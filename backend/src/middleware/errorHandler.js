@@ -4,6 +4,10 @@ function getClientIp(req) {
   return req.ip || req.socket.remoteAddress;
 }
 
+function getRequestPath(req) {
+  return (req.originalUrl || req.url || "").split("?")[0];
+}
+
 function getErrorSource(error) {
   if (error.code && String(error.code).startsWith("ORA-")) {
     return "oracle";
@@ -87,7 +91,7 @@ function getPublicMessage(error, statusCode) {
 function buildErrorLogPayload(error, req, statusCode, traceId) {
   const payload = {
     method: req.method,
-    path: req.originalUrl,
+    path: getRequestPath(req),
     route: req.route?.path,
     ip: getClientIp(req),
     user_agent: req.headers["user-agent"],

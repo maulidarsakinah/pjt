@@ -30,6 +30,34 @@ async function main() {
       throw new Error(`Expected /api/health to return 200 ok, got ${health.response.status}`);
     }
 
+    const invalidRegistration = await requestJson(baseUrl, "/api/register", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-trace-id": "tx-ci-register-invalid",
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (invalidRegistration.response.status !== 400) {
+      throw new Error(
+        `Expected malformed /api/register to return 400, got ${invalidRegistration.response.status}`
+      );
+    }
+
+    const invalidLogin = await requestJson(baseUrl, "/api/login", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-trace-id": "tx-ci-login-invalid",
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (invalidLogin.response.status !== 400) {
+      throw new Error(`Expected malformed /api/login to return 400, got ${invalidLogin.response.status}`);
+    }
+
     const companies = await requestJson(baseUrl, "/api/companies", {
       headers: {
         "x-trace-id": "tx-ci-companies",

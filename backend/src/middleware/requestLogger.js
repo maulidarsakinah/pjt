@@ -25,6 +25,10 @@ function getClientIp(req) {
   return req.ip || req.socket.remoteAddress;
 }
 
+function getRequestPath(req) {
+  return (req.originalUrl || req.url || "").split("?")[0];
+}
+
 module.exports = (req, res, next) => {
   const traceId =
     req.headers["x-trace-id"] ||
@@ -52,7 +56,7 @@ module.exports = (req, res, next) => {
     req.log[level](
       {
         method: req.method,
-        path: req.originalUrl || req.url,
+        path: getRequestPath(req),
         ip: getClientIp(req),
         user_agent: req.headers["user-agent"],
         status,
