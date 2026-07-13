@@ -1,0 +1,69 @@
+.settings-layout { display: grid; grid-template-columns: 250px 1fr; gap: 30px; align-items: start;}
+.settings-nav { background-color: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; position: sticky; top: 0;}
+.settings-nav-item { padding: 16px 20px; border-bottom: 1px solid var(--border-color); font-size: 14px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;}
+.settings-nav-item:last-child { border-bottom: none; }
+.settings-nav-item:hover { background-color: var(--hover-bg); color: var(--text-primary);}
+.settings-nav-item.active { border-left: 3px solid var(--black-btn); color: var(--text-primary); font-weight: 600; background-color: var(--hover-bg);}
+
+.settings-content { display: flex; flex-direction: column; gap: 24px; }
+.settings-card { background-color: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 8px; padding: 30px; }
+.settings-card-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);}
+
+.profile-grid { display: grid; grid-template-columns: 120px 1fr; gap: 30px; }
+.profile-avatar { width: 120px; height: 120px; background-color: #f1f5f9; border: 1px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 40px;}
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.form-full { grid-column: span 2; }
+
+.filter-group input[readonly] {
+  background-color: #f8fafc;
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.settings-password-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.settings-status {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background-color: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.settings-status-warning {
+  margin-top: 0;
+  border-color: #fde68a;
+  background-color: #fffbeb;
+  color: #92400e;
+}
+
+.settings-status-success {
+  margin-top: 0;
+  border-color: #bbf7d0;
+  background-color: #f0fdf4;
+  color: #166534;
+}
+
+@media (max-width: 900px) {
+  .settings-layout { grid-template-columns: 1fr; gap: 20px; }
+  .settings-nav { position: relative; }
+  .profile-grid { grid-template-columns: 1fr; justify-items: center; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-full { grid-column: span 1; }
+  .view-section { padding: 15px; gap: 15px; }
+  .settings-actions { justify-content: flex-start; }
+}
