@@ -135,56 +135,6 @@ const MasterAccount = () => {
         <KPICard title="Akun Aktif" value={String(totalActive + 113)} icon="fa-circle-check" badge="LIVE" accent="#06b6d4" descText="Akses siap digunakan" />
       </div>
 
-      <section className="panel master-control-panel">
-        <div className="master-filter-row">
-          <div className="filter-group">
-            <label>Cari Pengguna</label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Nama, email, atau ID..."
-            />
-          </div>
-          <div className="filter-group">
-            <label>Peran Pengguna</label>
-            <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
-              <option>Semua Peran</option>
-              <option>Administrator</option>
-              <option>Operator</option>
-              <option>Pemanfaat</option>
-            </select>
-          </div>
-          <div className="filter-group">
-            <label>Status Akun</label>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option>Semua Status</option>
-              <option>Aktif</option>
-              <option>Non-aktif</option>
-            </select>
-          </div>
-          <div className="master-filter-actions">
-            <button className="btn btn-primary">Filter</button>
-            <button className="btn btn-outline" onClick={resetFilters}>Reset</button>
-          </div>
-        </div>
-
-        <div className="master-action-row">
-          <div className="master-action-group">
-            <button className="btn btn-primary" onClick={() => openForm('add')}>
-              <i className="fa-solid fa-plus"></i> Tambah Akun
-            </button>
-            <button className="btn btn-outline" onClick={() => setActiveModal('role')}>
-              <i className="fa-solid fa-shield-halved"></i> Kelola Role & Permission
-            </button>
-          </div>
-          <div className="master-action-group">
-            <button className="btn btn-outline"><i className="fa-solid fa-upload"></i> Import</button>
-            <button className="btn btn-outline"><i className="fa-solid fa-download"></i> Export</button>
-          </div>
-        </div>
-      </section>
-
       <section className="panel master-table-panel">
         <div className="panel-header master-table-header">
           <div>
@@ -192,6 +142,56 @@ const MasterAccount = () => {
             <div className="panel-subtitle">Menampilkan akun dengan akses ke dashboard HydroTrack.</div>
           </div>
           <span className="master-table-count">{filteredUsers.length} akun ditemukan</span>
+        </div>
+
+        <div className="master-table-tools">
+          <div className="master-filter-row">
+            <div className="filter-group">
+              <label>Cari Pengguna</label>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Nama, email, atau ID..."
+              />
+            </div>
+            <div className="filter-group">
+              <label>Peran Pengguna</label>
+              <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>
+                <option>Semua Peran</option>
+                <option>Administrator</option>
+                <option>Operator</option>
+                <option>Pemanfaat</option>
+              </select>
+            </div>
+            <div className="filter-group">
+              <label>Status Akun</label>
+              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                <option>Semua Status</option>
+                <option>Aktif</option>
+                <option>Non-aktif</option>
+              </select>
+            </div>
+            <div className="master-filter-actions">
+              <button className="btn btn-primary">Filter</button>
+              <button className="btn btn-outline" onClick={resetFilters}>Reset</button>
+            </div>
+          </div>
+
+          <div className="master-action-row">
+            <div className="master-action-group">
+              <button className="btn btn-primary" onClick={() => openForm('add')}>
+                <i className="fa-solid fa-plus"></i> Tambah Akun
+              </button>
+              <button className="btn btn-outline" onClick={() => setActiveModal('role')}>
+                <i className="fa-solid fa-shield-halved"></i> Kelola Role & Permission
+              </button>
+            </div>
+            <div className="master-action-group">
+              <button className="btn btn-outline"><i className="fa-solid fa-upload"></i> Import</button>
+              <button className="btn btn-outline"><i className="fa-solid fa-download"></i> Export</button>
+            </div>
+          </div>
         </div>
 
         <div className="table-container master-table-container">

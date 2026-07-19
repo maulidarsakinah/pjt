@@ -67,7 +67,7 @@ const AuditLog = () => {
   const [levelFilter, setLevelFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [methodFilter, setMethodFilter] = useState('all');
-  const [selectedLog, setSelectedLog] = useState(auditLogs[0]);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   const filteredLogs = useMemo(() => auditLogs.filter((log) => {
     const levelMatch = levelFilter === 'all' || log.level === levelFilter;

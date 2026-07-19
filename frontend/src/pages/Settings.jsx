@@ -17,6 +17,13 @@ const Settings = () => {
   const isDemoUser = Boolean(user?.is_demo);
   const roles = user?.roles?.length ? user.roles.join(', ') : '-';
   const companyName = user?.company?.name || user?.company_name || '-';
+  const displayName = user?.name || 'Pengguna HydroTrack';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'HT';
 
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
@@ -108,27 +115,35 @@ const Settings = () => {
           
           <div className="settings-card" id="sec-profil">
             <div className="settings-card-title">Informasi Profil</div>
-            <div className="profile-grid">
-              <div className="form-grid">
-                <div className="filter-group form-full">
-                  <label>Nama Lengkap</label>
-                  <input type="text" value={user?.name || ''} readOnly />
+            <div className="profile-info-panel">
+              <div className="profile-summary">
+                <div className="profile-summary-avatar">{initials}</div>
+                <div>
+                  <h2>{displayName}</h2>
+                  <p>{user?.email || 'Email belum tersedia'}</p>
                 </div>
-                <div className="filter-group">
-                  <label>Email</label>
-                  <input type="email" value={user?.email || ''} readOnly />
+              </div>
+
+              <div className="profile-info-grid">
+                <div className="profile-info-item">
+                  <span>Nama Lengkap</span>
+                  <strong>{displayName}</strong>
                 </div>
-                <div className="filter-group">
-                  <label>Nomor Telepon</label>
-                  <input type="text" value={user?.phone || '-'} readOnly />
+                <div className="profile-info-item">
+                  <span>Email</span>
+                  <strong>{user?.email || '-'}</strong>
                 </div>
-                <div className="filter-group">
-                  <label>Role</label>
-                  <input type="text" value={roles} readOnly />
+                <div className="profile-info-item">
+                  <span>Nomor Telepon</span>
+                  <strong>{user?.phone || '-'}</strong>
                 </div>
-                <div className="filter-group">
-                  <label>Perusahaan</label>
-                  <input type="text" value={companyName} readOnly />
+                <div className="profile-info-item">
+                  <span>Role</span>
+                  <strong>{roles}</strong>
+                </div>
+                <div className="profile-info-item">
+                  <span>Perusahaan</span>
+                  <strong>{companyName}</strong>
                 </div>
               </div>
             </div>
