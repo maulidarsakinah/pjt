@@ -28,7 +28,7 @@ const AdminLayout = () => {
       {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>}
 
       <main className="main-content">
-        <Topbar toggleSidebar={() => setIsSidebarOpen((value) => !value)} />
+        <Topbar toggleSidebar={() => setIsSidebarOpen((value) => !value)} openLogoutModal={openLogoutModal} />
         <Outlet />
       </main>
 

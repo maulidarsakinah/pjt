@@ -101,7 +101,7 @@ const Settings = () => {
             className={`settings-nav-item ${activeTab === 'profil' ? 'active' : ''}`} 
             onClick={() => scrollToSection('profil')}
           >
-            Profil <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px' }}></i>
+            Profil
           </div>
           <div 
             className={`settings-nav-item ${activeTab === 'keamanan' ? 'active' : ''}`} 
@@ -194,7 +194,7 @@ const Settings = () => {
               <div>
                 <button
                   type="button"
-                  className="btn btn-outline"
+                  className="btn btn-primary"
                   style={{ marginTop: '10px' }}
                   onClick={handleChangePassword}
                   disabled={isChangingPassword}

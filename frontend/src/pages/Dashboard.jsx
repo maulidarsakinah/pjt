@@ -295,7 +295,7 @@ const Dashboard = () => {
                 <th>VCC (V)</th>
                 <th>SUHU (C)</th>
                 <th>STATUS</th>
-                <th>LAST UPDATE</th>
+                <th>TERAKHIR DIPERBARUI</th>
               </tr>
             </thead>
             <tbody>

@@ -1,18 +1,41 @@
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import useAuth from '../contexts/useAuth';
 import './Topbar.css';
 
-const Topbar = ({ toggleSidebar }) => {
+const Topbar = ({ toggleSidebar, openLogoutModal }) => {
   const location = useLocation();
   const { user } = useAuth();
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const accountRef = useRef(null);
   const displayName = user?.name || 'Operator';
   const companyName = user?.company?.name || user?.company_name || 'Company';
+  const roleText = user?.role || user?.role_name || user?.roles?.join(', ') || 'Operator';
   const initials = displayName
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('') || 'OP';
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (accountRef.current && !accountRef.current.contains(event.target)) {
+        setIsAccountOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleExit = () => {
+    setIsAccountOpen(false);
+    openLogoutModal?.();
+  };
   
   const getBreadcrumb = () => {
     switch (location.pathname) {
@@ -108,13 +131,46 @@ const Topbar = ({ toggleSidebar }) => {
         </div>
       </div>
       <div className="topbar-right">
-        <div className="user-dropdown">
-          <div className="user-info">
-            <span className="user-role">{companyName}</span>
-            <span className="user-name">{displayName}</span>
+        <div className="account-menu" ref={accountRef}>
+          <button
+            className={`user-dropdown ${isAccountOpen ? 'active' : ''}`}
+            type="button"
+            onClick={() => setIsAccountOpen((value) => !value)}
+            aria-expanded={isAccountOpen}
+            aria-haspopup="menu"
+          >
+            <div className="user-info">
+              <span className="user-role">{companyName}</span>
+              <span className="user-name">{displayName}</span>
+            </div>
+            <div className="user-avatar">{initials}</div>
+          </button>
+
+          {isAccountOpen && (
+            <div className="account-dropdown-panel" role="menu">
+              <div className="account-dropdown-header">
+                <div className="account-dropdown-avatar">{initials}</div>
+                <div className="account-dropdown-identity">
+                  <strong>{displayName}</strong>
+                  <span>{user?.email || 'Email belum tersedia'}</span>
+                </div>
+              </div>
+
+              <div className="account-dropdown-info">
+                <span>Role</span>
+                <strong>{roleText}</strong>
+              </div>
+              <div className="account-dropdown-info">
+                <span>Perusahaan</span>
+                <strong>{companyName}</strong>
+              </div>
+
+              <button className="account-exit-button" type="button" onClick={handleExit} role="menuitem">
+                <i className="fa-solid fa-arrow-right-from-bracket"></i> Keluar
+              </button>
+            </div>
+          )}
           </div>
-          <div className="user-avatar">{initials}</div>
-        </div>
       </div>
     </header>
   );

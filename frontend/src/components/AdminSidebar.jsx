@@ -40,7 +40,7 @@ const AdminSidebar = ({ openLogoutModal }) => (
       <div className="nav-spacer"></div>
 
       <div className="nav-item text-danger" onClick={openLogoutModal}>
-        <i className="fa-solid fa-arrow-right-from-bracket"></i> Log Out
+        <i className="fa-solid fa-arrow-right-from-bracket"></i> Keluar
       </div>
     </ul>
   </aside>

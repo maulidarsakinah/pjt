@@ -37,6 +37,13 @@ const auditLogs = [
   },
 ];
 
+const auditKpiDescriptions = {
+  total: 'Total seluruh aktivitas request API yang tercatat pada audit log.',
+  success: 'Jumlah request yang berhasil diproses oleh server dengan status sukses.',
+  failed: 'Jumlah request yang gagal, termasuk error autentikasi atau response kode 4xx/5xx.',
+  latency: 'Rata-rata waktu respons API dari log yang memiliki data latency.',
+};
+
 function formatLogTime(value) {
   return new Intl.DateTimeFormat('id-ID', {
     dateStyle: 'medium',
@@ -103,10 +110,34 @@ const AuditLog = () => {
       </div>
 
       <div className="kpi-grid audit-kpi-grid">
-        <KPICard title="Total Aktivitas" value={String(auditLogs.length)} icon="fa-list-check" badge="LOG" accent="#3A4BCF" descText="Data dari service pkl-api" />
-        <KPICard title="Request Success" value={String(successCount)} icon="fa-circle-check" badge="200" accent="#10b981" descText="Request berhasil diproses" />
-        <KPICard title="Request Failed" value={String(failedCount)} icon="fa-shield-halved" badge="401" accent="#ef4444" descText="Butuh autentikasi valid" />
-        <KPICard title="Avg Latency" value={avgLatency ? String(Math.round(avgLatency)) : '-'} unit="ms" icon="fa-gauge-high" badge="API" accent="#06b6d4" descText={`${warningCount} warning terdeteksi`} />
+        <div className="audit-kpi-card-wrap">
+          <button className="audit-kpi-info" type="button" aria-label="Info Total Aktivitas">
+            <i className="fa-solid fa-info"></i>
+            <span>{auditKpiDescriptions.total}</span>
+          </button>
+          <KPICard title="Total Aktivitas" value={String(auditLogs.length)} icon="fa-list-check" badge="LOG" accent="#3A4BCF" descText="Data dari service pkl-api" />
+        </div>
+        <div className="audit-kpi-card-wrap">
+          <button className="audit-kpi-info" type="button" aria-label="Info Request Success">
+            <i className="fa-solid fa-info"></i>
+            <span>{auditKpiDescriptions.success}</span>
+          </button>
+          <KPICard title="Request Success" value={String(successCount)} icon="fa-circle-check" badge="200" accent="#10b981" descText="Request berhasil diproses" />
+        </div>
+        <div className="audit-kpi-card-wrap">
+          <button className="audit-kpi-info" type="button" aria-label="Info Request Failed">
+            <i className="fa-solid fa-info"></i>
+            <span>{auditKpiDescriptions.failed}</span>
+          </button>
+          <KPICard title="Request Failed" value={String(failedCount)} icon="fa-shield-halved" badge="401" accent="#ef4444" descText="Butuh autentikasi valid" />
+        </div>
+        <div className="audit-kpi-card-wrap">
+          <button className="audit-kpi-info" type="button" aria-label="Info Avg Latency">
+            <i className="fa-solid fa-info"></i>
+            <span>{auditKpiDescriptions.latency}</span>
+          </button>
+          <KPICard title="Avg Latency" value={avgLatency ? String(Math.round(avgLatency)) : '-'} unit="ms" icon="fa-gauge-high" badge="API" accent="#06b6d4" descText={`${warningCount} warning terdeteksi`} />
+        </div>
       </div>
 
       <section className="panel audit-filter-panel">

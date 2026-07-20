@@ -262,9 +262,13 @@
 }
 
 @media (max-width: 1100px) {
-  .dashboard-kpi-grid,
   .dash-middle-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
   }
 
   .large-chart-container {
@@ -298,7 +302,49 @@
   }
 
   .dashboard-kpi-grid {
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .dashboard-kpi-grid .kpi-card {
+    min-height: 118px;
+    padding: 12px;
+    gap: 7px;
+    border-radius: 14px;
+  }
+
+  .dashboard-kpi-grid .kpi-card-top {
+    gap: 6px;
+  }
+
+  .dashboard-kpi-grid .kpi-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .dashboard-kpi-grid .kpi-badge {
+    padding: 4px 7px;
+    font-size: 8px;
+  }
+
+  .dashboard-kpi-grid .kpi-title {
+    font-size: 9px;
+    letter-spacing: 0.05em;
+  }
+
+  .dashboard-kpi-grid .kpi-value {
+    font-size: 22px;
+  }
+
+  .dashboard-kpi-grid .kpi-unit {
+    font-size: 10px;
+  }
+
+  .dashboard-kpi-grid .kpi-desc {
+    font-size: 9px;
+    line-height: 1.35;
   }
 
   .dash-middle-grid,
@@ -365,6 +411,19 @@
 }
 
 @media (max-width: 420px) {
+  .dashboard-kpi-grid {
+    gap: 8px;
+  }
+
+  .dashboard-kpi-grid .kpi-card {
+    min-height: 112px;
+    padding: 11px;
+  }
+
+  .dashboard-kpi-grid .kpi-desc {
+    font-size: 8px;
+  }
+
   .large-chart-container {
     height: 220px;
   }

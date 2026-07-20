@@ -108,6 +108,15 @@
   margin-top: 0;
 }
 
+.master-table-panel .pagination {
+  gap: 14px;
+}
+
+.master-table-panel .page-controls {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .master-user-name {
   font-weight: 700;
 }
@@ -449,14 +458,100 @@
     flex-direction: column;
   }
 
-  .master-kpi-grid,
   .master-filter-row,
   .master-form-grid,
   .master-info-grid {
     grid-template-columns: 1fr;
   }
 
+  .master-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .master-kpi-grid .kpi-card {
+    min-height: 118px;
+    padding: 12px;
+    gap: 7px;
+    border-radius: 14px;
+  }
+
+  .master-kpi-grid .kpi-card-top {
+    gap: 6px;
+  }
+
+  .master-kpi-grid .kpi-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .master-kpi-grid .kpi-badge {
+    padding: 4px 7px;
+    font-size: 8px;
+  }
+
+  .master-kpi-grid .kpi-title {
+    font-size: 9px;
+    letter-spacing: 0.05em;
+  }
+
+  .master-kpi-grid .kpi-value {
+    font-size: 22px;
+  }
+
+  .master-kpi-grid .kpi-desc {
+    font-size: 9px;
+    line-height: 1.35;
+  }
+
   .master-add-button {
     width: 100%;
+  }
+
+  .master-table-panel .pagination {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .master-table-panel .page-info {
+    line-height: 1.45;
+  }
+
+  .master-table-panel .page-controls {
+    justify-content: flex-start;
+    max-width: 100%;
+  }
+
+  .master-table-panel .page-btn {
+    min-width: 34px;
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  .master-kpi-grid {
+    gap: 8px;
+  }
+
+  .master-kpi-grid .kpi-card {
+    min-height: 112px;
+    padding: 11px;
+  }
+
+  .master-kpi-grid .kpi-desc {
+    font-size: 8px;
+  }
+
+  .master-table-panel .page-controls {
+    gap: 4px;
+  }
+
+  .master-table-panel .page-btn {
+    min-width: 30px;
+    padding: 5px 8px;
+    font-size: 12px;
   }
 }

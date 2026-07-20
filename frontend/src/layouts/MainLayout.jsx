@@ -30,7 +30,7 @@ const MainLayout = () => {
       {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>}
       
       <main className="main-content">
-        <Topbar toggleSidebar={toggleSidebar} />
+        <Topbar toggleSidebar={toggleSidebar} openLogoutModal={openLogoutModal} />
         <Outlet />
       </main>
       <LogoutModal 

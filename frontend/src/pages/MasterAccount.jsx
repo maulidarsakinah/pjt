@@ -124,7 +124,7 @@ const MasterAccount = () => {
       <div className="header-section master-account-header">
         <div>
           <h1>Master Akun</h1>
-          <p>Kelola pengguna, role, dan permission akses HydroTrack.</p>
+          <p>Kelola pengguna, role, dan perizinan akses aplikasi HydroTrack.</p>
         </div>
       </div>
 
