@@ -1,4 +1,5 @@
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
 
 const FALLBACK_STATIONS = [{ id: 'fallback-1', station_name: 'Flowmeter Lamongan' }];
 const MAP_CENTER = [-7.1147, 112.4146];

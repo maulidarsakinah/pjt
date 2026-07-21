@@ -11,6 +11,7 @@ const errorHandler = require("./middleware/errorHandler");
 const authRoutes = require("./routes/auth");
 const companiesRoutes = require("./routes/companies");
 const healthRoutes = require("./routes/health");
+const logsRoutes = require("./routes/logs");
 const meRoutes = require("./routes/me");
 const permissionsRoutes = require("./routes/permissions");
 const rolesRoutes = require("./routes/roles");
@@ -44,6 +45,7 @@ if (config.security.docsEnabled) {
 
 app.use("/api", authRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/api/logs", logsRoutes);
 app.use("/api/companies", companiesRoutes);
 app.use("/api/me", meRoutes);
 app.use("/api/permissions", permissionsRoutes);

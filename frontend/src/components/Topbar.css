@@ -6,8 +6,8 @@
   align-items: center; 
   justify-content: space-between; 
   padding: 0 30px; 
-  position: sticky; 
-  top: 0; 
+  position: relative;
+  flex: 0 0 auto;
   z-index: 10; 
 }
 .topbar-left { display: flex; align-items: center; gap: 14px; min-width: 0; }

@@ -42,7 +42,7 @@ export function clearSession() {
   localStorage.removeItem(USER_KEY);
 }
 
-export async function apiRequest(path, { method = 'GET', body, query, auth = true } = {}) {
+export async function apiRequest(path, { method = 'GET', body, query, auth = true, signal } = {}) {
   const headers = {
     Accept: 'application/json',
   };
@@ -63,6 +63,7 @@ export async function apiRequest(path, { method = 'GET', body, query, auth = tru
     method,
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
   });
   const contentType = response.headers.get('content-type') || '';
   const payload = contentType.includes('application/json') ? await response.json() : null;
@@ -112,4 +113,8 @@ export function getFlowStationData(id, query) {
 
 export function getCompany(id) {
   return apiRequest(`/api/companies/${id}`);
+}
+
+export function getAuditLogs(query, { signal } = {}) {
+  return apiRequest('/api/logs', { query, signal });
 }

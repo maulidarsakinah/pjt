@@ -2,10 +2,13 @@ const crypto = require("crypto");
 const { performance } = require("perf_hooks");
 const logger = require("../logger");
 
-function shouldSkipRequestLog(req) {
+function shouldSkipRequestLog(req, statusCode) {
+  const requestPath = getRequestPath(req);
+  const requestUrl = req.url || req.originalUrl || "";
+
   return (
-    req.url.startsWith("/api/docs/") &&
-    /\.(css|js|png|ico|map)$/.test(req.url)
+    (requestUrl.startsWith("/api/docs/") && /\.(css|js|png|ico|map)$/.test(requestUrl)) ||
+    (req.method === "GET" && requestPath === "/api/logs" && statusCode < 400)
   );
 }
 
@@ -44,7 +47,7 @@ module.exports = (req, res, next) => {
   res.setHeader("x-request-id", traceId);
 
   res.on("finish", () => {
-    if (shouldSkipRequestLog(req)) {
+    if (shouldSkipRequestLog(req, res.statusCode)) {
       return;
     }
 
@@ -70,3 +73,5 @@ module.exports = (req, res, next) => {
 
   next();
 };
+
+module.exports.shouldSkipRequestLog = shouldSkipRequestLog;

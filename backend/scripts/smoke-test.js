@@ -134,6 +134,20 @@ async function main() {
       throw new Error(`Expected /api/users/accesses without token to return 401, got ${accesses.response.status}`);
     }
 
+    const logs = await requestJson(baseUrl, "/api/logs", {
+      headers: {
+        "x-trace-id": "tx-ci-logs",
+      },
+    });
+
+    if (logs.response.status !== 401) {
+      throw new Error(`Expected /api/logs without token to return 401, got ${logs.response.status}`);
+    }
+
+    if (!logs.body.trace_id) {
+      throw new Error("Expected /api/logs error response to include trace_id");
+    }
+
     const stations = await requestJson(baseUrl, "/api/stations/flow", {
       headers: {
         "x-trace-id": "tx-ci-stations-flow",

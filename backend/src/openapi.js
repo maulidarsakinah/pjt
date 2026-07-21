@@ -35,6 +35,10 @@ module.exports = {
       description: "Permission management",
     },
     {
+      name: "Logs",
+      description: "Administrative access to normalized backend log entries",
+    },
+    {
       name: "Stations",
       description: "Station records and IoT data",
     },
@@ -1240,6 +1244,95 @@ module.exports = {
         },
       },
     },
+    "/api/logs": {
+      get: {
+        tags: ["Logs"],
+        summary: "List backend log entries",
+        description: "Reads normalized entries from the backend log directory. Successful reads of this endpoint are excluded to prevent self-generated audit noise. Totals and pages may be cached for up to 5 seconds. Requires the `list accesses` permission.",
+        operationId: "listLogs",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "limit",
+            in: "query",
+            required: false,
+            schema: {
+              type: "integer",
+              minimum: 1,
+              maximum: 200,
+              default: 50,
+            },
+          },
+          { $ref: "#/components/parameters/OffsetQuery" },
+          {
+            name: "date",
+            in: "query",
+            required: false,
+            description: "Log date in Asia/Jakarta using YYYY-MM-DD.",
+            schema: { type: "string", format: "date" },
+          },
+          {
+            name: "level",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["trace", "debug", "info", "warn", "error", "fatal"],
+            },
+          },
+          {
+            name: "method",
+            in: "query",
+            required: false,
+            schema: {
+              type: "string",
+              enum: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+            },
+          },
+          {
+            name: "status",
+            in: "query",
+            required: false,
+            schema: { type: "string", enum: ["success", "failed"] },
+          },
+          {
+            name: "search",
+            in: "query",
+            required: false,
+            description: "Case-insensitive search across trace ID, method, endpoint, message, and error fields.",
+            schema: { type: "string", maxLength: 200 },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Log entries returned newest first",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/LogsResponse" },
+              },
+            },
+          },
+          400: {
+            description: "Invalid filter or pagination parameter",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+          401: { description: "Missing or invalid bearer token" },
+          403: { description: "Missing the list accesses permission" },
+          500: {
+            description: "Log directory or server error",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/ErrorResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/stations/flow": {
       get: {
         tags: ["Stations"],
@@ -2186,6 +2279,44 @@ module.exports = {
             },
             example: [6, 7],
           },
+        },
+      },
+      LogEntry: {
+        type: "object",
+        required: ["id", "level", "time", "status"],
+        properties: {
+          id: { type: "string", example: "2f65979c56e15f336e68a47a" },
+          level: { type: "string", example: "info" },
+          time: { type: "string", format: "date-time" },
+          service: { type: "string", nullable: true, example: "pkl-api" },
+          env: { type: "string", nullable: true, example: "development" },
+          trace_id: { type: "string", nullable: true, example: "tx-ci-health" },
+          method: { type: "string", nullable: true, example: "GET" },
+          path: { type: "string", nullable: true, example: "/api/health" },
+          ip: { type: "string", nullable: true, example: "127.0.0.1" },
+          user_agent: { type: "string", nullable: true, example: "Mozilla/5.0" },
+          status: { type: "string", enum: ["success", "failed"] },
+          status_code: { type: "integer", nullable: true, example: 200 },
+          latency_ms: { type: "number", nullable: true, example: 25 },
+          error_source: { type: "string", nullable: true, example: "application" },
+          error_code: { type: "string", nullable: true, example: "Error" },
+          error_message: { type: "string", nullable: true, example: "authentication required" },
+          message: { type: "string", nullable: true, example: "request_completed" },
+        },
+      },
+      LogsResponse: {
+        type: "object",
+        required: ["data", "count", "total", "limit", "offset", "has_more"],
+        properties: {
+          data: {
+            type: "array",
+            items: { $ref: "#/components/schemas/LogEntry" },
+          },
+          count: { type: "integer", example: 10 },
+          total: { type: "integer", example: 78 },
+          limit: { type: "integer", example: 10 },
+          offset: { type: "integer", example: 0 },
+          has_more: { type: "boolean", example: true },
         },
       },
       Station: {
