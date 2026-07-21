@@ -61,6 +61,13 @@ const initialForm = {
   password: '',
 };
 
+const masterKpiDescriptions = {
+  total: 'Total seluruh akun pengguna yang tercatat pada aplikasi HydroTrack.',
+  admin: 'Jumlah akun dengan role administrator yang memiliki akses pengelolaan sistem.',
+  operator: 'Jumlah akun operator yang bertugas melakukan pemantauan data lapangan.',
+  active: 'Jumlah akun aktif yang saat ini dapat digunakan untuk mengakses aplikasi.',
+};
+
 function getInitials(name) {
   return name
     .split(' ')
@@ -129,10 +136,34 @@ const MasterAccount = () => {
       </div>
 
       <div className="kpi-grid master-kpi-grid">
-        <KPICard title="Total Pengguna" value="128" icon="fa-users" badge="ALL" accent="#3A4BCF" descText="Seluruh tenant dan operator" />
-        <KPICard title="Admin" value={String(totalAdmins + 11)} icon="fa-user-shield" badge="ADMIN" accent="#f59e0b" descText="Role administrator aktif" />
-        <KPICard title="Operator" value={String(totalOperators + 92)} icon="fa-headset" badge="OPS" accent="#10b981" descText="Tim pemantauan lapangan" />
-        <KPICard title="Akun Aktif" value={String(totalActive + 113)} icon="fa-circle-check" badge="LIVE" accent="#06b6d4" descText="Akses siap digunakan" />
+        <div className="master-kpi-card-wrap">
+          <button className="master-kpi-info" type="button" aria-label="Info Total Pengguna">
+            <i className="fa-solid fa-info"></i>
+            <span>{masterKpiDescriptions.total}</span>
+          </button>
+          <KPICard title="Total Pengguna" value="128" icon="fa-users" badge="ALL" accent="#3A4BCF" descText="Seluruh tenant dan operator" />
+        </div>
+        <div className="master-kpi-card-wrap">
+          <button className="master-kpi-info" type="button" aria-label="Info Admin">
+            <i className="fa-solid fa-info"></i>
+            <span>{masterKpiDescriptions.admin}</span>
+          </button>
+          <KPICard title="Admin" value={String(totalAdmins + 11)} icon="fa-user-shield" badge="ADMIN" accent="#f59e0b" descText="Role administrator aktif" />
+        </div>
+        <div className="master-kpi-card-wrap">
+          <button className="master-kpi-info" type="button" aria-label="Info Operator">
+            <i className="fa-solid fa-info"></i>
+            <span>{masterKpiDescriptions.operator}</span>
+          </button>
+          <KPICard title="Operator" value={String(totalOperators + 92)} icon="fa-headset" badge="OPS" accent="#10b981" descText="Tim pemantauan lapangan" />
+        </div>
+        <div className="master-kpi-card-wrap">
+          <button className="master-kpi-info" type="button" aria-label="Info Akun Aktif">
+            <i className="fa-solid fa-info"></i>
+            <span>{masterKpiDescriptions.active}</span>
+          </button>
+          <KPICard title="Akun Aktif" value={String(totalActive + 113)} icon="fa-circle-check" badge="LIVE" accent="#06b6d4" descText="Akses siap digunakan" />
+        </div>
       </div>
 
       <section className="panel master-table-panel">

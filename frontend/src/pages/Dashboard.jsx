@@ -51,6 +51,12 @@ const STATIC_LATEST_READINGS = [
   { station: 'Flowmeter Lamongan', flow: '142.50', totalizer: '452109', vcc: '12.42', temp: '29.5', time: '2026-07-13 10:45' },
 ];
 
+const dashboardKpiDescriptions = {
+  sensor: 'Jumlah sensor flowmeter yang aktif dan terdaftar pada sistem monitoring.',
+  flow: 'Rata-rata debit air berdasarkan data pembacaan terakhir pada dashboard.',
+  anomaly: 'Jumlah kondisi anomali atau peringatan yang perlu diperhatikan operator.',
+};
+
 function isFlowmeterLamongan(station) {
   const value = `${station?.station_name || ''} ${station?.kode_station || ''} ${station?.table_data || ''}`.toLowerCase();
 
@@ -164,37 +170,55 @@ const Dashboard = () => {
     <div className="view-section dashboard-page">
       {error && <div className="panel" style={{ color: '#b91c1c', marginBottom: '12px' }}>{error}</div>}
       <div className="kpi-grid dashboard-kpi-grid">
-        <KPICard
-          title="Lokasi Sensor Aktif"
-          value={String(visibleStations.length || 1)}
-          icon="fa-satellite-dish"
-          badge="LIVE"
-          accent="#3A4BCF"
-          descIcon="fa-arrow-up"
-          descClass="trend-up"
-          descText={isLoading ? 'Memuat data stasiun' : 'Stasiun FLOW terdaftar'}
-        />
-        <KPICard
-          title="Rata-rata Debit Air"
-          value={formatNumber(averageFlow)}
-          unit="m3/s"
-          icon="fa-droplet"
-          badge="STABLE"
-          accent="#10b981"
-          descIcon="fa-wave-square"
-          descClass="success-text"
-          descText="Berdasarkan data terakhir"
-        />
-        <KPICard
-          title="Peringatan Anomali"
-          value="0"
-          icon="fa-triangle-exclamation"
-          badge="CLEAR"
-          accent="#ef4444"
-          descIcon="fa-shield-heart"
-          descClass="success-text"
-          descText="Semua sistem normal"
-        />
+        <div className="dashboard-kpi-card-wrap">
+          <button className="dashboard-kpi-info" type="button" aria-label="Info Lokasi Sensor Aktif">
+            <i className="fa-solid fa-info"></i>
+            <span>{dashboardKpiDescriptions.sensor}</span>
+          </button>
+          <KPICard
+            title="Lokasi Sensor Aktif"
+            value={String(visibleStations.length || 1)}
+            icon="fa-satellite-dish"
+            badge="LIVE"
+            accent="#3A4BCF"
+            descIcon="fa-arrow-up"
+            descClass="trend-up"
+            descText={isLoading ? 'Memuat data stasiun' : 'Stasiun FLOW terdaftar'}
+          />
+        </div>
+        <div className="dashboard-kpi-card-wrap">
+          <button className="dashboard-kpi-info" type="button" aria-label="Info Rata-rata Debit Air">
+            <i className="fa-solid fa-info"></i>
+            <span>{dashboardKpiDescriptions.flow}</span>
+          </button>
+          <KPICard
+            title="Rata-rata Debit Air"
+            value={formatNumber(averageFlow)}
+            unit="m3/s"
+            icon="fa-droplet"
+            badge="STABLE"
+            accent="#10b981"
+            descIcon="fa-wave-square"
+            descClass="success-text"
+            descText="Berdasarkan data terakhir"
+          />
+        </div>
+        <div className="dashboard-kpi-card-wrap">
+          <button className="dashboard-kpi-info" type="button" aria-label="Info Peringatan Anomali">
+            <i className="fa-solid fa-info"></i>
+            <span>{dashboardKpiDescriptions.anomaly}</span>
+          </button>
+          <KPICard
+            title="Peringatan Anomali"
+            value="0"
+            icon="fa-triangle-exclamation"
+            badge="CLEAR"
+            accent="#ef4444"
+            descIcon="fa-shield-heart"
+            descClass="success-text"
+            descText="Semua sistem normal"
+          />
+        </div>
       </div>
 
       <div className="dash-middle-grid">
