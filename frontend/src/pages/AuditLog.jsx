@@ -365,7 +365,7 @@ const AuditFilters = memo(function AuditFilters({ appliedFilters, isLoading, onA
   };
 
   return (
-    <section className="panel audit-filter-panel">
+    <div className="audit-filter-panel">
       <button
         className="audit-filter-toggle"
         type="button"
@@ -422,7 +422,7 @@ const AuditFilters = memo(function AuditFilters({ appliedFilters, isLoading, onA
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 });
 
@@ -803,13 +803,6 @@ const AuditLog = () => {
         total={isDemoUser ? auditLogs.length : totalLogs}
       />
 
-      <AuditFilters
-        appliedFilters={appliedFilters}
-        isLoading={isLoading}
-        onApply={applyFilters}
-        onReset={resetFilters}
-      />
-
       <section className="panel audit-table-panel">
         <div className="panel-header audit-table-header">
           <div>
@@ -818,6 +811,16 @@ const AuditLog = () => {
               {isDemoUser ? 'Menampilkan data statis untuk sesi demo.' : 'Data terbaru dari backend, diurutkan dari waktu terbaru.'}
             </div>
           </div>
+        </div>
+
+        <AuditFilters
+          appliedFilters={appliedFilters}
+          isLoading={isLoading}
+          onApply={applyFilters}
+          onReset={resetFilters}
+        />
+
+        <div className="audit-table-tools">
           <AuditSearch key={searchResetKey} isLoading={isLoading} onCommit={commitSearch} />
         </div>
 

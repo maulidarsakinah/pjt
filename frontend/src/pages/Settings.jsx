@@ -18,12 +18,22 @@ const Settings = () => {
   const roles = user?.roles?.length ? user.roles.join(', ') : '-';
   const companyName = user?.company?.name || user?.company_name || '-';
   const displayName = user?.name || 'Pengguna HydroTrack';
+  const username = user?.username || user?.email?.split('@')?.[0] || '-';
+  const position = user?.position || user?.job_title || roles;
   const initials = displayName
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('') || 'HT';
+  const profileDetails = [
+    { label: 'Nama Lengkap', value: displayName },
+    { label: 'Username', value: username },
+    { label: 'Email', value: user?.email || '-' },
+    { label: 'Nomor Telepon', value: user?.phone || '-' },
+    { label: 'Posisi', value: position },
+    { label: 'Perusahaan', value: companyName },
+  ];
 
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
@@ -116,34 +126,20 @@ const Settings = () => {
           <div className="settings-card" id="sec-profil">
             <div className="settings-card-title">Informasi Profil</div>
             <div className="profile-info-panel">
-              <div className="profile-summary">
-                <div className="profile-summary-avatar">{initials}</div>
-                <div>
-                  <h2>{displayName}</h2>
-                  <p>{user?.email || 'Email belum tersedia'}</p>
+              <div className="profile-identity-layout">
+                <div className="profile-summary">
+                  <div className="profile-summary-avatar">{initials}</div>
+                  <span className="profile-status-badge">Akun Aktif</span>
                 </div>
-              </div>
 
-              <div className="profile-info-grid">
-                <div className="profile-info-item">
-                  <span>Nama Lengkap</span>
-                  <strong>{displayName}</strong>
-                </div>
-                <div className="profile-info-item">
-                  <span>Email</span>
-                  <strong>{user?.email || '-'}</strong>
-                </div>
-                <div className="profile-info-item">
-                  <span>Nomor Telepon</span>
-                  <strong>{user?.phone || '-'}</strong>
-                </div>
-                <div className="profile-info-item">
-                  <span>Role</span>
-                  <strong>{roles}</strong>
-                </div>
-                <div className="profile-info-item">
-                  <span>Perusahaan</span>
-                  <strong>{companyName}</strong>
+                <div className="profile-detail-list" aria-label="Informasi profil pengguna">
+                  {profileDetails.map((item) => (
+                    <div className="profile-detail-row" key={item.label}>
+                      <span>{item.label}</span>
+                      <b>:</b>
+                      <strong>{item.value}</strong>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
