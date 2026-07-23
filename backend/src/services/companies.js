@@ -34,6 +34,11 @@ function validateCompanyPayload(body, { partial = false } = {}) {
     throw badRequest("name is required");
   }
 
+  if (!partial) {
+    payload.address ??= null;
+    payload.contact ??= null;
+  }
+
   if (partial && Object.keys(payload).length === 0) {
     throw badRequest("at least one of name, address, or contact is required");
   }

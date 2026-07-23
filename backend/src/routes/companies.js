@@ -61,20 +61,30 @@ router.post("/", requirePermission("create companies"), async (req, res, next) =
   }
 });
 
-async function handleUpdateCompany(req, res, next) {
-  try {
-    const id = parseId(req.params.id);
-    const payload = validateCompanyPayload(req.body, { partial: true });
-    const company = await updateCompany(id, payload);
+function createUpdateCompanyHandler({ partial }) {
+  return async (req, res, next) => {
+    try {
+      const id = parseId(req.params.id);
+      const payload = validateCompanyPayload(req.body, { partial });
+      const company = await updateCompany(id, payload);
 
-    res.json({ data: company });
-  } catch (error) {
-    next(error);
-  }
+      res.json({ data: company });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
-router.put("/:id", requirePermission("update companies"), handleUpdateCompany);
-router.patch("/:id", requirePermission("update companies"), handleUpdateCompany);
+router.put(
+  "/:id",
+  requirePermission("update companies"),
+  createUpdateCompanyHandler({ partial: false })
+);
+router.patch(
+  "/:id",
+  requirePermission("update companies"),
+  createUpdateCompanyHandler({ partial: true })
+);
 
 router.delete("/:id", requirePermission("delete companies"), async (req, res, next) => {
   try {

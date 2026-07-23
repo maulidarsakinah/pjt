@@ -48,18 +48,28 @@ router.post("/", requirePermission("create permissions"), async (req, res, next)
   }
 });
 
-async function handleUpdatePermission(req, res, next) {
-  try {
-    const id = parsePositiveInteger(req.params.id);
+function createUpdatePermissionHandler({ partial }) {
+  return async (req, res, next) => {
+    try {
+      const id = parsePositiveInteger(req.params.id);
 
-    res.json({ data: await updatePermission(id, req.body, req) });
-  } catch (error) {
-    next(error);
-  }
+      res.json({ data: await updatePermission(id, req.body, req, { partial }) });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
-router.put("/:id", requirePermission("update permissions"), handleUpdatePermission);
-router.patch("/:id", requirePermission("update permissions"), handleUpdatePermission);
+router.put(
+  "/:id",
+  requirePermission("update permissions"),
+  createUpdatePermissionHandler({ partial: false })
+);
+router.patch(
+  "/:id",
+  requirePermission("update permissions"),
+  createUpdatePermissionHandler({ partial: true })
+);
 
 router.delete("/:id", requirePermission("delete permissions"), async (req, res, next) => {
   try {

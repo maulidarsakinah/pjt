@@ -141,6 +141,18 @@ function buildDataFilter(query) {
   };
 }
 
+function buildFlowStationDataResponse(station, response, mode) {
+  return {
+    station,
+    data: response.data,
+    count: response.count,
+    limit: response.limit,
+    offset: response.offset,
+    has_more: mode === "latest" ? false : response.has_more,
+    mode,
+  };
+}
+
 async function findFlowStationById(connection, stationId) {
   const cacheKey = `station:flow:${stationId}`;
   const cachedStation = stationCache.get(cacheKey);
@@ -279,15 +291,7 @@ async function getFlowStationData(stationIdValue, query) {
     );
     const response = buildListResponse(dataResult.rows, dataFilter.pagination);
 
-    return {
-      station,
-      data: response.data,
-      count: response.count,
-      limit: response.limit,
-      offset: response.offset,
-      has_more: response.has_more,
-      mode: dataFilter.mode,
-    };
+    return buildFlowStationDataResponse(station, response, dataFilter.mode);
   });
 }
 
@@ -300,6 +304,7 @@ function clearCache() {
 }
 
 module.exports = {
+  buildFlowStationDataResponse,
   clearCache,
   getFlowStationData,
   invalidateStation,

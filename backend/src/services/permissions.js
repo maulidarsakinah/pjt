@@ -141,8 +141,8 @@ async function createPermission(body, req) {
   return result.permission;
 }
 
-async function updatePermission(id, body, req) {
-  const payload = validatePermissionPayload(body, { partial: true });
+async function updatePermission(id, body, req, { partial = true } = {}) {
+  const payload = validatePermissionPayload(body, { partial });
   const result = await withTransaction(async (connection) => {
     const setClauses = Object.keys(payload).map((field) => `"${field}" = :${field}`);
 
@@ -206,4 +206,5 @@ module.exports = {
   findPermission,
   listPermissions,
   updatePermission,
+  validatePermissionPayload,
 };

@@ -50,18 +50,20 @@ router.post("/", requirePermission("create roles"), async (req, res, next) => {
   }
 });
 
-async function handleUpdateRole(req, res, next) {
-  try {
-    const id = parsePositiveInteger(req.params.id);
+function createUpdateRoleHandler({ partial }) {
+  return async (req, res, next) => {
+    try {
+      const id = parsePositiveInteger(req.params.id);
 
-    res.json({ data: await updateRole(id, req.body, req) });
-  } catch (error) {
-    next(error);
-  }
+      res.json({ data: await updateRole(id, req.body, req, { partial }) });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
-router.put("/:id", requirePermission("update roles"), handleUpdateRole);
-router.patch("/:id", requirePermission("update roles"), handleUpdateRole);
+router.put("/:id", requirePermission("update roles"), createUpdateRoleHandler({ partial: false }));
+router.patch("/:id", requirePermission("update roles"), createUpdateRoleHandler({ partial: true }));
 
 router.delete("/:id", requirePermission("delete roles"), async (req, res, next) => {
   try {

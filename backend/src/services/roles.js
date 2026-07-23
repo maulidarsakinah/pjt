@@ -190,8 +190,8 @@ async function createRole(body, req) {
   return result.role;
 }
 
-async function updateRole(id, body, req) {
-  const payload = validateRolePayload(body, { partial: true });
+async function updateRole(id, body, req, { partial = true } = {}) {
+  const payload = validateRolePayload(body, { partial });
   const result = await withTransaction(async (connection) => {
     const setClauses = Object.keys(payload).map((field) => `"${field}" = :${field}`);
 
@@ -306,4 +306,5 @@ module.exports = {
   listRoles,
   replaceRolePermissions,
   updateRole,
+  validateRolePayload,
 };
