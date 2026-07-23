@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import KPICard from '../components/KPICard';
 import './MasterAccount.css';
 
@@ -77,7 +77,57 @@ function getInitials(name) {
     .join('');
 }
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = (event) => setMatches(event.matches);
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [query]);
+
+  return matches;
+}
+
+const MasterMobileRow = ({ user, openDetail, openForm, openDelete }) => (
+  <li>
+    <div className="master-mobile-log">
+      <span className="master-mobile-log-main">
+        <span className="master-mobile-log-topline">
+          <strong>{user.name}</strong>
+          <span className={`master-mobile-status ${user.status === 'Aktif' ? 'is-active' : 'is-inactive'}`}>
+            {user.status}
+          </span>
+        </span>
+        <span className="master-mobile-log-meta">
+          <span>{user.email}</span>
+          <span className="master-role-badge">{user.role}</span>
+        </span>
+        <div className="master-mobile-actions">
+          <div className="master-mobile-actions-left">
+            <button className="master-icon-button" title="Detail" onClick={() => openDetail(user)}>
+              <i className="fa-regular fa-eye"></i>
+            </button>
+            <button className="master-icon-button" title="Edit" onClick={() => openForm('edit', user)}>
+              <i className="fa-solid fa-pen"></i>
+            </button>
+            <button className="master-icon-button danger" title="Hapus" onClick={() => openDelete(user)}>
+              <i className="fa-regular fa-trash-can"></i>
+            </button>
+          </div>
+          <span className="master-mobile-last-login">
+            {user.lastLogin}
+          </span>
+        </div>
+      </span>
+    </div>
+  </li>
+);
+
 const MasterAccount = () => {
+  const isMobile = useMediaQuery('(max-width: 760px)');
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('Semua Peran');
   const [statusFilter, setStatusFilter] = useState('Semua Status');
@@ -226,50 +276,64 @@ const MasterAccount = () => {
         </div>
 
         <div className="table-container master-table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>ID Pengguna</th>
-                <th>Nama</th>
-                <th>Email</th>
-                <th>Peran</th>
-                <th>Status</th>
-                <th>Terakhir Login</th>
-                <th style={{ textAlign: 'center' }}>Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
+          {isMobile ? (
+            <ul className="master-mobile-list">
               {filteredUsers.map((user) => (
-                <tr key={user.id}>
-                  <td><b>{user.id}</b></td>
-                  <td>
-                    <span className="master-user-name">{user.name}</span>
-                  </td>
-                  <td>{user.email}</td>
-                  <td><span className="master-role-badge">{user.role}</span></td>
-                  <td>
-                    <span className={`master-status ${user.status === 'Aktif' ? 'is-active' : 'is-inactive'}`}>
-                      <span></span>{user.status}
-                    </span>
-                  </td>
-                  <td>{user.lastLogin}</td>
-                  <td>
-                    <div className="master-table-actions">
-                      <button className="master-icon-button" title="Detail" onClick={() => openDetail(user)}>
-                        <i className="fa-regular fa-eye"></i>
-                      </button>
-                      <button className="master-icon-button" title="Edit" onClick={() => openForm('edit', user)}>
-                        <i className="fa-solid fa-pen"></i>
-                      </button>
-                      <button className="master-icon-button danger" title="Hapus" onClick={() => openDelete(user)}>
-                        <i className="fa-regular fa-trash-can"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <MasterMobileRow 
+                  key={user.id} 
+                  user={user} 
+                  openDetail={openDetail} 
+                  openForm={openForm} 
+                  openDelete={openDelete} 
+                />
               ))}
-            </tbody>
-          </table>
+            </ul>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>ID Pengguna</th>
+                  <th>Nama</th>
+                  <th>Email</th>
+                  <th>Peran</th>
+                  <th>Status</th>
+                  <th>Terakhir Login</th>
+                  <th style={{ textAlign: 'center' }}>Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user.id}>
+                    <td><b>{user.id}</b></td>
+                    <td>
+                      <span className="master-user-name">{user.name}</span>
+                    </td>
+                    <td>{user.email}</td>
+                    <td><span className="master-role-badge">{user.role}</span></td>
+                    <td>
+                      <span className={`master-status ${user.status === 'Aktif' ? 'is-active' : 'is-inactive'}`}>
+                        <span></span>{user.status}
+                      </span>
+                    </td>
+                    <td>{user.lastLogin}</td>
+                    <td>
+                      <div className="master-table-actions">
+                        <button className="master-icon-button" title="Detail" onClick={() => openDetail(user)}>
+                          <i className="fa-regular fa-eye"></i>
+                        </button>
+                        <button className="master-icon-button" title="Edit" onClick={() => openForm('edit', user)}>
+                          <i className="fa-solid fa-pen"></i>
+                        </button>
+                        <button className="master-icon-button danger" title="Hapus" onClick={() => openDelete(user)}>
+                          <i className="fa-regular fa-trash-can"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         <div className="pagination">

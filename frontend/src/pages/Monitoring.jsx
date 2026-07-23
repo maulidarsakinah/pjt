@@ -1,9 +1,51 @@
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import './Monitoring.css';
 
+const monitoringHistoryData = [
+  { id: 1, station: 'FLOW-Ploso_Lamongan', debit: 142.50, totalizer: 452109, vcc: 12.42, temp: 29.5, status: 'Active', time: '2026-07-06 10:45' },
+  { id: 2, station: 'FLOW-Babat_Hilir', debit: 95.40, totalizer: 210985, vcc: 12.38, temp: 30.1, status: 'Active', time: '2026-07-06 10:42' },
+  { id: 3, station: 'FLOW-Ploso_Lamongan', debit: 140.20, totalizer: 451900, vcc: 12.40, temp: 29.4, status: 'Active', time: '2026-07-06 10:40' },
+  { id: 4, station: 'FLOW-Babat_Hilir', debit: 92.10, totalizer: 210500, vcc: 12.35, temp: 29.9, status: 'Active', time: '2026-07-06 10:35' }
+];
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = (event) => setMatches(event.matches);
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [query]);
+
+  return matches;
+}
+
+const MonitoringMobileRow = ({ row }) => (
+  <li>
+    <div className="monitoring-mobile-log">
+      <span className="monitoring-mobile-log-main">
+        <span className="monitoring-mobile-log-topline">
+          <time>{row.time}</time>
+          <span className="monitoring-mobile-status success">{row.status}</span>
+        </span>
+        <strong>{row.station}</strong>
+        <span className="monitoring-mobile-log-meta">
+          <span>Debit: {row.debit.toFixed(2)} m³/s</span>
+          <span>VCC: {row.vcc.toFixed(2)} V</span>
+          <span className="monitoring-mobile-latency">Suhu: {row.temp} °C</span>
+        </span>
+      </span>
+    </div>
+  </li>
+);
+
 const Monitoring = () => {
+  const isMobile = useMediaQuery('(max-width: 760px)');
   const navigate = useNavigate();
   const location = useLocation();
   const detailBasePath = location.pathname.startsWith('/admin') ? '/admin/detail' : '/dashboard/detail';
@@ -107,25 +149,40 @@ const Monitoring = () => {
           </button>
         </div>
         <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>LOKASI STASIUN</th>
-                <th>DEBIT (m³/s)</th>
-                <th>TOTALIZER (L)</th>
-                <th>VCC (V)</th>
-                <th>SUHU (°C)</th>
-                <th>STATUS</th>
-                <th>LAST UPDATE</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr><td><b>FLOW-Ploso_Lamongan</b></td><td>142.50</td><td>452109</td><td>12.42</td><td>29.5</td><td><span className="badge-dot"></span>Active</td><td>2026-07-06 10:45</td></tr>
-              <tr><td><b>FLOW-Babat_Hilir</b></td><td>95.40</td><td>210985</td><td>12.38</td><td>30.1</td><td><span className="badge-dot"></span>Active</td><td>2026-07-06 10:42</td></tr>
-              <tr><td><b>FLOW-Ploso_Lamongan</b></td><td>140.20</td><td>451900</td><td>12.40</td><td>29.4</td><td><span className="badge-dot"></span>Active</td><td>2026-07-06 10:40</td></tr>
-              <tr><td><b>FLOW-Babat_Hilir</b></td><td>92.10</td><td>210500</td><td>12.35</td><td>29.9</td><td><span className="badge-dot"></span>Active</td><td>2026-07-06 10:35</td></tr>
-            </tbody>
-          </table>
+          {isMobile ? (
+            <ul className="monitoring-mobile-list">
+              {monitoringHistoryData.map((row) => (
+                <MonitoringMobileRow key={row.id} row={row} />
+              ))}
+            </ul>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>LOKASI STASIUN</th>
+                  <th>DEBIT (m³/s)</th>
+                  <th>TOTALIZER (L)</th>
+                  <th>VCC (V)</th>
+                  <th>SUHU (°C)</th>
+                  <th>STATUS</th>
+                  <th>LAST UPDATE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monitoringHistoryData.map((row) => (
+                  <tr key={row.id}>
+                    <td><b>{row.station}</b></td>
+                    <td>{row.debit.toFixed(2)}</td>
+                    <td>{row.totalizer}</td>
+                    <td>{row.vcc.toFixed(2)}</td>
+                    <td>{row.temp.toFixed(1)}</td>
+                    <td><span className="badge-dot"></span>{row.status}</td>
+                    <td>{row.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
         <div className="pagination">
           <div className="page-info">Menampilkan 1-4 dari 4 entri</div>

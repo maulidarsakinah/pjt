@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import FlowAreaChart from '../components/FlowAreaChart';
 import './Detail.css';
@@ -18,7 +18,41 @@ const chartData = [
 
 const initialTableData = [...chartData].reverse();
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = (event) => setMatches(event.matches);
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [query]);
+
+  return matches;
+}
+
+const DetailMobileRow = ({ row, locationName }) => (
+  <li>
+    <div className="detail-mobile-log">
+      <span className="detail-mobile-log-main">
+        <span className="detail-mobile-log-topline">
+          <time>2026-07-06 {row.time}</time>
+          <span className="detail-mobile-status success">Active</span>
+        </span>
+        <strong>{locationName}</strong>
+        <span className="detail-mobile-log-meta">
+          <span>Debit: {row.debit.toFixed(2)} m³/s</span>
+          <span>VCC: {row.vcc.toFixed(2)} V</span>
+          <span className="detail-mobile-latency">Suhu: {row.suhu.toFixed(1)} °C</span>
+        </span>
+      </span>
+    </div>
+  </li>
+);
+
 const Detail = () => {
+  const isMobile = useMediaQuery('(max-width: 760px)');
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -105,38 +139,50 @@ const Detail = () => {
           </div>
         </div>
         <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th onClick={() => handleSort('location')} style={{ cursor: 'pointer' }}>LOKASI STASIUN {getSortIcon('location')}</th>
-                <th onClick={() => handleSort('debit')} style={{ cursor: 'pointer' }}>DEBIT (m³/s) {getSortIcon('debit')}</th>
-                <th onClick={() => handleSort('totalizer')} style={{ cursor: 'pointer' }}>TOTALIZER (L) {getSortIcon('totalizer')}</th>
-                <th onClick={() => handleSort('vcc')} style={{ cursor: 'pointer' }}>VCC (V) {getSortIcon('vcc')}</th>
-                <th onClick={() => handleSort('suhu')} style={{ cursor: 'pointer' }}>SUHU (°C) {getSortIcon('suhu')}</th>
-                <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>STATUS {getSortIcon('status')}</th>
-                <th onClick={() => handleSort('time')} style={{ cursor: 'pointer' }}>WAKTU {getSortIcon('time')}</th>
-              </tr>
-            </thead>
-            <tbody>
+          {isMobile ? (
+            <ul className="detail-mobile-list">
               {filteredAndSortedData.length > 0 ? (
                 filteredAndSortedData.map((row) => (
-                  <tr key={row.time}>
-                    <td><b>{locationName}</b></td>
-                    <td>{row.debit.toFixed(2)}</td>
-                    <td>{row.totalizer}</td>
-                    <td>{row.vcc.toFixed(2)}</td>
-                    <td>{row.suhu.toFixed(1)}</td>
-                    <td><span className="badge-dot"></span>Active</td>
-                    <td>2026-07-06 {row.time}</td>
-                  </tr>
+                  <DetailMobileRow key={row.time} row={row} locationName={locationName} />
                 ))
               ) : (
-                <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '30px' }}>Tidak ada data yang cocok.</td>
-                </tr>
+                <li style={{ textAlign: 'center', padding: '30px' }}>Tidak ada data yang cocok.</li>
               )}
-            </tbody>
-          </table>
+            </ul>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th onClick={() => handleSort('location')} style={{ cursor: 'pointer' }}>LOKASI STASIUN {getSortIcon('location')}</th>
+                  <th onClick={() => handleSort('debit')} style={{ cursor: 'pointer' }}>DEBIT (m³/s) {getSortIcon('debit')}</th>
+                  <th onClick={() => handleSort('totalizer')} style={{ cursor: 'pointer' }}>TOTALIZER (L) {getSortIcon('totalizer')}</th>
+                  <th onClick={() => handleSort('vcc')} style={{ cursor: 'pointer' }}>VCC (V) {getSortIcon('vcc')}</th>
+                  <th onClick={() => handleSort('suhu')} style={{ cursor: 'pointer' }}>SUHU (°C) {getSortIcon('suhu')}</th>
+                  <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>STATUS {getSortIcon('status')}</th>
+                  <th onClick={() => handleSort('time')} style={{ cursor: 'pointer' }}>WAKTU {getSortIcon('time')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAndSortedData.length > 0 ? (
+                  filteredAndSortedData.map((row) => (
+                    <tr key={row.time}>
+                      <td><b>{locationName}</b></td>
+                      <td>{row.debit.toFixed(2)}</td>
+                      <td>{row.totalizer}</td>
+                      <td>{row.vcc.toFixed(2)}</td>
+                      <td>{row.suhu.toFixed(1)}</td>
+                      <td><span className="badge-dot"></span>Active</td>
+                      <td>2026-07-06 {row.time}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px' }}>Tidak ada data yang cocok.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          )}
         </div>
         <div className="pagination">
           <div className="page-info">Menampilkan 1-{filteredAndSortedData.length} dari {filteredAndSortedData.length} entri</div>

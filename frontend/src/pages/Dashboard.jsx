@@ -63,9 +63,43 @@ function isFlowmeterLamongan(station) {
   return value.includes('flowmeter lamongan') || value.includes('flow_lamongan') || value.includes('tb_flow_lamongan');
 }
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = (event) => setMatches(event.matches);
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [query]);
+
+  return matches;
+}
+
+const DashboardMobileRow = ({ row }) => (
+  <li>
+    <div className="dashboard-mobile-log">
+      <span className="dashboard-mobile-log-main">
+        <span className="dashboard-mobile-log-topline">
+          <time>{row.time}</time>
+          <span className="dashboard-mobile-status success">Active</span>
+        </span>
+        <strong>{row.station}</strong>
+        <span className="dashboard-mobile-log-meta">
+          <span>Debit: {row.flow} m³/s</span>
+          <span>VCC: {row.vcc} V</span>
+          <span className="dashboard-mobile-latency">Suhu: {row.temp} °C</span>
+        </span>
+      </span>
+    </div>
+  </li>
+);
+
 const Dashboard = () => {
   const { user } = useAuth();
   const isDemoUser = Boolean(user?.is_demo);
+  const isMobile = useMediaQuery('(max-width: 760px)');
   const [stations, setStations] = useState([]);
   const [liveReadings, setLiveReadings] = useState([]);
   const [error, setError] = useState('');
@@ -309,34 +343,42 @@ const Dashboard = () => {
             <div className="dashboard-widget-skeleton dashboard-widget-skeleton--large-chart" />
           )}
         </div>
-        <div className="table-container dashboard-table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>LOKASI STASIUN</th>
-                <th>DEBIT (m3/s)</th>
-                <th>TOTALIZER (L)</th>
-                <th>VCC (V)</th>
-                <th>SUHU (C)</th>
-                <th>STATUS</th>
-                <th>TERAKHIR DIPERBARUI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {latestReadings.map((row) => (
-                <tr key={`${row.station}-${row.time}`}>
-                  <td><b>{row.station}</b></td>
-                  <td>{row.flow}</td>
-                  <td>{row.totalizer}</td>
-                  <td>{row.vcc}</td>
-                  <td>{row.temp}</td>
-                  <td><span className="badge-dot"></span>Active</td>
-                  <td>{row.time}</td>
+        {isMobile ? (
+          <ul className="dashboard-mobile-list">
+            {latestReadings.map((row) => (
+              <DashboardMobileRow key={`${row.station}-${row.time}`} row={row} />
+            ))}
+          </ul>
+        ) : (
+          <div className="table-container dashboard-table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>LOKASI STASIUN</th>
+                  <th>DEBIT (m3/s)</th>
+                  <th>TOTALIZER (L)</th>
+                  <th>VCC (V)</th>
+                  <th>SUHU (C)</th>
+                  <th>STATUS</th>
+                  <th>TERAKHIR DIPERBARUI</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {latestReadings.map((row) => (
+                  <tr key={`${row.station}-${row.time}`}>
+                    <td><b>{row.station}</b></td>
+                    <td>{row.flow}</td>
+                    <td>{row.totalizer}</td>
+                    <td>{row.vcc}</td>
+                    <td>{row.temp}</td>
+                    <td><span className="badge-dot"></span>Active</td>
+                    <td>{row.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <div className="pagination">
           <div className="page-info">Menampilkan {latestReadings.length} entri</div>
           <div className="page-controls">

@@ -444,6 +444,22 @@
 
   .map-badge {
     top: 78px;
+
+  .dash-middle-grid,
+  .charts-container {
+    gap: 14px;
+  }
+
+  .dashboard-panel-header {
+    padding: 18px 18px 12px;
+  }
+
+  .map-panel {
+    height: 260px;
+  }
+
+  .map-badge {
+    top: 78px;
     left: 16px;
     max-width: calc(100% - 32px);
     font-size: 12px;
@@ -517,5 +533,94 @@
 
   .dashboard-table-container table {
     min-width: 560px;
+  }
+}
+
+@media (max-width: 760px) {
+  .dashboard-mobile-list {
+    display: block;
+    margin-top: 0;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    background: #fff;
+    list-style: none;
+    padding: 0;
+  }
+
+  .dashboard-mobile-list li:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .dashboard-mobile-log {
+    width: 100%;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: #fff;
+    color: var(--text-primary);
+    text-align: left;
+  }
+
+  .dashboard-mobile-log-main {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .dashboard-mobile-log-topline,
+  .dashboard-mobile-log-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dashboard-mobile-log-topline {
+    justify-content: space-between;
+  }
+
+  .dashboard-mobile-log-topline time {
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dashboard-mobile-log-main > strong {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 13px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-mobile-log-meta {
+    flex-wrap: wrap;
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+  }
+
+  .dashboard-mobile-status.success {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: #dcfce7;
+    color: #047857;
+    border: 1px solid #bbf7d0;
+  }
+
+  .dashboard-mobile-latency {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
   }
 }
