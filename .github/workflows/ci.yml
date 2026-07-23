@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    name: Node checks
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      LOG_TO_FILE: "false"
+      ENABLE_DOCS: "true"
+      JWT_SECRET: ci-only-jwt-secret-change-in-production
+      DB_USER: ci_user_placeholder
+      DB_PASSWORD: ci_password_placeholder
+      DB_CONNECT_STRING: ci-host.example.invalid:1521/ci-service
+      ORACLE_USE_THICK_MODE: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Syntax checks
+        working-directory: backend
+        run: npm run check
+
+      - name: Dependency audit
+        working-directory: backend
+        run: npm run audit
+
+      - name: Smoke tests
+        working-directory: backend
+        run: npm test
+
+  docker:
+    name: Docker build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: false
+          tags: pkl-api:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

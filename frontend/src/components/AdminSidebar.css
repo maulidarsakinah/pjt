@@ -1,0 +1,21 @@
+.admin-sidebar {
+  width: 288px;
+}
+
+.admin-logo-container {
+  background:
+    radial-gradient(circle at top left, rgba(58, 75, 207, 0.12), transparent 46%),
+    rgba(255, 255, 255, 0.82);
+}
+
+.admin-nav-menu .nav-item {
+  margin-inline: 14px;
+}
+
+.admin-nav-menu .nav-item.active {
+  background-color: #B1CFF6;
+}
+
+.admin-nav-menu .nav-item.text-danger {
+  color: var(--danger-color);
+}

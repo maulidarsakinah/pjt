@@ -1,0 +1,42 @@
+services:
+  api:
+    build:
+      context: .
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_TO_FILE: ${LOG_TO_FILE:-true}
+      LOG_FILE_PATH: ${LOG_FILE_PATH:-logs/app.log}
+      LOG_RETENTION_COUNT: ${LOG_RETENTION_COUNT:-30}
+      SERVICE_NAME: ${SERVICE_NAME:-pkl-api}
+      DB_USER: ${DB_USER:?DB_USER is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_CONNECT_STRING: ${DB_CONNECT_STRING:?DB_CONNECT_STRING is required}
+      DB_POOL_MIN: ${DB_POOL_MIN:-1}
+      DB_POOL_MAX: ${DB_POOL_MAX:-10}
+      DB_POOL_INCREMENT: ${DB_POOL_INCREMENT:-1}
+      DB_POOL_TIMEOUT: ${DB_POOL_TIMEOUT:-60}
+      DB_STATEMENT_CACHE_SIZE: ${DB_STATEMENT_CACHE_SIZE:-30}
+      ORACLE_USE_THICK_MODE: "true"
+      ORACLE_CLIENT_LIB_DIR: /opt/oracle/instantclient
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      JWT_ISSUER: ${JWT_ISSUER:-pkl-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-pkl-api-users}
+      ENABLE_DOCS: ${ENABLE_DOCS:-false}
+      BODY_LIMIT: ${BODY_LIMIT:-100kb}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-20}
+      AUTH_CACHE_TTL_SECONDS: ${AUTH_CACHE_TTL_SECONDS:-30}
+      AUTH_CACHE_MAX_ITEMS: ${AUTH_CACHE_MAX_ITEMS:-5000}
+      STATION_CACHE_TTL_SECONDS: ${STATION_CACHE_TTL_SECONDS:-300}
+      STATION_CACHE_MAX_ITEMS: ${STATION_CACHE_MAX_ITEMS:-1000}
+    restart: unless-stopped

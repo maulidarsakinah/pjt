@@ -1,0 +1,38 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="dropGrad" x1="72" y1="48" x2="178" y2="204" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8ED4FF" />
+      <stop offset="0.52" stop-color="#4F7DFF" />
+      <stop offset="1" stop-color="#233A9E" />
+    </linearGradient>
+    <linearGradient id="waveGrad" x1="58" y1="130" x2="198" y2="154" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity="0.98" />
+      <stop offset="1" stop-color="#D6ECFF" stop-opacity="0.88" />
+    </linearGradient>
+    <filter id="shadow" x="32" y="26" width="192" height="210" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" />
+      <feOffset dy="10" />
+      <feGaussianBlur stdDeviation="12" />
+      <feColorMatrix type="matrix" values="0 0 0 0 0.0117647 0 0 0 0 0.0588235 0 0 0 0 0.188235 0 0 0 0.2 0" />
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow" />
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape" />
+    </filter>
+    <filter id="glow" x="54" y="42" width="148" height="172" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix" />
+      <feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
+      <feGaussianBlur stdDeviation="1.8" result="effect1_foregroundBlur" />
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <path d="M128 40C107 64 92 82 82 98C69 119 62 136 62 154C62 191 91 220 128 220C165 220 194 191 194 154C194 136 187 119 174 98C164 82 149 64 128 40Z" fill="url(#dropGrad)" />
+    <path d="M92 150C106 139 120 133 136 133C151 133 164 137 176 144C182 148 187 151 192 151C194 151 196 150 198 148C198 175 174 198 144 198H112C82 198 58 175 58 148C62 150 66 152 70 152C75 152 81 149 87 145L92 150Z" fill="url(#waveGrad)" opacity="0.92" />
+    <path d="M60 150C73 147 82 143 90 138C100 132 111 126 128 126C145 126 158 131 170 136C180 141 188 146 196 148" stroke="url(#waveGrad)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" />
+    <circle cx="88" cy="141" r="6" fill="#FFFFFF" opacity="0.96" />
+    <circle cx="128" cy="126" r="7" fill="#FFFFFF" opacity="0.96" />
+    <circle cx="171" cy="137" r="5.5" fill="#FFFFFF" opacity="0.96" />
+    <path d="M166 78C176 90 183 103 187 116" stroke="#AEE1FF" stroke-width="8" stroke-linecap="round" opacity="0.55" />
+    <circle cx="189" cy="121" r="5" fill="#AEE1FF" />
+    <circle cx="196" cy="133" r="3.5" fill="#8ED4FF" />
+  </g>
+</svg>
