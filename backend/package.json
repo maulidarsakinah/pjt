@@ -10,8 +10,8 @@
     "dev": "nodemon index.js",
     "start": "node index.js",
     "audit": "npm audit --audit-level=high",
-    "check": "node --check index.js && node --check src/config.js && node --check src/cache.js && node --check src/db.js && node --check src/app.js && node --check src/openapi.js && node --check src/services/access.js && node --check src/services/audit.js && node --check src/services/auth.js && node --check src/services/companies.js && node --check src/services/database.js && node --check src/services/logs.js && node --check src/services/me.js && node --check src/services/permissions.js && node --check src/services/roles.js && node --check src/services/stations.js && node --check src/services/userAccess.js && node --check src/utils/httpErrors.js && node --check src/utils/validation.js && node --check src/utils/pagination.js && node --check src/routes/auth.js && node --check src/routes/companies.js && node --check src/routes/logs.js && node --check src/routes/me.js && node --check src/routes/permissions.js && node --check src/routes/roles.js && node --check src/routes/stations.js && node --check src/routes/users.js && node --check src/middleware/authenticate.js && node --check src/middleware/requirePermission.js && node --check src/middleware/security.js && node --check src/middleware/errorHandler.js",
-    "test": "node scripts/update-semantics-test.js && node scripts/log-service-test.js && node scripts/smoke-test.js"
+    "check": "node --check index.js && node --check src/config.js && node --check src/authCookie.js && node --check src/cache.js && node --check src/db.js && node --check src/app.js && node --check src/openapi.js && node --check src/services/access.js && node --check src/services/audit.js && node --check src/services/auth.js && node --check src/services/companies.js && node --check src/services/database.js && node --check src/services/logs.js && node --check src/services/me.js && node --check src/services/permissions.js && node --check src/services/roles.js && node --check src/services/stations.js && node --check src/services/userAccess.js && node --check src/utils/httpErrors.js && node --check src/utils/validation.js && node --check src/utils/pagination.js && node --check src/routes/auth.js && node --check src/routes/companies.js && node --check src/routes/logs.js && node --check src/routes/me.js && node --check src/routes/permissions.js && node --check src/routes/roles.js && node --check src/routes/stations.js && node --check src/routes/users.js && node --check src/middleware/authenticate.js && node --check src/middleware/requirePermission.js && node --check src/middleware/security.js && node --check src/middleware/errorHandler.js",
+    "test": "node scripts/auth-cookie-test.js && node scripts/update-semantics-test.js && node scripts/log-service-test.js && node scripts/smoke-test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -30,6 +30,7 @@
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.0",
     "nodemon": "^3.1.14",
+    "prettier": "3.9.6",
     "typescript": "^6.0.3"
   }
 }

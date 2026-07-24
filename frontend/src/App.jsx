@@ -28,7 +28,11 @@ function isAdminUser(user) {
 }
 
 const ProtectedRoute = ({ layout, requireAdmin = false }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isInitializing, user } = useAuth();
+
+  if (isInitializing) {
+    return <PageFallback />;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -42,7 +46,11 @@ const ProtectedRoute = ({ layout, requireAdmin = false }) => {
 };
 
 const RootRedirect = () => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isInitializing, user } = useAuth();
+
+  if (isInitializing) {
+    return <PageFallback />;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

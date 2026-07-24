@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuth from '../contexts/useAuth';
-import { getMe, login, setSession } from '../services/api';
+import { getMe, login } from '../services/api';
 import './Login.css';
 
 const STATIC_EMAIL = 'pjt@gmail.com';
@@ -10,7 +10,6 @@ const STATIC_ADMIN_EMAIL = 'admin@gmail.com';
 const STATIC_ADMIN_PASSWORD = 'admin123456';
 
 const STATIC_SESSION = {
-  token: 'static-pjt-session-token',
   user: {
     id: 1,
     name: 'Operator PJT',
@@ -22,7 +21,6 @@ const STATIC_SESSION = {
 };
 
 const STATIC_ADMIN_SESSION = {
-  token: 'static-admin-session-token',
   user: {
     id: 99,
     name: 'Admin HydroTrack',
@@ -72,18 +70,11 @@ const Login = () => {
       }
 
       const response = await login(email, password);
-      const token = response.token || response.access_token;
-
-      if (!token) {
-        throw new Error('Token login tidak ditemukan.');
-      }
-
-      setSession({ token, user: response.user || null });
 
       const profileResponse = await getMe();
       const user = profileResponse.data || response.user;
 
-      saveAuthSession({ token, user });
+      saveAuthSession({ user });
       navigate(isAdminUser(user) ? '/admin' : '/dashboard', { replace: true });
     } catch (loginError) {
       setError(loginError.message || 'Email atau password salah.');

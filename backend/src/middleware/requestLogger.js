@@ -7,7 +7,8 @@ function shouldSkipRequestLog(req, statusCode) {
   const requestUrl = req.url || req.originalUrl || "";
 
   return (
-    (requestUrl.startsWith("/api/docs/") && /\.(css|js|png|ico|map)$/.test(requestUrl)) ||
+    (requestUrl.startsWith("/api/docs/") &&
+      /\.(css|js|png|ico|map)$/.test(requestUrl)) ||
     (req.method === "GET" && requestPath === "/api/logs" && statusCode < 400)
   );
 }
@@ -67,7 +68,7 @@ module.exports = (req, res, next) => {
         latency_ms: latencyMs,
         user_id: req.user?.id,
       },
-      "request_completed"
+      "request_completed",
     );
   });
 

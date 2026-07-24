@@ -57,13 +57,17 @@ async function main() {
     await fs.writeFile(
       path.join(directory, "app.20-07-26.1.log"),
       `${entries.map((entry) => JSON.stringify(entry)).join("\n")}\nnot-json\n`,
-      "utf8"
+      "utf8",
     );
 
     const response = await listLogs({
       directory,
       pagination: { limit: 1, offset: 0 },
-      filters: parseLogFilters({ status: "failed", method: "post", date: "2026-07-20" }),
+      filters: parseLogFilters({
+        status: "failed",
+        method: "post",
+        date: "2026-07-20",
+      }),
     });
 
     assert.equal(response.count, 1);
@@ -91,7 +95,10 @@ async function main() {
     assert.equal(secondPage.total, 2);
     assert.equal(secondPage.data[0].trace_id, "tx-success");
     assert.equal(secondPage.has_more, false);
-    assert.equal(secondPage.data.some((entry) => entry.trace_id === "tx-audit-read"), false);
+    assert.equal(
+      secondPage.data.some((entry) => entry.trace_id === "tx-audit-read"),
+      false,
+    );
 
     await fs.appendFile(
       path.join(directory, "app.20-07-26.1.log"),
@@ -104,7 +111,7 @@ async function main() {
         status: "success",
         status_code: 200,
       })}\n`,
-      "utf8"
+      "utf8",
     );
 
     const cachedSecondPage = await listLogs({
@@ -148,11 +155,29 @@ async function main() {
 
     assert.equal(searchResponse.total, 1);
     assert.equal(searchResponse.data[0].trace_id, "tx-new-entry");
-    assert.throws(() => parseLogFilters({ search: "x".repeat(201) }), /200 characters or fewer/);
+    assert.throws(
+      () => parseLogFilters({ search: "x".repeat(201) }),
+      /200 characters or fewer/,
+    );
     assert.equal(normalizeLogEntry(null), null);
-    assert.throws(() => parseLogFilters({ date: "2026-02-30" }), /valid calendar date/);
-    assert.equal(requestLogger.shouldSkipRequestLog({ method: "GET", originalUrl: "/api/logs" }, 200), true);
-    assert.equal(requestLogger.shouldSkipRequestLog({ method: "GET", originalUrl: "/api/logs" }, 401), false);
+    assert.throws(
+      () => parseLogFilters({ date: "2026-02-30" }),
+      /valid calendar date/,
+    );
+    assert.equal(
+      requestLogger.shouldSkipRequestLog(
+        { method: "GET", originalUrl: "/api/logs" },
+        200,
+      ),
+      true,
+    );
+    assert.equal(
+      requestLogger.shouldSkipRequestLog(
+        { method: "GET", originalUrl: "/api/logs" },
+        401,
+      ),
+      false,
+    );
 
     console.log("Log service tests passed");
   } finally {

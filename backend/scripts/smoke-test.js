@@ -27,7 +27,9 @@ async function main() {
     });
 
     if (health.response.status !== 200 || health.body.status !== "ok") {
-      throw new Error(`Expected /api/health to return 200 ok, got ${health.response.status}`);
+      throw new Error(
+        `Expected /api/health to return 200 ok, got ${health.response.status}`,
+      );
     }
 
     const invalidRegistration = await requestJson(baseUrl, "/api/register", {
@@ -41,7 +43,7 @@ async function main() {
 
     if (invalidRegistration.response.status !== 400) {
       throw new Error(
-        `Expected malformed /api/register to return 400, got ${invalidRegistration.response.status}`
+        `Expected malformed /api/register to return 400, got ${invalidRegistration.response.status}`,
       );
     }
 
@@ -55,7 +57,50 @@ async function main() {
     });
 
     if (invalidLogin.response.status !== 400) {
-      throw new Error(`Expected malformed /api/login to return 400, got ${invalidLogin.response.status}`);
+      throw new Error(
+        `Expected malformed /api/login to return 400, got ${invalidLogin.response.status}`,
+      );
+    }
+
+    const rejectedCrossSiteLogout = await requestJson(baseUrl, "/api/logout", {
+      method: "POST",
+      headers: {
+        origin: "https://attacker.example",
+        "x-trace-id": "tx-ci-logout-csrf",
+      },
+    });
+
+    if (
+      rejectedCrossSiteLogout.response.status !== 403 ||
+      rejectedCrossSiteLogout.body.code !== "CSRF_ORIGIN_DENIED"
+    ) {
+      throw new Error(
+        `Expected cross-site /api/logout to return 403 CSRF_ORIGIN_DENIED, got ${rejectedCrossSiteLogout.response.status}`,
+      );
+    }
+
+    const logoutResponse = await fetch(`${baseUrl}/api/logout`, {
+      method: "POST",
+      headers: {
+        "x-trace-id": "tx-ci-logout",
+      },
+    });
+
+    if (logoutResponse.status !== 204) {
+      throw new Error(
+        `Expected /api/logout to return 204, got ${logoutResponse.status}`,
+      );
+    }
+
+    const logoutCookie = logoutResponse.headers.get("set-cookie") || "";
+
+    if (
+      !logoutCookie.includes("pkl_session=") ||
+      !logoutCookie.includes("HttpOnly")
+    ) {
+      throw new Error(
+        "Expected /api/logout to clear the HttpOnly authentication cookie",
+      );
     }
 
     const companies = await requestJson(baseUrl, "/api/companies", {
@@ -65,15 +110,24 @@ async function main() {
     });
 
     if (companies.response.status !== 401) {
-      throw new Error(`Expected /api/companies without token to return 401, got ${companies.response.status}`);
+      throw new Error(
+        `Expected /api/companies without token to return 401, got ${companies.response.status}`,
+      );
     }
 
     if (!companies.body.trace_id) {
-      throw new Error("Expected /api/companies error response to include trace_id");
+      throw new Error(
+        "Expected /api/companies error response to include trace_id",
+      );
     }
 
-    if (companies.body.error !== "Missing or invalid token" || companies.body.code !== "UNAUTHORIZED") {
-      throw new Error("Expected /api/companies 401 body to include Missing or invalid token and UNAUTHORIZED");
+    if (
+      companies.body.error !== "Missing or invalid session" ||
+      companies.body.code !== "UNAUTHORIZED"
+    ) {
+      throw new Error(
+        "Expected /api/companies 401 body to include Missing or invalid session and UNAUTHORIZED",
+      );
     }
 
     const meAccess = await requestJson(baseUrl, "/api/me/access", {
@@ -83,15 +137,24 @@ async function main() {
     });
 
     if (meAccess.response.status !== 401) {
-      throw new Error(`Expected /api/me/access without token to return 401, got ${meAccess.response.status}`);
+      throw new Error(
+        `Expected /api/me/access without token to return 401, got ${meAccess.response.status}`,
+      );
     }
 
     if (!meAccess.body.trace_id) {
-      throw new Error("Expected /api/me/access error response to include trace_id");
+      throw new Error(
+        "Expected /api/me/access error response to include trace_id",
+      );
     }
 
-    if (meAccess.body.error !== "Missing or invalid token" || meAccess.body.code !== "UNAUTHORIZED") {
-      throw new Error("Expected /api/me/access 401 body to include Missing or invalid token and UNAUTHORIZED");
+    if (
+      meAccess.body.error !== "Missing or invalid session" ||
+      meAccess.body.code !== "UNAUTHORIZED"
+    ) {
+      throw new Error(
+        "Expected /api/me/access 401 body to include Missing or invalid session and UNAUTHORIZED",
+      );
     }
 
     const roles = await requestJson(baseUrl, "/api/roles", {
@@ -101,7 +164,9 @@ async function main() {
     });
 
     if (roles.response.status !== 401) {
-      throw new Error(`Expected /api/roles without token to return 401, got ${roles.response.status}`);
+      throw new Error(
+        `Expected /api/roles without token to return 401, got ${roles.response.status}`,
+      );
     }
 
     const permissions = await requestJson(baseUrl, "/api/permissions", {
@@ -111,7 +176,9 @@ async function main() {
     });
 
     if (permissions.response.status !== 401) {
-      throw new Error(`Expected /api/permissions without token to return 401, got ${permissions.response.status}`);
+      throw new Error(
+        `Expected /api/permissions without token to return 401, got ${permissions.response.status}`,
+      );
     }
 
     const userAccess = await requestJson(baseUrl, "/api/users/1/access", {
@@ -121,7 +188,9 @@ async function main() {
     });
 
     if (userAccess.response.status !== 401) {
-      throw new Error(`Expected /api/users/1/access without token to return 401, got ${userAccess.response.status}`);
+      throw new Error(
+        `Expected /api/users/1/access without token to return 401, got ${userAccess.response.status}`,
+      );
     }
 
     const accesses = await requestJson(baseUrl, "/api/users/accesses", {
@@ -131,7 +200,9 @@ async function main() {
     });
 
     if (accesses.response.status !== 401) {
-      throw new Error(`Expected /api/users/accesses without token to return 401, got ${accesses.response.status}`);
+      throw new Error(
+        `Expected /api/users/accesses without token to return 401, got ${accesses.response.status}`,
+      );
     }
 
     const logs = await requestJson(baseUrl, "/api/logs", {
@@ -141,7 +212,9 @@ async function main() {
     });
 
     if (logs.response.status !== 401) {
-      throw new Error(`Expected /api/logs without token to return 401, got ${logs.response.status}`);
+      throw new Error(
+        `Expected /api/logs without token to return 401, got ${logs.response.status}`,
+      );
     }
 
     if (!logs.body.trace_id) {
@@ -155,25 +228,37 @@ async function main() {
     });
 
     if (stations.response.status !== 401) {
-      throw new Error(`Expected /api/stations/flow without token to return 401, got ${stations.response.status}`);
+      throw new Error(
+        `Expected /api/stations/flow without token to return 401, got ${stations.response.status}`,
+      );
     }
 
     if (!stations.body.trace_id) {
-      throw new Error("Expected /api/stations/flow error response to include trace_id");
+      throw new Error(
+        "Expected /api/stations/flow error response to include trace_id",
+      );
     }
 
-    const stationData = await requestJson(baseUrl, "/api/stations/flow/740/data", {
-      headers: {
-        "x-trace-id": "tx-ci-stations-flow-data",
+    const stationData = await requestJson(
+      baseUrl,
+      "/api/stations/flow/740/data",
+      {
+        headers: {
+          "x-trace-id": "tx-ci-stations-flow-data",
+        },
       },
-    });
+    );
 
     if (stationData.response.status !== 401) {
-      throw new Error(`Expected /api/stations/flow/740/data without token to return 401, got ${stationData.response.status}`);
+      throw new Error(
+        `Expected /api/stations/flow/740/data without token to return 401, got ${stationData.response.status}`,
+      );
     }
 
     if (!stationData.body.trace_id) {
-      throw new Error("Expected /api/stations/flow/740/data error response to include trace_id");
+      throw new Error(
+        "Expected /api/stations/flow/740/data error response to include trace_id",
+      );
     }
 
     const openapi = await requestJson(baseUrl, "/api/openapi.json", {
@@ -183,7 +268,9 @@ async function main() {
     });
 
     if (openapi.response.status !== 200 || openapi.body.openapi !== "3.0.3") {
-      throw new Error(`Expected /api/openapi.json to return OpenAPI 3.0.3, got ${openapi.response.status}`);
+      throw new Error(
+        `Expected /api/openapi.json to return OpenAPI 3.0.3, got ${openapi.response.status}`,
+      );
     }
 
     console.log("Smoke tests passed");

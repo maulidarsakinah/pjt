@@ -3,6 +3,7 @@ const compression = require("compression");
 const config = require("./config");
 const {
   corsAllowlist,
+  csrfProtection,
   generalRateLimit,
   securityHeaders,
 } = require("./middleware/security");
@@ -27,6 +28,7 @@ app.set("trust proxy", config.security.trustProxy);
 
 app.use(requestLogger);
 app.use(corsAllowlist);
+app.use(csrfProtection);
 app.use(securityHeaders);
 app.use(compression());
 app.use(generalRateLimit);
@@ -58,12 +60,16 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/companies", (req, res) => {
-  const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+  const query = req.url.includes("?")
+    ? req.url.slice(req.url.indexOf("?"))
+    : "";
   res.redirect(308, `/api/companies${query}`);
 });
 
 app.get("/stations/flow", (req, res) => {
-  const query = req.url.includes("?") ? req.url.slice(req.url.indexOf("?")) : "";
+  const query = req.url.includes("?")
+    ? req.url.slice(req.url.indexOf("?"))
+    : "";
   res.redirect(308, `/api/stations/flow${query}`);
 });
 

@@ -41,7 +41,9 @@ function parseMode(value) {
   const mode = value || "latest";
 
   if (!DATA_MODES.has(mode)) {
-    const error = new Error("mode must be one of latest, last_hour, today, date, or range");
+    const error = new Error(
+      "mode must be one of latest, last_hour, today, date, or range",
+    );
 
     error.statusCode = 400;
     throw error;
@@ -177,7 +179,7 @@ async function findFlowStationById(connection, stationId) {
     {
       fetchArraySize: 1,
       maxRows: 1,
-    }
+    },
   );
 
   const station = stationResult.rows[0];
@@ -223,7 +225,7 @@ async function listFlowStations(query) {
       {
         fetchArraySize: Math.min(pagination.limit + 1, 100),
         maxRows: pagination.limit + 1,
-      }
+      },
     );
 
     return buildListResponse(result.rows, pagination);
@@ -287,7 +289,7 @@ async function getFlowStationData(stationIdValue, query) {
       {
         fetchArraySize: Math.min(dataFilter.pagination.limit + 1, 100),
         maxRows: dataFilter.pagination.limit + 1,
-      }
+      },
     );
     const response = buildListResponse(dataResult.rows, dataFilter.pagination);
 

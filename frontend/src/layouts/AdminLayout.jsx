@@ -14,8 +14,8 @@ const AdminLayout = () => {
 
   const openLogoutModal = () => setIsLogoutModalOpen(true);
   const closeLogoutModal = () => setIsLogoutModalOpen(false);
-  const confirmLogout = () => {
-    logout();
+  const confirmLogout = async () => {
+    await logout();
     closeLogoutModal();
     navigate('/login', { replace: true });
   };

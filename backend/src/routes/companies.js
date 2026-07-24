@@ -35,31 +35,39 @@ router.get("/", requirePermission("list companies"), async (req, res, next) => {
   }
 });
 
-router.get("/:id", requirePermission("view companies"), async (req, res, next) => {
-  try {
-    const id = parseId(req.params.id);
-    const company = await findCompany(id);
+router.get(
+  "/:id",
+  requirePermission("view companies"),
+  async (req, res, next) => {
+    try {
+      const id = parseId(req.params.id);
+      const company = await findCompany(id);
 
-    if (!company) {
-      throw notFound("company not found");
+      if (!company) {
+        throw notFound("company not found");
+      }
+
+      res.json({ data: company });
+    } catch (error) {
+      next(error);
     }
+  },
+);
 
-    res.json({ data: company });
-  } catch (error) {
-    next(error);
-  }
-});
+router.post(
+  "/",
+  requirePermission("create companies"),
+  async (req, res, next) => {
+    try {
+      const payload = validateCompanyPayload(req.body);
+      const company = await createCompany(payload);
 
-router.post("/", requirePermission("create companies"), async (req, res, next) => {
-  try {
-    const payload = validateCompanyPayload(req.body);
-    const company = await createCompany(payload);
-
-    res.status(201).json({ data: company });
-  } catch (error) {
-    next(error);
-  }
-});
+      res.status(201).json({ data: company });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 function createUpdateCompanyHandler({ partial }) {
   return async (req, res, next) => {
@@ -78,23 +86,27 @@ function createUpdateCompanyHandler({ partial }) {
 router.put(
   "/:id",
   requirePermission("update companies"),
-  createUpdateCompanyHandler({ partial: false })
+  createUpdateCompanyHandler({ partial: false }),
 );
 router.patch(
   "/:id",
   requirePermission("update companies"),
-  createUpdateCompanyHandler({ partial: true })
+  createUpdateCompanyHandler({ partial: true }),
 );
 
-router.delete("/:id", requirePermission("delete companies"), async (req, res, next) => {
-  try {
-    const id = parseId(req.params.id);
+router.delete(
+  "/:id",
+  requirePermission("delete companies"),
+  async (req, res, next) => {
+    try {
+      const id = parseId(req.params.id);
 
-    await deleteCompany(id);
-    res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
-});
+      await deleteCompany(id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 module.exports = router;

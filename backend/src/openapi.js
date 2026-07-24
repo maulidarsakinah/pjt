@@ -66,6 +66,12 @@ module.exports = {
         responses: {
           201: {
             description: "User registered successfully",
+            headers: {
+              "Set-Cookie": {
+                description: "HttpOnly authentication cookie",
+                schema: { type: "string" },
+              },
+            },
             content: {
               "application/json": {
                 schema: {
@@ -115,6 +121,12 @@ module.exports = {
         responses: {
           200: {
             description: "Login successful",
+            headers: {
+              "Set-Cookie": {
+                description: "HttpOnly authentication cookie",
+                schema: { type: "string" },
+              },
+            },
             content: {
               "application/json": {
                 schema: {
@@ -140,6 +152,24 @@ module.exports = {
                 schema: {
                   $ref: "#/components/schemas/ErrorResponse",
                 },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/logout": {
+      post: {
+        tags: ["Auth"],
+        summary: "Logout the current browser session",
+        operationId: "logoutUser",
+        responses: {
+          204: {
+            description: "Authentication cookie cleared",
+            headers: {
+              "Set-Cookie": {
+                description: "Expired authentication cookie",
+                schema: { type: "string" },
               },
             },
           },
@@ -173,7 +203,7 @@ module.exports = {
         operationId: "listCompanies",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         parameters: [
@@ -204,7 +234,7 @@ module.exports = {
             },
           },
           401: {
-            description: "Missing or invalid bearer token",
+            description: "Missing or invalid session cookie",
             content: {
               "application/json": {
                 schema: {
@@ -242,7 +272,7 @@ module.exports = {
         operationId: "createCompany",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         requestBody: {
@@ -277,7 +307,7 @@ module.exports = {
             },
           },
           401: {
-            description: "Missing or invalid bearer token",
+            description: "Missing or invalid session cookie",
             content: {
               "application/json": {
                 schema: {
@@ -307,7 +337,7 @@ module.exports = {
         operationId: "getCompany",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         parameters: [
@@ -333,7 +363,7 @@ module.exports = {
             },
           },
           401: {
-            description: "Missing or invalid bearer token",
+            description: "Missing or invalid session cookie",
             content: {
               "application/json": {
                 schema: {
@@ -371,7 +401,7 @@ module.exports = {
         operationId: "updateCompany",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         parameters: [
@@ -445,7 +475,7 @@ module.exports = {
         operationId: "patchCompany",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         parameters: [
@@ -519,7 +549,7 @@ module.exports = {
         operationId: "deleteCompany",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         parameters: [
@@ -563,11 +593,12 @@ module.exports = {
     "/api/me": {
       get: {
         tags: ["Access"],
-        summary: "Get authenticated user's profile, company, roles, and permissions",
+        summary:
+          "Get authenticated user's profile, company, roles, and permissions",
         operationId: "getMe",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         responses: {
@@ -582,7 +613,7 @@ module.exports = {
             },
           },
           401: {
-            description: "Missing or invalid bearer token",
+            description: "Missing or invalid session cookie",
             content: {
               "application/json": {
                 schema: {
@@ -611,7 +642,7 @@ module.exports = {
         operationId: "changeMyPassword",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         requestBody: {
@@ -646,7 +677,7 @@ module.exports = {
             },
           },
           401: {
-            description: "Missing or invalid bearer token",
+            description: "Missing or invalid session cookie",
             content: {
               "application/json": {
                 schema: {
@@ -675,7 +706,7 @@ module.exports = {
         operationId: "getMyAccess",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         responses: {
@@ -690,7 +721,7 @@ module.exports = {
             },
           },
           401: {
-            description: "Missing or invalid bearer token",
+            description: "Missing or invalid session cookie",
             content: {
               "application/json": {
                 schema: {
@@ -718,7 +749,7 @@ module.exports = {
         summary: "List roles",
         description: "Requires the `list roles` permission.",
         operationId: "listRoles",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [
           {
             name: "limit",
@@ -744,7 +775,7 @@ module.exports = {
               },
             },
           },
-          401: { description: "Missing or invalid bearer token" },
+          401: { description: "Missing or invalid session cookie" },
           403: { description: "Missing required permission" },
         },
       },
@@ -753,7 +784,7 @@ module.exports = {
         summary: "Create a role",
         description: "Requires the `create roles` permission.",
         operationId: "createRole",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -782,7 +813,7 @@ module.exports = {
         summary: "Get a role by id",
         description: "Requires the `view roles` permission.",
         operationId: "getRole",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         responses: {
           200: {
@@ -801,7 +832,7 @@ module.exports = {
         summary: "Update a role",
         description: "Requires the `update roles` permission.",
         operationId: "updateRole",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         requestBody: {
           required: true,
@@ -828,7 +859,7 @@ module.exports = {
         summary: "Partially update a role",
         description: "Requires the `update roles` permission.",
         operationId: "patchRole",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         requestBody: {
           required: true,
@@ -855,7 +886,7 @@ module.exports = {
         summary: "Delete a role",
         description: "Requires the `delete roles` permission.",
         operationId: "deleteRole",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         responses: {
           204: { description: "Role deleted successfully" },
@@ -869,7 +900,7 @@ module.exports = {
         summary: "List permissions attached to a role",
         description: "Requires the `view roles` permission.",
         operationId: "getRolePermissions",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         responses: {
           200: {
@@ -887,7 +918,7 @@ module.exports = {
         summary: "Replace permissions attached to a role",
         description: "Requires the `update roles` permission.",
         operationId: "syncRolePermissions",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         requestBody: {
           required: true,
@@ -915,7 +946,7 @@ module.exports = {
         summary: "List permissions",
         description: "Requires the `list permissions` permission.",
         operationId: "listPermissions",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [
           {
             name: "limit",
@@ -949,7 +980,7 @@ module.exports = {
         summary: "Create a permission",
         description: "Requires the `create permissions` permission.",
         operationId: "createPermission",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -976,7 +1007,7 @@ module.exports = {
         summary: "Get a permission by id",
         description: "Requires the `view permissions` permission.",
         operationId: "getPermission",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         responses: {
           200: {
@@ -995,7 +1026,7 @@ module.exports = {
         summary: "Update a permission",
         description: "Requires the `update permissions` permission.",
         operationId: "updatePermission",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         requestBody: {
           required: true,
@@ -1021,7 +1052,7 @@ module.exports = {
         summary: "Partially update a permission",
         description: "Requires the `update permissions` permission.",
         operationId: "patchPermission",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         requestBody: {
           required: true,
@@ -1047,7 +1078,7 @@ module.exports = {
         summary: "Delete a permission",
         description: "Requires the `delete permissions` permission.",
         operationId: "deletePermission",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         responses: {
           204: { description: "Permission deleted successfully" },
@@ -1061,7 +1092,7 @@ module.exports = {
         summary: "List user role assignments",
         description: "Requires the `list accesses` permission.",
         operationId: "listUserAccesses",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [
           {
             name: "limit",
@@ -1097,7 +1128,7 @@ module.exports = {
         summary: "Get a user's assigned and effective access",
         description: "Requires the `view accesses` permission.",
         operationId: "getUserAccess",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         responses: {
           200: {
@@ -1116,9 +1147,10 @@ module.exports = {
       put: {
         tags: ["Access"],
         summary: "Replace a user's roles",
-        description: "Requires the `update accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `update accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "syncUserRoles",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         requestBody: {
           required: true,
@@ -1144,9 +1176,10 @@ module.exports = {
       post: {
         tags: ["Access"],
         summary: "Attach one role to a user",
-        description: "Requires the `create accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `create accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "attachUserRole",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [
           { $ref: "#/components/parameters/IdPath" },
           { $ref: "#/components/parameters/RoleIdPath" },
@@ -1165,9 +1198,10 @@ module.exports = {
       delete: {
         tags: ["Access"],
         summary: "Detach one role from a user",
-        description: "Requires the `delete accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `delete accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "detachUserRole",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [
           { $ref: "#/components/parameters/IdPath" },
           { $ref: "#/components/parameters/RoleIdPath" },
@@ -1182,9 +1216,10 @@ module.exports = {
       put: {
         tags: ["Access"],
         summary: "Replace a user's direct permissions",
-        description: "Requires the `update accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `update accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "syncUserDirectPermissions",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
         requestBody: {
           required: true,
@@ -1210,9 +1245,10 @@ module.exports = {
       post: {
         tags: ["Access"],
         summary: "Attach one direct permission to a user",
-        description: "Requires the `create accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `create accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "attachUserDirectPermission",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [
           { $ref: "#/components/parameters/IdPath" },
           { $ref: "#/components/parameters/PermissionIdPath" },
@@ -1231,9 +1267,10 @@ module.exports = {
       delete: {
         tags: ["Access"],
         summary: "Detach one direct permission from a user",
-        description: "Requires the `delete accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `delete accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "detachUserDirectPermission",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [
           { $ref: "#/components/parameters/IdPath" },
           { $ref: "#/components/parameters/PermissionIdPath" },
@@ -1248,9 +1285,10 @@ module.exports = {
       get: {
         tags: ["Logs"],
         summary: "List backend log entries",
-        description: "Reads normalized entries from the backend log directory. Successful reads of this endpoint are excluded to prevent self-generated audit noise. Totals and pages may be cached for up to 5 seconds. Requires the `list accesses` permission.",
+        description:
+          "Reads normalized entries from the backend log directory. Successful reads of this endpoint are excluded to prevent self-generated audit noise. Totals and pages may be cached for up to 5 seconds. Requires the `list accesses` permission.",
         operationId: "listLogs",
-        security: [{ bearerAuth: [] }],
+        security: [{ cookieAuth: [] }],
         parameters: [
           {
             name: "limit",
@@ -1286,7 +1324,15 @@ module.exports = {
             required: false,
             schema: {
               type: "string",
-              enum: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+              enum: [
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS",
+                "HEAD",
+              ],
             },
           },
           {
@@ -1299,7 +1345,8 @@ module.exports = {
             name: "search",
             in: "query",
             required: false,
-            description: "Case-insensitive search across trace ID, method, endpoint, message, and error fields.",
+            description:
+              "Case-insensitive search across trace ID, method, endpoint, message, and error fields.",
             schema: { type: "string", maxLength: 200 },
           },
         ],
@@ -1320,7 +1367,7 @@ module.exports = {
               },
             },
           },
-          401: { description: "Missing or invalid bearer token" },
+          401: { description: "Missing or invalid session cookie" },
           403: { description: "Missing the list accesses permission" },
           500: {
             description: "Log directory or server error",
@@ -1337,11 +1384,12 @@ module.exports = {
       get: {
         tags: ["Stations"],
         summary: "Get stations whose station type starts with FLOW_",
-        description: "Requires a valid bearer token. No named permission is required.",
+        description:
+          "Requires a valid session cookie. No named permission is required.",
         operationId: "getFlowStations",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         parameters: [
@@ -1383,7 +1431,7 @@ module.exports = {
             },
           },
           401: {
-            description: "Missing or invalid bearer token",
+            description: "Missing or invalid session cookie",
             content: {
               "application/json": {
                 schema: {
@@ -1409,11 +1457,12 @@ module.exports = {
       get: {
         tags: ["Stations"],
         summary: "Get IoT data rows for a FLOW_ station",
-        description: "Requires a valid bearer token. No named permission is required.",
+        description:
+          "Requires a valid session cookie. No named permission is required.",
         operationId: "getFlowStationData",
         security: [
           {
-            bearerAuth: [],
+            cookieAuth: [],
           },
         ],
         parameters: [
@@ -1509,7 +1558,7 @@ module.exports = {
             },
           },
           401: {
-            description: "Missing or invalid bearer token",
+            description: "Missing or invalid session cookie",
             content: {
               "application/json": {
                 schema: {
@@ -1584,10 +1633,10 @@ module.exports = {
       },
     },
     securitySchemes: {
-      bearerAuth: {
-        type: "http",
-        scheme: "bearer",
-        bearerFormat: "JWT",
+      cookieAuth: {
+        type: "apiKey",
+        in: "cookie",
+        name: config.auth.cookieName,
       },
     },
     schemas: {
@@ -1643,7 +1692,11 @@ module.exports = {
       },
       ChangePasswordRequest: {
         type: "object",
-        required: ["current_password", "new_password", "new_password_confirmation"],
+        required: [
+          "current_password",
+          "new_password",
+          "new_password_confirmation",
+        ],
         properties: {
           current_password: {
             type: "string",
@@ -1726,14 +1779,10 @@ module.exports = {
       },
       AuthResponse: {
         type: "object",
-        required: ["user", "token"],
+        required: ["user"],
         properties: {
           user: {
             $ref: "#/components/schemas/User",
-          },
-          token: {
-            type: "string",
-            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
           },
         },
       },
@@ -1899,7 +1948,15 @@ module.exports = {
       },
       Me: {
         type: "object",
-        required: ["id", "name", "email", "company_id", "company", "roles", "permissions"],
+        required: [
+          "id",
+          "name",
+          "email",
+          "company_id",
+          "company",
+          "roles",
+          "permissions",
+        ],
         properties: {
           id: {
             type: "integer",
@@ -2294,14 +2351,30 @@ module.exports = {
           method: { type: "string", nullable: true, example: "GET" },
           path: { type: "string", nullable: true, example: "/api/health" },
           ip: { type: "string", nullable: true, example: "127.0.0.1" },
-          user_agent: { type: "string", nullable: true, example: "Mozilla/5.0" },
+          user_agent: {
+            type: "string",
+            nullable: true,
+            example: "Mozilla/5.0",
+          },
           status: { type: "string", enum: ["success", "failed"] },
           status_code: { type: "integer", nullable: true, example: 200 },
           latency_ms: { type: "number", nullable: true, example: 25 },
-          error_source: { type: "string", nullable: true, example: "application" },
+          error_source: {
+            type: "string",
+            nullable: true,
+            example: "application",
+          },
           error_code: { type: "string", nullable: true, example: "Error" },
-          error_message: { type: "string", nullable: true, example: "authentication required" },
-          message: { type: "string", nullable: true, example: "request_completed" },
+          error_message: {
+            type: "string",
+            nullable: true,
+            example: "authentication required",
+          },
+          message: {
+            type: "string",
+            nullable: true,
+            example: "request_completed",
+          },
         },
       },
       LogsResponse: {
@@ -2440,7 +2513,15 @@ module.exports = {
       },
       FlowStationDataResponse: {
         type: "object",
-        required: ["station", "data", "count", "limit", "offset", "has_more", "mode"],
+        required: [
+          "station",
+          "data",
+          "count",
+          "limit",
+          "offset",
+          "has_more",
+          "mode",
+        ],
         properties: {
           station: {
             $ref: "#/components/schemas/Station",

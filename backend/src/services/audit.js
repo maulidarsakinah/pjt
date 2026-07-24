@@ -28,7 +28,7 @@ function defaultLogLevel(outcome, severity) {
 
 function compactObject(value) {
   return Object.fromEntries(
-    Object.entries(value).filter(([, entry]) => entry !== undefined)
+    Object.entries(value).filter(([, entry]) => entry !== undefined),
   );
 }
 

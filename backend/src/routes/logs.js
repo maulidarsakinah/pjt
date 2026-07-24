@@ -8,7 +8,10 @@ router.use(authenticate);
 
 router.get("/", requirePermission("list accesses"), async (req, res, next) => {
   try {
-    const pagination = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
+    const pagination = parsePagination(req.query, {
+      defaultLimit: 50,
+      maxLimit: 200,
+    });
     const filters = parseLogFilters(req.query);
 
     res.json(await listLogs({ pagination, filters }));

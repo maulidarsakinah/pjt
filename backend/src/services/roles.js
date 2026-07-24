@@ -49,7 +49,7 @@ async function getRoleById(connection, id) {
     {
       fetchArraySize: 1,
       maxRows: 1,
-    }
+    },
   );
 
   return result.rows[0];
@@ -66,7 +66,7 @@ async function getRolePermissions(connection, roleId) {
        ON rhp."permission_id" = p."id"
      WHERE rhp."role_id" = :role_id
      ORDER BY p."id" ASC`,
-    { role_id: roleId }
+    { role_id: roleId },
   );
 
   return result.rows;
@@ -89,7 +89,7 @@ async function assertPermissionIdsExist(connection, permissionIds) {
     `SELECT "id" AS "id"
      FROM "permissions"
      WHERE "id" IN (${placeholders.join(", ")})`,
-    binds
+    binds,
   );
   const foundIds = new Set(result.rows.map((row) => row.id));
   const missingIds = permissionIds.filter((id) => !foundIds.has(id));
@@ -104,7 +104,9 @@ function parsePermissionIds(value) {
     throw badRequest("permission_ids must be an array");
   }
 
-  return [...new Set(value.map((id) => parsePositiveInteger(id, "permission_id")))];
+  return [
+    ...new Set(value.map((id) => parsePositiveInteger(id, "permission_id"))),
+  ];
 }
 
 async function listRoles(pagination) {
@@ -138,7 +140,7 @@ async function listRoles(pagination) {
       {
         fetchArraySize: Math.min(pagination.limit + 1, 100),
         maxRows: pagination.limit + 1,
-      }
+      },
     );
 
     return result.rows;
@@ -156,7 +158,7 @@ async function createRole(body, req) {
 
     const idResult = await connection.execute(
       `SELECT NVL(MAX("id"), 0) + 1 AS "next_id"
-       FROM "roles"`
+       FROM "roles"`,
     );
     const nextId = idResult.rows[0].next_id;
 
@@ -178,7 +180,7 @@ async function createRole(body, req) {
         id: nextId,
         name: payload.name,
         guard_name: payload.guard_name,
-      }
+      },
     );
 
     const role = await getRoleById(connection, nextId);
@@ -193,7 +195,9 @@ async function createRole(body, req) {
 async function updateRole(id, body, req, { partial = true } = {}) {
   const payload = validateRolePayload(body, { partial });
   const result = await withTransaction(async (connection) => {
-    const setClauses = Object.keys(payload).map((field) => `"${field}" = :${field}`);
+    const setClauses = Object.keys(payload).map(
+      (field) => `"${field}" = :${field}`,
+    );
 
     setClauses.push(`"updated_at" = SYSTIMESTAMP`);
 
@@ -204,7 +208,7 @@ async function updateRole(id, body, req, { partial = true } = {}) {
       {
         ...payload,
         id,
-      }
+      },
     );
 
     if (result.rowsAffected === 0) {
@@ -227,17 +231,17 @@ async function deleteRole(id, req) {
     await connection.execute(
       `DELETE FROM "role_has_permissions"
        WHERE "role_id" = :id`,
-      { id }
+      { id },
     );
     await connection.execute(
       `DELETE FROM "model_has_roles"
        WHERE "role_id" = :id`,
-      { id }
+      { id },
     );
     const result = await connection.execute(
       `DELETE FROM "roles"
        WHERE "id" = :id`,
-      { id }
+      { id },
     );
 
     if (result.rowsAffected === 0) {
@@ -271,7 +275,7 @@ async function replaceRolePermissions(id, permissionIdsValue, req) {
     await connection.execute(
       `DELETE FROM "role_has_permissions"
        WHERE "role_id" = :role_id`,
-      { role_id: id }
+      { role_id: id },
     );
 
     for (const permissionId of permissionIds) {
@@ -286,7 +290,7 @@ async function replaceRolePermissions(id, permissionIdsValue, req) {
         {
           permission_id: permissionId,
           role_id: id,
-        }
+        },
       );
     }
 
@@ -294,7 +298,9 @@ async function replaceRolePermissions(id, permissionIdsValue, req) {
   });
 
   clearAccessCache();
-  logRoleAudit(req, "replace_role_permissions", id, { permission_ids: permissionIds });
+  logRoleAudit(req, "replace_role_permissions", id, {
+    permission_ids: permissionIds,
+  });
   return permissions;
 }
 

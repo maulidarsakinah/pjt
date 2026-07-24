@@ -62,46 +62,70 @@ function createUpdateRoleHandler({ partial }) {
   };
 }
 
-router.put("/:id", requirePermission("update roles"), createUpdateRoleHandler({ partial: false }));
-router.patch("/:id", requirePermission("update roles"), createUpdateRoleHandler({ partial: true }));
+router.put(
+  "/:id",
+  requirePermission("update roles"),
+  createUpdateRoleHandler({ partial: false }),
+);
+router.patch(
+  "/:id",
+  requirePermission("update roles"),
+  createUpdateRoleHandler({ partial: true }),
+);
 
-router.delete("/:id", requirePermission("delete roles"), async (req, res, next) => {
-  try {
-    const id = parsePositiveInteger(req.params.id);
+router.delete(
+  "/:id",
+  requirePermission("delete roles"),
+  async (req, res, next) => {
+    try {
+      const id = parsePositiveInteger(req.params.id);
 
-    await deleteRole(id, req);
-    res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
-});
+      await deleteRole(id, req);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-router.get("/:id/permissions", requirePermission("view roles"), async (req, res, next) => {
-  try {
-    const id = parsePositiveInteger(req.params.id);
-    const permissions = await listRolePermissions(id);
+router.get(
+  "/:id/permissions",
+  requirePermission("view roles"),
+  async (req, res, next) => {
+    try {
+      const id = parsePositiveInteger(req.params.id);
+      const permissions = await listRolePermissions(id);
 
-    res.json({
-      data: permissions,
-      count: permissions.length,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+      res.json({
+        data: permissions,
+        count: permissions.length,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-router.put("/:id/permissions", requirePermission("update roles"), async (req, res, next) => {
-  try {
-    const id = parsePositiveInteger(req.params.id);
-    const permissions = await replaceRolePermissions(id, req.body.permission_ids, req);
+router.put(
+  "/:id/permissions",
+  requirePermission("update roles"),
+  async (req, res, next) => {
+    try {
+      const id = parsePositiveInteger(req.params.id);
+      const permissions = await replaceRolePermissions(
+        id,
+        req.body.permission_ids,
+        req,
+      );
 
-    res.json({
-      data: permissions,
-      count: permissions.length,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+      res.json({
+        data: permissions,
+        count: permissions.length,
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 module.exports = router;

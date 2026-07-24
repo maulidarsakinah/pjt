@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { clearSession, getMe, getStoredUser, getToken, setSession } from '../services/api';
+import { getMe, logout as logoutRequest } from '../services/api';
 import AuthContext from './authContext';
 
 function normalizeUser(user) {
@@ -14,80 +14,74 @@ function normalizeUser(user) {
 }
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => getToken());
-  const [user, setUser] = useState(() => normalizeUser(getStoredUser()));
-  const [hasLoadedProfile, setHasLoadedProfile] = useState(() => {
-    const storedUser = getStoredUser();
-    return Boolean(storedUser?.roles || storedUser?.is_demo);
-  });
+  const [user, setUser] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isRefreshingUser, setIsRefreshingUser] = useState(false);
 
   const saveAuthSession = useCallback((session) => {
     const nextUser = normalizeUser(session.user);
 
-    setSession({ token: session.token, user: nextUser });
-    setToken(session.token);
     setUser(nextUser);
-    setHasLoadedProfile(Boolean(nextUser?.roles || nextUser?.is_demo));
+    setIsInitializing(false);
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (!getToken()) {
-      return null;
-    }
-
-    if (user?.is_demo) {
-      return user;
-    }
-
     setIsRefreshingUser(true);
 
     try {
       const response = await getMe();
       const nextUser = normalizeUser(response.data);
-      const currentToken = getToken();
 
-      if (currentToken) {
-        setSession({ token: currentToken, user: nextUser });
-      }
-
-      setToken(currentToken);
       setUser(nextUser);
-      setHasLoadedProfile(true);
       return nextUser;
     } finally {
       setIsRefreshingUser(false);
     }
-  }, [user]);
-
-  const logout = useCallback(() => {
-    clearSession();
-    setToken(null);
-    setUser(null);
-    setHasLoadedProfile(false);
   }, []);
 
-  useEffect(() => {
-    if (!token || hasLoadedProfile || user?.is_demo) {
-      return;
+  const logout = useCallback(async () => {
+    try {
+      if (!user?.is_demo) {
+        await logoutRequest();
+      }
+    } finally {
+      setUser(null);
+      setIsInitializing(false);
     }
+  }, [user]);
 
-    Promise.resolve().then(refreshUser).catch(() => {
-      logout();
-    });
-  }, [hasLoadedProfile, logout, refreshUser, token, user]);
+  useEffect(() => {
+    let active = true;
+
+    Promise.resolve()
+      .then(refreshUser)
+      .catch(() => {
+        if (active) {
+          setUser(null);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setIsInitializing(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [refreshUser]);
 
   const value = useMemo(
     () => ({
-      isAuthenticated: Boolean(token),
+      isAuthenticated: Boolean(user),
+      isInitializing,
       isRefreshingUser,
       logout,
       refreshUser,
       saveAuthSession,
-      token,
       user,
     }),
-    [isRefreshingUser, logout, refreshUser, saveAuthSession, token, user]
+    [isInitializing, isRefreshingUser, logout, refreshUser, saveAuthSession, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

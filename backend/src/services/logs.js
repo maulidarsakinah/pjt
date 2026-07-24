@@ -13,8 +13,23 @@ const MAX_LOG_FILE_BYTES = 20 * 1024 * 1024;
 const LOG_CACHE_TTL_MS = 5 * 1000;
 const MAX_COUNT_CACHE_ITEMS = 50;
 const MAX_PAGE_CACHE_ITEMS = 100;
-const ALLOWED_LEVELS = new Set(["trace", "debug", "info", "warn", "error", "fatal"]);
-const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]);
+const ALLOWED_LEVELS = new Set([
+  "trace",
+  "debug",
+  "info",
+  "warn",
+  "error",
+  "fatal",
+]);
+const ALLOWED_METHODS = new Set([
+  "GET",
+  "POST",
+  "PUT",
+  "PATCH",
+  "DELETE",
+  "OPTIONS",
+  "HEAD",
+]);
 const ALLOWED_STATUSES = new Set(["success", "failed"]);
 const jakartaDateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "Asia/Jakarta",
@@ -85,7 +100,12 @@ function getLogCacheStats() {
   };
 }
 
-function parseOptionalEnum(value, field, allowedValues, transform = (entry) => entry) {
+function parseOptionalEnum(
+  value,
+  field,
+  allowedValues,
+  transform = (entry) => entry,
+) {
   if (value === undefined || value === "") {
     return undefined;
   }
@@ -112,7 +132,10 @@ function parseDate(value) {
 
   const parsed = new Date(`${normalized}T00:00:00.000Z`);
 
-  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== normalized) {
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== normalized
+  ) {
     throw badRequest("date must be a valid calendar date");
   }
 
@@ -136,9 +159,21 @@ function parseSearch(value) {
 function parseLogFilters(query) {
   return {
     date: parseDate(query.date),
-    level: parseOptionalEnum(query.level, "level", ALLOWED_LEVELS, (value) => value.toLowerCase()),
-    method: parseOptionalEnum(query.method, "method", ALLOWED_METHODS, (value) => value.toUpperCase()),
-    status: parseOptionalEnum(query.status, "status", ALLOWED_STATUSES, (value) => value.toLowerCase()),
+    level: parseOptionalEnum(query.level, "level", ALLOWED_LEVELS, (value) =>
+      value.toLowerCase(),
+    ),
+    method: parseOptionalEnum(
+      query.method,
+      "method",
+      ALLOWED_METHODS,
+      (value) => value.toUpperCase(),
+    ),
+    status: parseOptionalEnum(
+      query.status,
+      "status",
+      ALLOWED_STATUSES,
+      (value) => value.toLowerCase(),
+    ),
     search: parseSearch(query.search),
   };
 }
@@ -152,7 +187,11 @@ function inferStatus(entry) {
     return entry.event_outcome === "success" ? "success" : "failed";
   }
 
-  if (Number(entry.status_code) >= 400 || entry.level === "error" || entry.level === "fatal") {
+  if (
+    Number(entry.status_code) >= 400 ||
+    entry.level === "error" ||
+    entry.level === "fatal"
+  ) {
     return "failed";
   }
 
@@ -164,7 +203,8 @@ function normalizeLogEntry(entry) {
     return null;
   }
 
-  const request = entry.request && typeof entry.request === "object" ? entry.request : {};
+  const request =
+    entry.request && typeof entry.request === "object" ? entry.request : {};
   const time = typeof entry.time === "string" ? entry.time : undefined;
 
   if (!time || Number.isNaN(Date.parse(time))) {
@@ -182,11 +222,18 @@ function normalizeLogEntry(entry) {
     ip: entry.ip || request.ip,
     user_agent: entry.user_agent || request.user_agent,
     status: inferStatus(entry),
-    status_code: Number.isInteger(entry.status_code) ? entry.status_code : undefined,
-    latency_ms: Number.isFinite(entry.latency_ms) ? entry.latency_ms : undefined,
-    error_source: typeof entry.error_source === "string" ? entry.error_source : undefined,
-    error_code: typeof entry.error_code === "string" ? entry.error_code : undefined,
-    error_message: typeof entry.error_message === "string" ? entry.error_message : undefined,
+    status_code: Number.isInteger(entry.status_code)
+      ? entry.status_code
+      : undefined,
+    latency_ms: Number.isFinite(entry.latency_ms)
+      ? entry.latency_ms
+      : undefined,
+    error_source:
+      typeof entry.error_source === "string" ? entry.error_source : undefined,
+    error_code:
+      typeof entry.error_code === "string" ? entry.error_code : undefined,
+    error_message:
+      typeof entry.error_message === "string" ? entry.error_message : undefined,
     message: typeof entry.message === "string" ? entry.message : undefined,
   };
 }
@@ -196,7 +243,7 @@ function formatJakartaDate(value) {
     jakartaDateFormatter
       .formatToParts(new Date(value))
       .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, part.value])
+      .map((part) => [part.type, part.value]),
   );
 
   return `${parts.year}-${parts.month}-${parts.day}`;
@@ -217,7 +264,12 @@ function matchesFilters(entry, filters) {
     (!filters.level || entry.level === filters.level) &&
     (!filters.method || entry.method === filters.method) &&
     (!filters.status || entry.status === filters.status) &&
-    (!filters.search || searchValues.some((value) => String(value || "").toLowerCase().includes(filters.search)))
+    (!filters.search ||
+      searchValues.some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(filters.search),
+      ))
   );
 }
 
@@ -250,7 +302,7 @@ async function listLogFiles(directory) {
         const stats = await fs.stat(filePath);
 
         return { filePath, modifiedAt: stats.mtimeMs };
-      })
+      }),
   );
 
   return files.sort((left, right) => right.modifiedAt - left.modifiedAt);
@@ -310,7 +362,12 @@ async function readRecentLines(filePath) {
   }
 }
 
-async function listLogs({ pagination, filters, directory = DEFAULT_LOG_DIRECTORY, now = Date.now() }) {
+async function listLogs({
+  pagination,
+  filters,
+  directory = DEFAULT_LOG_DIRECTORY,
+  now = Date.now(),
+}) {
   const filterCacheKey = buildFilterCacheKey(directory, filters);
   const pageCacheKey = `${filterCacheKey}|${pagination.limit}|${pagination.offset}`;
   const cachedPage = getCachedValue(pageCache, pageCacheKey, now);
@@ -331,7 +388,13 @@ async function listLogs({ pagination, filters, directory = DEFAULT_LOG_DIRECTORY
       has_more: false,
     };
 
-    setCachedValue(pageCache, pageCacheKey, emptyResponse, MAX_PAGE_CACHE_ITEMS, now);
+    setCachedValue(
+      pageCache,
+      pageCacheKey,
+      emptyResponse,
+      MAX_PAGE_CACHE_ITEMS,
+      now,
+    );
     return cloneListResponse(emptyResponse);
   }
 
@@ -339,8 +402,7 @@ async function listLogs({ pagination, filters, directory = DEFAULT_LOG_DIRECTORY
   let matchedCount = 0;
   const files = await listLogFiles(directory);
 
-  fileLoop:
-  for (const file of files) {
+  fileLoop: for (const file of files) {
     const lines = await readRecentLines(file.filePath);
 
     for (const lineRecord of lines) {
@@ -354,8 +416,15 @@ async function listLogs({ pagination, filters, directory = DEFAULT_LOG_DIRECTORY
 
       const entry = normalizeLogEntry(parsed);
 
-      if (entry && !isSuccessfulAuditRead(entry) && matchesFilters(entry, filters)) {
-        if (matchedCount >= pagination.offset && page.length < pagination.limit) {
+      if (
+        entry &&
+        !isSuccessfulAuditRead(entry) &&
+        matchesFilters(entry, filters)
+      ) {
+        if (
+          matchedCount >= pagination.offset &&
+          page.length < pagination.limit
+        ) {
           const id = crypto
             .createHash("sha256")
             .update(`${path.basename(file.filePath)}:${lineRecord.byteOffset}`)
@@ -367,7 +436,10 @@ async function listLogs({ pagination, filters, directory = DEFAULT_LOG_DIRECTORY
 
         matchedCount += 1;
 
-        if (cachedTotal !== undefined && matchedCount >= pagination.offset + pagination.limit) {
+        if (
+          cachedTotal !== undefined &&
+          matchedCount >= pagination.offset + pagination.limit
+        ) {
           break fileLoop;
         }
       }
@@ -377,7 +449,13 @@ async function listLogs({ pagination, filters, directory = DEFAULT_LOG_DIRECTORY
   const total = cachedTotal === undefined ? matchedCount : cachedTotal;
 
   if (cachedTotal === undefined) {
-    setCachedValue(countCache, filterCacheKey, total, MAX_COUNT_CACHE_ITEMS, now);
+    setCachedValue(
+      countCache,
+      filterCacheKey,
+      total,
+      MAX_COUNT_CACHE_ITEMS,
+      now,
+    );
   }
 
   const response = {

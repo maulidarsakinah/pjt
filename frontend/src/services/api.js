@@ -1,6 +1,4 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-const TOKEN_KEY = 'pkl_api_token';
-const USER_KEY = 'pkl_api_user';
 
 function buildUrl(path, query) {
   const url = new URL(`${API_BASE_URL}${path}`, window.location.origin);
@@ -14,35 +12,7 @@ function buildUrl(path, query) {
   return API_BASE_URL ? `${url.pathname}${url.search}`.replace(/^/, API_BASE_URL) : `${url.pathname}${url.search}`;
 }
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function getStoredUser() {
-  const value = localStorage.getItem(USER_KEY);
-
-  if (!value) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
-}
-
-export function setSession({ token, user }) {
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
-
-export function clearSession() {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-}
-
-export async function apiRequest(path, { method = 'GET', body, query, auth = true, signal } = {}) {
+export async function apiRequest(path, { method = 'GET', body, query, signal } = {}) {
   const headers = {
     Accept: 'application/json',
   };
@@ -51,17 +21,10 @@ export async function apiRequest(path, { method = 'GET', body, query, auth = tru
     headers['Content-Type'] = 'application/json';
   }
 
-  if (auth) {
-    const token = getToken();
-
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-  }
-
   const response = await fetch(buildUrl(path, query), {
     method,
     headers,
+    credentials: 'include',
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
@@ -83,8 +46,13 @@ export async function apiRequest(path, { method = 'GET', body, query, auth = tru
 export function login(email, password) {
   return apiRequest('/api/login', {
     method: 'POST',
-    auth: false,
     body: { email, password },
+  });
+}
+
+export function logout() {
+  return apiRequest('/api/logout', {
+    method: 'POST',
   });
 }
 

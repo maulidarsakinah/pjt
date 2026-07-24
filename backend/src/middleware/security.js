@@ -17,7 +17,7 @@ function corsAllowlist(req, res, next) {
         status_code: 403,
         origin,
       },
-      "cors_origin_denied"
+      "cors_origin_denied",
     );
 
     res.status(403).json({
@@ -29,9 +29,16 @@ function corsAllowlist(req, res, next) {
   }
 
   res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Vary", "Origin");
-  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-Id, X-Trace-Id");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, X-Request-Id, X-Trace-Id",
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  );
 
   if (req.method === "OPTIONS") {
     res.status(204).send();
@@ -39,6 +46,48 @@ function corsAllowlist(req, res, next) {
   }
 
   next();
+}
+
+function csrfProtection(req, res, next) {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    next();
+    return;
+  }
+
+  const origin = req.headers.origin;
+
+  if (!origin) {
+    next();
+    return;
+  }
+
+  let isSameHost = false;
+
+  try {
+    isSameHost = new URL(origin).host === req.get("host");
+  } catch {
+    isSameHost = false;
+  }
+
+  if (isSameHost || config.security.corsOrigins.includes(origin)) {
+    next();
+    return;
+  }
+
+  req.log?.warn(
+    {
+      status: "failed",
+      status_code: 403,
+      origin,
+    },
+    "csrf_origin_denied",
+  );
+
+  res.status(403).json({
+    error: "Request origin not allowed",
+    code: "CSRF_ORIGIN_DENIED",
+    trace_id: req.trace_id,
+  });
 }
 
 const securityHeaders = helmet({
@@ -56,7 +105,7 @@ function createRateLimitHandler(message) {
         status_code: 429,
         error: message,
       },
-      "rate_limit_exceeded"
+      "rate_limit_exceeded",
     );
 
     res.status(429).json({
@@ -89,6 +138,7 @@ const authRateLimit = rateLimit({
 module.exports = {
   authRateLimit,
   corsAllowlist,
+  csrfProtection,
   generalRateLimit,
   securityHeaders,
 };

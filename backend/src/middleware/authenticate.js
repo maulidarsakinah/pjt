@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const config = require("../config");
+const { getAuthToken } = require("../authCookie");
 const { TtlCache } = require("../cache");
 const db = require("../db");
 
@@ -12,19 +13,9 @@ const authUserCache = new TtlCache({
 function unauthorized(message = "authentication required") {
   const error = new Error(message);
   error.statusCode = 401;
-  error.publicMessage = "Missing or invalid token";
+  error.publicMessage = "Missing or invalid session";
   error.publicCode = "UNAUTHORIZED";
   return error;
-}
-
-function getBearerToken(req) {
-  const authorization = req.headers.authorization;
-
-  if (!authorization || !authorization.startsWith("Bearer ")) {
-    return null;
-  }
-
-  return authorization.slice("Bearer ".length).trim();
 }
 
 async function findActiveUser(userId) {
@@ -55,7 +46,7 @@ async function findActiveUser(userId) {
       {
         fetchArraySize: 1,
         maxRows: 1,
-      }
+      },
     );
 
     const user = result.rows[0];
@@ -74,7 +65,7 @@ async function findActiveUser(userId) {
 
 module.exports = async (req, res, next) => {
   try {
-    const token = getBearerToken(req);
+    const token = getAuthToken(req);
 
     if (!token) {
       throw unauthorized();

@@ -65,16 +65,25 @@ function createToken(user) {
       expiresIn: config.auth.jwtExpiresIn,
       issuer: config.auth.jwtIssuer,
       audience: config.auth.jwtAudience,
-    }
+    },
   );
 }
 
 async function registerUser(body, req) {
   const { name, email, password, phone, company_id } = body;
-  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedEmail =
+    typeof email === "string" ? email.trim().toLowerCase() : "";
 
-  if (!name || !normalizedEmail || !password || !phone || company_id === undefined) {
-    throw badRequest("name, email, password, phone, and company_id are required");
+  if (
+    !name ||
+    !normalizedEmail ||
+    !password ||
+    !phone ||
+    company_id === undefined
+  ) {
+    throw badRequest(
+      "name, email, password, phone, and company_id are required",
+    );
   }
 
   if (!isValidEmail(normalizedEmail)) {
@@ -104,7 +113,7 @@ async function registerUser(body, req) {
       {
         fetchArraySize: 1,
         maxRows: 1,
-      }
+      },
     );
 
     if (company.rows.length === 0) {
@@ -122,7 +131,7 @@ async function registerUser(body, req) {
       {
         fetchArraySize: 1,
         maxRows: 1,
-      }
+      },
     );
 
     if (existing.rows.length > 0) {
@@ -133,7 +142,7 @@ async function registerUser(body, req) {
       `SELECT NVL(MAX("id"), 0) + 1 AS "next_id"
        FROM "users"`,
       {},
-      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+      { outFormat: oracledb.OUT_FORMAT_OBJECT },
     );
     const nextId = idResult.rows[0].next_id;
     const hashedPassword = await bcrypt.hash(safePassword, 12);
@@ -169,7 +178,7 @@ async function registerUser(body, req) {
         status: "1",
         company_id: safeCompanyId,
       },
-      { autoCommit: true }
+      { autoCommit: true },
     );
 
     const user = {
@@ -201,7 +210,8 @@ async function registerUser(body, req) {
 
 async function loginUser(body, req) {
   const { email, password } = body;
-  const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+  const normalizedEmail =
+    typeof email === "string" ? email.trim().toLowerCase() : "";
 
   if (!normalizedEmail || !password) {
     throw badRequest("email and password are required");
@@ -235,7 +245,7 @@ async function loginUser(body, req) {
       {
         fetchArraySize: 1,
         maxRows: 1,
-      }
+      },
     );
 
     const user = result.rows[0];
@@ -263,7 +273,10 @@ async function loginUser(body, req) {
       throw unauthorized("invalid email or password");
     }
 
-    const passwordMatches = await bcrypt.compare(String(password), user.password);
+    const passwordMatches = await bcrypt.compare(
+      String(password),
+      user.password,
+    );
 
     if (!passwordMatches) {
       writeAuditEvent(req, {

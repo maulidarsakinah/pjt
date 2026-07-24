@@ -17,7 +17,10 @@ function getErrorSource(error) {
     return "oracle_driver";
   }
 
-  if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+  if (
+    error.name === "JsonWebTokenError" ||
+    error.name === "TokenExpiredError"
+  ) {
     return "auth";
   }
 
@@ -126,7 +129,10 @@ module.exports = (error, req, res, next) => {
   const statusCode = error.statusCode || error.status || 500;
   const traceId = req.trace_id || req.id;
   const logTarget = req.log || logger.child({ trace_id: traceId });
-  const log = statusCode >= 500 ? logTarget.error.bind(logTarget) : logTarget.warn.bind(logTarget);
+  const log =
+    statusCode >= 500
+      ? logTarget.error.bind(logTarget)
+      : logTarget.warn.bind(logTarget);
 
   log(buildErrorLogPayload(error, req, statusCode, traceId), "request_error");
 

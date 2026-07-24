@@ -2,9 +2,29 @@ require("dotenv").config({ quiet: true });
 
 const nodeEnv = process.env.NODE_ENV || "development";
 const jwtSecret = process.env.JWT_SECRET || "change-this-secret";
+const cookieSecure =
+  nodeEnv === "production" || process.env.AUTH_COOKIE_SECURE === "true";
+const cookieSameSite = (
+  process.env.AUTH_COOKIE_SAME_SITE || "lax"
+).toLowerCase();
 
-if (nodeEnv === "production" && (jwtSecret === "change-this-secret" || jwtSecret.length < 32)) {
-  throw new Error("JWT_SECRET must be set to a strong secret of at least 32 characters in production");
+if (
+  nodeEnv === "production" &&
+  (jwtSecret === "change-this-secret" || jwtSecret.length < 32)
+) {
+  throw new Error(
+    "JWT_SECRET must be set to a strong secret of at least 32 characters in production",
+  );
+}
+
+if (!["lax", "strict", "none"].includes(cookieSameSite)) {
+  throw new Error("AUTH_COOKIE_SAME_SITE must be lax, strict, or none");
+}
+
+if (cookieSameSite === "none" && !cookieSecure) {
+  throw new Error(
+    "AUTH_COOKIE_SECURE must be true when AUTH_COOKIE_SAME_SITE is none",
+  );
 }
 
 const config = {
@@ -27,6 +47,11 @@ const config = {
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1d",
     jwtIssuer: process.env.JWT_ISSUER || "pkl-api",
     jwtAudience: process.env.JWT_AUDIENCE || "pkl-api-users",
+    cookieName:
+      process.env.AUTH_COOKIE_NAME ||
+      (nodeEnv === "production" ? "__Host-pkl_session" : "pkl_session"),
+    cookieSameSite,
+    cookieSecure,
   },
   security: {
     bodyLimit: process.env.BODY_LIMIT || "100kb",
@@ -38,7 +63,8 @@ const config = {
       process.env.ENABLE_DOCS === "true" ||
       (process.env.ENABLE_DOCS !== "false" && nodeEnv !== "production"),
     trustProxy: process.env.TRUST_PROXY === "true" ? 1 : false,
-    rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+    rateLimitWindowMs:
+      Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
     rateLimitMax: Number(process.env.RATE_LIMIT_MAX) || 300,
     authRateLimitMax: Number(process.env.AUTH_RATE_LIMIT_MAX) || 20,
   },
