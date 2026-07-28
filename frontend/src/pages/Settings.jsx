@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useAuth from '../contexts/useAuth';
 import { changePassword } from '../services/api';
 import './Settings.css';
@@ -13,7 +14,8 @@ const Settings = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const { user } = useAuth();
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
   const isDemoUser = Boolean(user?.is_demo);
   const roles = user?.roles?.length ? user.roles.join(', ') : '-';
   const companyName = user?.company?.name || user?.company_name || '-';
@@ -90,6 +92,11 @@ const Settings = () => {
       setConfirmPassword('');
       setPasswordStatusType('success');
       setPasswordStatus('Password berhasil diperbarui.');
+      await logout({
+        remote: false,
+        message: 'Password berhasil diperbarui. Silakan login kembali.',
+      });
+      navigate('/login', { replace: true });
     } catch (error) {
       setPasswordStatusType('warning');
       setPasswordStatus(error.message || 'Gagal memperbarui password.');

@@ -49,11 +49,12 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { saveAuthSession } = useAuth();
+  const { authMessage, clearAuthMessage, saveAuthSession } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    clearAuthMessage();
     setIsSubmitting(true);
 
     try {
@@ -71,10 +72,19 @@ const Login = () => {
 
       const response = await login(email, password);
 
-      const profileResponse = await getMe();
-      const user = profileResponse.data || response.user;
+      saveAuthSession(response);
 
-      saveAuthSession({ user });
+      let user;
+
+      try {
+        const profileResponse = await getMe();
+        user = profileResponse.data || response.user;
+        saveAuthSession({ token: response.token, user });
+      } catch (profileError) {
+        saveAuthSession({ user: null });
+        throw profileError;
+      }
+
       navigate(isAdminUser(user) ? '/admin' : '/dashboard', { replace: true });
     } catch (loginError) {
       setError(loginError.message || 'Email atau password salah.');
@@ -186,7 +196,9 @@ const Login = () => {
               </div>
             </div>
 
-            {error && <div className="login-error">{error}</div>}
+            {(error || authMessage) && (
+              <div className="login-error">{error || authMessage}</div>
+            )}
 
             <button type="submit" className="btn-login" disabled={isSubmitting}>
               {isSubmitting ? 'Memproses...' : 'Masuk'}

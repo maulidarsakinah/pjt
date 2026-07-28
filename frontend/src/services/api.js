@@ -1,4 +1,14 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+let accessToken = null;
+let unauthorizedHandler = null;
+
+export function setAccessToken(token) {
+  accessToken = typeof token === 'string' && token ? token : null;
+}
+
+export function setUnauthorizedHandler(handler) {
+  unauthorizedHandler = typeof handler === 'function' ? handler : null;
+}
 
 function buildUrl(path, query) {
   const url = new URL(`${API_BASE_URL}${path}`, window.location.origin);
@@ -13,6 +23,7 @@ function buildUrl(path, query) {
 }
 
 export async function apiRequest(path, { method = 'GET', body, query, signal } = {}) {
+  const requestHadAccessToken = Boolean(accessToken);
   const headers = {
     Accept: 'application/json',
   };
@@ -21,10 +32,14 @@ export async function apiRequest(path, { method = 'GET', body, query, signal } =
     headers['Content-Type'] = 'application/json';
   }
 
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(buildUrl(path, query), {
     method,
     headers,
-    credentials: 'include',
+    credentials: 'omit',
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
@@ -37,6 +52,12 @@ export async function apiRequest(path, { method = 'GET', body, query, signal } =
     error.status = response.status;
     error.code = payload?.code;
     error.traceId = payload?.trace_id;
+
+    if (response.status === 401 && requestHadAccessToken) {
+      setAccessToken(null);
+      unauthorizedHandler?.();
+    }
+
     throw error;
   }
 
