@@ -22,11 +22,19 @@ const securityHeaders = {
   'X-Frame-Options': 'DENY',
 }
 
+const developmentSecurityHeaders = {
+  ...securityHeaders,
+  'Content-Security-Policy': contentSecurityPolicy.replace(
+    "script-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+  ),
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   server: {
-    headers: securityHeaders,
+    headers: developmentSecurityHeaders,
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
