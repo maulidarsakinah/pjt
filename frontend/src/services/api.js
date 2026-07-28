@@ -1,6 +1,7 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 let accessToken = null;
 let unauthorizedHandler = null;
+let refreshRequest = null;
 
 export function setAccessToken(token) {
   accessToken = typeof token === 'string' && token ? token : null;
@@ -22,7 +23,50 @@ function buildUrl(path, query) {
   return API_BASE_URL ? `${url.pathname}${url.search}`.replace(/^/, API_BASE_URL) : `${url.pathname}${url.search}`;
 }
 
-export async function apiRequest(path, { method = 'GET', body, query, signal } = {}) {
+async function readResponse(response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  return contentType.includes('application/json') ? response.json() : null;
+}
+
+async function requestRefreshToken() {
+  if (!refreshRequest) {
+    refreshRequest = (async () => {
+      const response = await fetch(buildUrl('/api/refresh'), {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+        },
+        credentials: 'include',
+      });
+      const payload = await readResponse(response);
+
+      if (!response.ok) {
+        const error = new Error(
+          payload?.error || `Request failed with status ${response.status}`
+        );
+
+        error.status = response.status;
+        error.code = payload?.code;
+        error.traceId = payload?.trace_id;
+        throw error;
+      }
+
+      setAccessToken(payload?.token);
+      return payload;
+    })().finally(() => {
+      refreshRequest = null;
+    });
+  }
+
+  return refreshRequest;
+}
+
+export async function apiRequest(
+  path,
+  { method = 'GET', body, query, signal } = {},
+  allowRefresh = true
+) {
   const requestHadAccessToken = Boolean(accessToken);
   const headers = {
     Accept: 'application/json',
@@ -39,21 +83,43 @@ export async function apiRequest(path, { method = 'GET', body, query, signal } =
   const response = await fetch(buildUrl(path, query), {
     method,
     headers,
-    credentials: 'omit',
+    credentials: 'include',
     body: body === undefined ? undefined : JSON.stringify(body),
     signal,
   });
-  const contentType = response.headers.get('content-type') || '';
-  const payload = contentType.includes('application/json') ? await response.json() : null;
+  const payload = await readResponse(response);
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      requestHadAccessToken &&
+      allowRefresh &&
+      path !== '/api/refresh'
+    ) {
+      try {
+        await requestRefreshToken();
+        return apiRequest(
+          path,
+          { method, body, query, signal },
+          false
+        );
+      } catch {
+        setAccessToken(null);
+        unauthorizedHandler?.();
+      }
+    }
+
     const message = payload?.error || `Request failed with status ${response.status}`;
     const error = new Error(message);
     error.status = response.status;
     error.code = payload?.code;
     error.traceId = payload?.trace_id;
 
-    if (response.status === 401 && requestHadAccessToken) {
+    if (
+      response.status === 401 &&
+      requestHadAccessToken &&
+      !allowRefresh
+    ) {
       setAccessToken(null);
       unauthorizedHandler?.();
     }
@@ -75,6 +141,10 @@ export function logout() {
   return apiRequest('/api/logout', {
     method: 'POST',
   });
+}
+
+export function refreshSession() {
+  return requestRefreshToken();
 }
 
 export function getMe() {

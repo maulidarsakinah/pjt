@@ -2,7 +2,8 @@ const app = require("../src/app");
 
 async function requestJson(baseUrl, path, options = {}) {
   const response = await fetch(`${baseUrl}${path}`, options);
-  const body = await response.json();
+  const text = await response.text();
+  const body = text ? JSON.parse(text) : null;
 
   return {
     body,
@@ -80,6 +81,22 @@ async function main() {
       );
     }
 
+    const refreshWithoutCookie = await requestJson(baseUrl, "/api/refresh", {
+      method: "POST",
+      headers: {
+        "x-trace-id": "tx-ci-refresh-no-cookie",
+      },
+    });
+
+    if (
+      refreshWithoutCookie.response.status !== 401 ||
+      refreshWithoutCookie.body.code !== "UNAUTHORIZED"
+    ) {
+      throw new Error(
+        `Expected /api/refresh without a cookie to return 401, got ${refreshWithoutCookie.response.status}`,
+      );
+    }
+
     const logoutWithoutToken = await requestJson(baseUrl, "/api/logout", {
       method: "POST",
       headers: {
@@ -87,12 +104,9 @@ async function main() {
       },
     });
 
-    if (
-      logoutWithoutToken.response.status !== 401 ||
-      logoutWithoutToken.body.code !== "UNAUTHORIZED"
-    ) {
+    if (logoutWithoutToken.response.status !== 204) {
       throw new Error(
-        `Expected /api/logout without a bearer token to return 401, got ${logoutWithoutToken.response.status}`,
+        `Expected /api/logout without a token to clear the session with 204, got ${logoutWithoutToken.response.status}`,
       );
     }
 

@@ -3,6 +3,14 @@ const { randomUUID } = require("node:crypto");
 const jwt = require("jsonwebtoken");
 const oracledb = require("oracledb");
 const config = require("../config");
+const {
+  createRefreshToken,
+  verifyRefreshToken,
+} = require("../refreshToken");
+const {
+  isTokenRevoked,
+  revokeToken,
+} = require("../tokenRevocation");
 const { writeAuditEvent } = require("./audit");
 const { withConnection } = require("./database");
 
@@ -60,6 +68,7 @@ function createToken(user) {
       sub: String(user.id),
       email: user.email,
       company_id: user.company_id,
+      token_type: "access",
       issued_at_ms: Date.now(),
     },
     config.auth.jwtSecret,
@@ -71,6 +80,14 @@ function createToken(user) {
       jwtid: randomUUID(),
     },
   );
+}
+
+function createSession(user) {
+  return {
+    user,
+    token: createToken(user),
+    refreshToken: createRefreshToken(user),
+  };
 }
 
 async function registerUser(body, req) {
@@ -205,10 +222,7 @@ async function registerUser(body, req) {
       targetId: nextId,
     });
 
-    return {
-      user,
-      token: createToken(user),
-    };
+    return createSession(user);
   });
 }
 
@@ -304,15 +318,77 @@ async function loginUser(body, req) {
 
     const safeUser = publicUser(user);
 
-    return {
-      user: safeUser,
-      token: createToken(safeUser),
-    };
+    return createSession(safeUser);
+  });
+}
+
+async function refreshUserSession(token) {
+  let payload;
+
+  try {
+    payload = verifyRefreshToken(token);
+  } catch {
+    throw unauthorized("invalid or expired refresh token");
+  }
+
+  const userId = Number(payload.sub);
+
+  if (
+    !Number.isInteger(userId) ||
+    userId <= 0 ||
+    isTokenRevoked(payload)
+  ) {
+    throw unauthorized("invalid or expired refresh token");
+  }
+
+  return withConnection(async (connection) => {
+    const result = await connection.execute(
+      `SELECT
+         "id" AS "id",
+         "name" AS "name",
+         "email" AS "email",
+         "email_verified_at" AS "email_verified_at",
+         "phone" AS "phone",
+         "status" AS "status",
+         "company_id" AS "company_id",
+         "created_at" AS "created_at",
+         "updated_at" AS "updated_at"
+       FROM "users"
+       WHERE "id" = :id
+       AND "status" = '1'
+       AND ROWNUM = 1`,
+      { id: userId },
+      {
+        fetchArraySize: 1,
+        maxRows: 1,
+      },
+    );
+    const user = result.rows[0];
+
+    if (!user) {
+      throw unauthorized("invalid or expired refresh token");
+    }
+
+    const issuedAt = Number(payload.issued_at_ms);
+    const updatedAt = Date.parse(user.updated_at);
+
+    if (
+      !Number.isFinite(issuedAt) ||
+      (Number.isFinite(updatedAt) && issuedAt <= updatedAt)
+    ) {
+      throw unauthorized("invalid or expired refresh token");
+    }
+
+    revokeToken(payload);
+
+    return createSession(publicUser(user));
   });
 }
 
 module.exports = {
+  createSession,
   createToken,
   loginUser,
+  refreshUserSession,
   registerUser,
 };

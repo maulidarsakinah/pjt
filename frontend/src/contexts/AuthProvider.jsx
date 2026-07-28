@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   getMe,
   logout as logoutRequest,
+  refreshSession,
   setAccessToken,
   setUnauthorizedHandler,
 } from '../services/api';
 import AuthContext from './authContext';
+
+const DEMO_SESSION_KEY = 'hydrotrack_demo_session';
 
 function normalizeUser(user) {
   if (!user) {
@@ -20,7 +23,7 @@ function normalizeUser(user) {
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [isInitializing, setIsInitializing] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isRefreshingUser, setIsRefreshingUser] = useState(false);
   const [authMessage, setAuthMessage] = useState('');
 
@@ -31,6 +34,15 @@ export function AuthProvider({ children }) {
     setUser(nextUser);
     setAuthMessage('');
     setIsInitializing(false);
+
+    if (nextUser?.is_demo) {
+      window.sessionStorage.setItem(
+        DEMO_SESSION_KEY,
+        JSON.stringify({ user: nextUser })
+      );
+    } else {
+      window.sessionStorage.removeItem(DEMO_SESSION_KEY);
+    }
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -56,6 +68,7 @@ export function AuthProvider({ children }) {
       } finally {
         setAccessToken(null);
         setUser(null);
+        window.sessionStorage.removeItem(DEMO_SESSION_KEY);
         setAuthMessage(message);
         setIsInitializing(false);
       }
@@ -70,12 +83,58 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       setUser(null);
+      window.sessionStorage.removeItem(DEMO_SESSION_KEY);
       setAuthMessage('Sesi berakhir. Silakan login kembali.');
       setIsInitializing(false);
     });
 
     return () => {
       setUnauthorizedHandler(null);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function restoreAuthSession() {
+      const storedDemoSession = window.sessionStorage.getItem(DEMO_SESSION_KEY);
+
+      if (storedDemoSession) {
+        try {
+          const session = JSON.parse(storedDemoSession);
+
+          if (session.user?.is_demo) {
+            if (isActive) {
+              setUser(normalizeUser(session.user));
+              setIsInitializing(false);
+            }
+            return;
+          }
+        } catch {
+          window.sessionStorage.removeItem(DEMO_SESSION_KEY);
+        }
+      }
+
+      try {
+        await refreshSession();
+        const response = await getMe();
+
+        if (isActive) {
+          setUser(normalizeUser(response.data));
+        }
+      } catch {
+        setAccessToken(null);
+      } finally {
+        if (isActive) {
+          setIsInitializing(false);
+        }
+      }
+    }
+
+    restoreAuthSession();
+
+    return () => {
+      isActive = false;
     };
   }, []);
 

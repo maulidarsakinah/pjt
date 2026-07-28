@@ -40,6 +40,7 @@ const loggerOptions = {
       "db.password",
       "DB_PASSWORD",
       "JWT_SECRET",
+      "REFRESH_TOKEN_SECRET",
     ],
     censor: "[REDACTED]",
   },

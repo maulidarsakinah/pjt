@@ -1,6 +1,5 @@
-const jwt = require("jsonwebtoken");
 const config = require("../config");
-const { getBearerToken } = require("../authToken");
+const { getBearerToken, verifyAccessToken } = require("../authToken");
 const { TtlCache } = require("../cache");
 const db = require("../db");
 const { isTokenRevoked } = require("../tokenRevocation");
@@ -75,11 +74,7 @@ module.exports = async (req, res, next) => {
     let payload;
 
     try {
-      payload = jwt.verify(token, config.auth.jwtSecret, {
-        algorithms: ["HS256"],
-        audience: config.auth.jwtAudience,
-        issuer: config.auth.jwtIssuer,
-      });
+      payload = verifyAccessToken(token);
     } catch (error) {
       throw unauthorized("invalid or expired token");
     }

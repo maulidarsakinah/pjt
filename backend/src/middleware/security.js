@@ -29,6 +29,7 @@ function corsAllowlist(req, res, next) {
   }
 
   res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Vary", "Origin");
   res.setHeader(
     "Access-Control-Allow-Headers",

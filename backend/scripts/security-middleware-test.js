@@ -49,8 +49,8 @@ assert.equal(
   "Authorization, Content-Type, X-Request-Id, X-Trace-Id",
 );
 assert.equal(
-  corsResponse.headers.has("access-control-allow-credentials"),
-  false,
+  corsResponse.headers.get("access-control-allow-credentials"),
+  "true",
 );
 
 config.security.corsOrigins.pop();

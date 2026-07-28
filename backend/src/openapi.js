@@ -104,6 +104,8 @@ module.exports = {
       post: {
         tags: ["Auth"],
         summary: "Login a user",
+        description:
+          "Returns a short-lived bearer token and sets a rotating HttpOnly refresh-token cookie.",
         operationId: "loginUser",
         requestBody: {
           required: true,
@@ -118,6 +120,13 @@ module.exports = {
         responses: {
           200: {
             description: "Login successful",
+            headers: {
+              "Set-Cookie": {
+                description:
+                  "HttpOnly, SameSite=Strict refresh-token cookie",
+                schema: { type: "string" },
+              },
+            },
             content: {
               "application/json": {
                 schema: {
@@ -152,18 +161,51 @@ module.exports = {
         },
       },
     },
+    "/api/refresh": {
+      post: {
+        tags: ["Auth"],
+        summary: "Rotate the refresh cookie and issue a new access token",
+        operationId: "refreshUserSession",
+        security: [{ refreshCookie: [] }],
+        responses: {
+          200: {
+            description: "Session refreshed successfully",
+            headers: {
+              "Set-Cookie": {
+                description:
+                  "Rotated HttpOnly, SameSite=Strict refresh-token cookie",
+                schema: { type: "string" },
+              },
+            },
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AuthResponse",
+                },
+              },
+            },
+          },
+          401: {
+            description: "Missing, invalid, expired, or revoked refresh token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     "/api/logout": {
       post: {
         tags: ["Auth"],
-        summary: "Revoke the current access token",
+        summary: "Revoke available session tokens and clear the refresh cookie",
         operationId: "logoutUser",
-        security: [{ bearerAuth: [] }],
         responses: {
           204: {
-            description: "Access token revoked",
-          },
-          401: {
-            description: "Missing or invalid bearer token",
+            description: "Session tokens revoked when valid and cookie cleared",
           },
         },
       },
@@ -1629,6 +1671,11 @@ module.exports = {
         type: "http",
         scheme: "bearer",
         bearerFormat: "JWT",
+      },
+      refreshCookie: {
+        type: "apiKey",
+        in: "cookie",
+        name: "hydrotrack_refresh",
       },
     },
     schemas: {
