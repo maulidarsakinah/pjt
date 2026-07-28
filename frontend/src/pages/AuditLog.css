@@ -556,6 +556,34 @@
   background: #fff7f7;
 }
 
+.audit-detail-error-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audit-detail-error-content pre {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.audit-detail-error-content a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .audit-trace-button {
   width: 100%;
   margin-top: 20px;

@@ -136,6 +136,16 @@ function getLogKey(log) {
   ].map((value) => value ?? '').join('|');
 }
 
+function getOracleHelpUrl(message) {
+  if (typeof message !== 'string') {
+    return null;
+  }
+
+  return message.match(
+    /https:\/\/docs\.oracle\.com\/error-help\/db\/[A-Za-z0-9-]+\/?/
+  )?.[0] || null;
+}
+
 function getPaginationItems(currentPage, totalPages) {
   if (totalPages <= 5) {
     return Array.from({ length: totalPages }, (_, index) => index + 1);
@@ -724,8 +734,21 @@ const AuditLog = () => {
   }, [auditLogs]);
 
   const handleSelectLog = useCallback((log) => {
-    setSelectedLog(log);
-  }, []);
+    const errorLog = auditLogs.find((candidate) => (
+      candidate.trace_id &&
+      candidate.trace_id === log.trace_id &&
+      candidate.error_message
+    ));
+
+    setSelectedLog(errorLog
+      ? {
+        ...log,
+        error_code: errorLog.error_code,
+        error_message: errorLog.error_message,
+        error_source: errorLog.error_source,
+      }
+      : log);
+  }, [auditLogs]);
 
   const applyFilters = useCallback((filters) => {
     setOffset(0);
@@ -784,6 +807,9 @@ const AuditLog = () => {
   };
 
   const selectedStatusMeta = selectedLog ? getStatusMeta(selectedLog) : null;
+  const selectedErrorHelpUrl = selectedLog
+    ? getOracleHelpUrl(selectedLog.error_message)
+    : null;
 
   return (
     <div className="view-section audit-log-page">
@@ -902,7 +928,24 @@ const AuditLog = () => {
               {selectedLog.error_message && (
                 <div className="audit-detail-item audit-detail-error">
                   <span>Error Detail</span>
-                  <strong>{selectedLog.error_source}: {selectedLog.error_message}</strong>
+                  <div className="audit-detail-error-content">
+                    <strong>
+                      {[selectedLog.error_source, selectedLog.error_code]
+                        .filter(Boolean)
+                        .join(' / ')}
+                    </strong>
+                    <pre>{selectedLog.error_message}</pre>
+                    {selectedErrorHelpUrl && (
+                      <a
+                        href={selectedErrorHelpUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Buka dokumentasi error Oracle
+                        <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                      </a>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
