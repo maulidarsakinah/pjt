@@ -2,9 +2,22 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, ''
 let accessToken = null;
 let unauthorizedHandler = null;
 let refreshRequest = null;
+const readRequestCache = new Map();
+const READ_CACHE_TTL_MS = 30_000;
+const READ_CACHE_MAX_ITEMS = 100;
+
+function clearReadRequestCache() {
+  readRequestCache.clear();
+}
 
 export function setAccessToken(token) {
-  accessToken = typeof token === 'string' && token ? token : null;
+  const nextAccessToken = typeof token === 'string' && token ? token : null;
+
+  if (nextAccessToken !== accessToken) {
+    clearReadRequestCache();
+  }
+
+  accessToken = nextAccessToken;
 }
 
 export function setUnauthorizedHandler(handler) {
@@ -27,6 +40,131 @@ async function readResponse(response) {
   const contentType = response.headers.get('content-type') || '';
 
   return contentType.includes('application/json') ? response.json() : null;
+}
+
+function createAbortError() {
+  return new DOMException('The request was aborted.', 'AbortError');
+}
+
+function subscribeToCachedRequest(entry, signal) {
+  if (signal?.aborted) {
+    return Promise.reject(createAbortError());
+  }
+
+  return new Promise((resolve, reject) => {
+    const consumer = Symbol('read-request-consumer');
+    let isSettled = false;
+
+    if (entry.status === 'pending') {
+      entry.consumers.add(consumer);
+    }
+
+    const cleanup = () => {
+      signal?.removeEventListener('abort', handleAbort);
+      entry.consumers.delete(consumer);
+    };
+    const handleAbort = () => {
+      if (isSettled) {
+        return;
+      }
+
+      isSettled = true;
+      cleanup();
+
+      if (entry.status === 'pending' && entry.consumers.size === 0) {
+        if (readRequestCache.get(entry.cacheKey) === entry) {
+          readRequestCache.delete(entry.cacheKey);
+        }
+
+        entry.controller.abort();
+      }
+
+      reject(createAbortError());
+    };
+
+    signal?.addEventListener('abort', handleAbort, { once: true });
+    entry.promise.then(
+      (value) => {
+        if (!isSettled) {
+          isSettled = true;
+          cleanup();
+          resolve(value);
+        }
+      },
+      (error) => {
+        if (!isSettled) {
+          isSettled = true;
+          cleanup();
+          reject(error);
+        }
+      }
+    );
+  });
+}
+
+function cachedGet(path, query, { signal, ttlMs = READ_CACHE_TTL_MS } = {}) {
+  const cacheKey = buildUrl(path, query);
+  const now = Date.now();
+  let entry = readRequestCache.get(cacheKey);
+
+  if (entry?.status === 'fulfilled' && entry.expiresAt <= now) {
+    readRequestCache.delete(cacheKey);
+    entry = null;
+  }
+
+  if (!entry) {
+    for (const [key, cachedEntry] of readRequestCache) {
+      if (
+        cachedEntry.status === 'fulfilled' &&
+        cachedEntry.expiresAt <= now
+      ) {
+        readRequestCache.delete(key);
+      }
+    }
+
+    while (readRequestCache.size >= READ_CACHE_MAX_ITEMS) {
+      const oldestFulfilledKey = Array.from(readRequestCache.entries()).find(
+        ([, cachedEntry]) => cachedEntry.status === 'fulfilled'
+      )?.[0];
+
+      if (!oldestFulfilledKey) {
+        break;
+      }
+
+      readRequestCache.delete(oldestFulfilledKey);
+    }
+
+    const controller = new AbortController();
+
+    entry = {
+      cacheKey,
+      consumers: new Set(),
+      controller,
+      expiresAt: 0,
+      promise: null,
+      status: 'pending',
+    };
+    entry.promise = apiRequest(path, {
+      query,
+      signal: controller.signal,
+    }).then(
+      (value) => {
+        entry.status = 'fulfilled';
+        entry.expiresAt = Date.now() + ttlMs;
+        return value;
+      },
+      (error) => {
+        if (readRequestCache.get(cacheKey) === entry) {
+          readRequestCache.delete(cacheKey);
+        }
+
+        throw error;
+      }
+    );
+    readRequestCache.set(cacheKey, entry);
+  }
+
+  return subscribeToCachedRequest(entry, signal);
 }
 
 async function requestRefreshToken() {
@@ -162,12 +300,16 @@ export function changePassword(currentPassword, newPassword, newPasswordConfirma
   });
 }
 
-export function getFlowStations(query) {
-  return apiRequest('/api/stations/flow', { query });
+export function getFlowStations(query, options) {
+  return cachedGet('/api/stations/flow', query, options);
 }
 
-export function getFlowStationData(id, query) {
-  return apiRequest(`/api/stations/flow/${id}/data`, { query });
+export function getFlowStationData(id, query, options) {
+  return cachedGet(`/api/stations/flow/${id}/data`, query, options);
+}
+
+export function prefetchFlowStationData(id, query) {
+  return getFlowStationData(id, query);
 }
 
 export function getCompany(id) {

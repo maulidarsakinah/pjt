@@ -500,7 +500,7 @@
 
   .pagination {
     gap: 12px;
-    align-items: center;
+    align-items: stretch;
   }
 
   .page-controls {

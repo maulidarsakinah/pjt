@@ -1,11 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import useAuth from '../contexts/useAuth';
-import { getFlowStationData, getFlowStations } from '../services/api';
+import {
+  getFlowStationData,
+  getFlowStations,
+  prefetchFlowStationData,
+} from '../services/api';
+import {
+  MapSkeleton,
+  StationListSkeleton,
+  TableRowsSkeleton,
+} from '../components/PageSkeletons';
 import { formatDateTime, formatNumber, readingToRow } from '../utils/flowData';
-import 'leaflet/dist/leaflet.css';
 import './Monitoring.css';
+
+const MonitoringMap = lazy(() => import('../components/MonitoringMap'));
 
 const DEMO_HISTORY_DATA = [
   { id: 1, station: 'FLOW-Ploso_Lamongan', debit: 142.50, totalizer: 452109, vcc: 12.42, temp: 29.5, status: 'Active', time: '2026-07-06 10:45' },
@@ -52,6 +70,20 @@ function buildRangeQuery(timeRange) {
   };
 }
 
+function buildDetailRangeQuery() {
+  const end = new Date();
+
+  end.setSeconds(0, 0);
+
+  return {
+    mode: 'range',
+    start: new Date(end.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+    end: end.toISOString(),
+    limit: 10,
+    offset: 0,
+  };
+}
+
 function mapHistoryRow(station, reading, index) {
   const row = readingToRow(station, reading);
 
@@ -82,14 +114,13 @@ function getPaginationItems(currentPage, pageCount) {
   }
 
   if (currentPage <= 3) {
-    return [1, 2, 3, 4, 'ellipsis-end', pageCount];
+    return [1, 2, 3, 'ellipsis-end', pageCount];
   }
 
   if (currentPage >= pageCount - 2) {
     return [
       1,
       'ellipsis-start',
-      pageCount - 3,
       pageCount - 2,
       pageCount - 1,
       pageCount,
@@ -99,9 +130,7 @@ function getPaginationItems(currentPage, pageCount) {
   return [
     1,
     'ellipsis-start',
-    currentPage - 1,
     currentPage,
-    currentPage + 1,
     'ellipsis-end',
     pageCount,
   ];
@@ -121,7 +150,7 @@ function useMediaQuery(query) {
   return matches;
 }
 
-const MonitoringMobileRow = ({ row }) => (
+const MonitoringMobileRow = memo(({ row }) => (
   <li>
     <div className="monitoring-mobile-log">
       <span className="monitoring-mobile-log-main">
@@ -140,7 +169,51 @@ const MonitoringMobileRow = ({ row }) => (
       </span>
     </div>
   </li>
-);
+));
+
+const StationCard = memo(({
+  isDemoUser,
+  latestReading,
+  onPrefetch,
+  onShowDetail,
+  station,
+}) => {
+  const stationName = station.station_name
+    || station.kode_station
+    || `Station ${station.id}`;
+  const latestDebit = isDemoUser
+    ? station.latest_debit
+    : formatNumber(latestReading?.debit);
+  const latestTime = isDemoUser
+    ? station.latest_time
+    : latestReading?.time || '-';
+
+  return (
+    <div className="station-card">
+      <div className="station-card-top">
+        <div className="station-name">{stationName}</div>
+        <span className="badge badge-normal">ACTIVE</span>
+      </div>
+      <div className="station-id">
+        ID: {station.kode_station || station.id}
+      </div>
+      <div className="station-metric">
+        <span className="station-metric-val">
+          Debit: {latestDebit} m³/s
+        </span>
+        <span className="station-time">{latestTime}</span>
+      </div>
+      <button
+        className="btn btn-outline btn-block"
+        onClick={() => onShowDetail(station)}
+        onFocus={() => onPrefetch(station)}
+        onMouseEnter={() => onPrefetch(station)}
+      >
+        Lihat Detail
+      </button>
+    </div>
+  );
+});
 
 const Monitoring = () => {
   const { user } = useAuth();
@@ -148,6 +221,7 @@ const Monitoring = () => {
   const isMobile = useMediaQuery('(max-width: 760px)');
   const navigate = useNavigate();
   const location = useLocation();
+  const detailQueriesRef = useRef(new Map());
   const detailBasePath = location.pathname.startsWith('/admin')
     ? '/admin/detail'
     : '/dashboard/detail';
@@ -167,13 +241,17 @@ const Monitoring = () => {
     }
 
     let isActive = true;
+    const controller = new AbortController();
 
     async function loadMonitoringData() {
       setIsLoading(true);
       setError('');
 
       try {
-        const stationResponse = await getFlowStations({ limit: 100, offset: 0 });
+        const stationResponse = await getFlowStations(
+          { limit: 100, offset: 0 },
+          { signal: controller.signal }
+        );
         const stationRows = (stationResponse.data || []).filter(
           (station) => LIVE_STATION_IDS.has(String(station.id))
         );
@@ -181,7 +259,8 @@ const Monitoring = () => {
           stationRows.map(async (station) => {
             const response = await getFlowStationData(
               station.id,
-              buildRangeQuery(appliedTimeRange)
+              buildRangeQuery(appliedTimeRange),
+              { signal: controller.signal }
             );
 
             return (response.data || []).map((reading, index) => (
@@ -208,7 +287,7 @@ const Monitoring = () => {
           }
         }
       } catch (requestError) {
-        if (isActive) {
+        if (isActive && requestError.name !== 'AbortError') {
           setStations([]);
           setHistoryData([]);
           setError(requestError.message || 'Gagal memuat data monitoring.');
@@ -224,6 +303,7 @@ const Monitoring = () => {
 
     return () => {
       isActive = false;
+      controller.abort();
     };
   }, [appliedTimeRange, isDemoUser]);
 
@@ -277,13 +357,17 @@ const Monitoring = () => {
   );
   const latestReadingByStation = useMemo(() => {
     const readings = new Map();
+    const stationByName = new Map(
+      availableStations.map((station) => [
+        isDemoUser ? station.station_name : String(station.id),
+        station,
+      ])
+    );
 
     allHistoryData.forEach((row) => {
-      const station = availableStations.find((item) => (
-        isDemoUser
-          ? item.station_name === row.station
-          : String(item.id) === row.stationId
-      ));
+      const station = stationByName.get(
+        isDemoUser ? row.station : row.stationId
+      );
       const key = station ? String(station.id) : null;
 
       if (key && !readings.has(key)) {
@@ -294,9 +378,45 @@ const Monitoring = () => {
     return readings;
   }, [allHistoryData, availableStations, isDemoUser]);
 
-  const handleShowDetail = (stationName) => {
-    navigate(`${detailBasePath}/${stationName}`);
-  };
+  const getDetailQuery = useCallback((station) => {
+    const cacheKey = String(station.id);
+
+    if (!detailQueriesRef.current.has(cacheKey)) {
+      detailQueriesRef.current.set(cacheKey, buildDetailRangeQuery());
+    }
+
+    return detailQueriesRef.current.get(cacheKey);
+  }, []);
+
+  const handlePrefetchDetail = useCallback((station) => {
+    const prefetchTasks = [import('./Detail')];
+
+    if (!isDemoUser) {
+      prefetchTasks.push(
+        prefetchFlowStationData(station.id, getDetailQuery(station))
+      );
+    }
+
+    void Promise.all(prefetchTasks).catch((error) => {
+      console.warn('Detail prefetch failed.', error);
+    });
+  }, [getDetailQuery, isDemoUser]);
+
+  const handleShowDetail = useCallback((station) => {
+    const stationKey = isDemoUser
+      ? station.station_name
+      : station.kode_station || station.station_name;
+
+    navigate(
+      `${detailBasePath}/${encodeURIComponent(stationKey)}`,
+      {
+        state: {
+          historyQuery: getDetailQuery(station),
+          station,
+        },
+      }
+    );
+  }, [detailBasePath, getDetailQuery, isDemoUser, navigate]);
 
   const handleApplyFilter = () => {
     setHistoryPage(1);
@@ -415,19 +535,9 @@ const Monitoring = () => {
 
       <div className="monitoring-layout">
         <div className="map-monitoring-container">
-          <MapContainer
-            center={[-7.1147, 112.4146]}
-            zoom={11}
-            style={{ height: '100%', width: '100%', zIndex: 1 }}
-          >
-            <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-            <Marker position={[-7.121, 112.414]}>
-              <Popup><b>FLOW-Ploso_Lamongan</b></Popup>
-            </Marker>
-            <Marker position={[-7.100, 112.450]}>
-              <Popup><b>FLOW-Babat_Hilir</b></Popup>
-            </Marker>
-          </MapContainer>
+          <Suspense fallback={<MapSkeleton />}>
+            <MonitoringMap />
+          </Suspense>
         </div>
 
         <div className="station-list">
@@ -437,46 +547,18 @@ const Monitoring = () => {
           </div>
           <div className="station-items">
             {isLoading && visibleStations.length === 0 ? (
-              <div>Memuat data stasiun...</div>
+              <StationListSkeleton />
             ) : visibleStations.length > 0 ? (
-              visibleStations.map((station) => {
-                const latestReading = latestReadingByStation.get(
-                  String(station.id)
-                );
-                const stationName = station.station_name
-                  || station.kode_station
-                  || `Station ${station.id}`;
-                const latestDebit = isDemoUser
-                  ? station.latest_debit
-                  : formatNumber(latestReading?.debit);
-                const latestTime = isDemoUser
-                  ? station.latest_time
-                  : latestReading?.time || '-';
-
-                return (
-                  <div className="station-card" key={station.id}>
-                    <div className="station-card-top">
-                      <div className="station-name">{stationName}</div>
-                      <span className="badge badge-normal">ACTIVE</span>
-                    </div>
-                    <div className="station-id">
-                      ID: {station.kode_station || station.id}
-                    </div>
-                    <div className="station-metric">
-                      <span className="station-metric-val">
-                        Debit: {latestDebit} m³/s
-                      </span>
-                      <span className="station-time">{latestTime}</span>
-                    </div>
-                    <button
-                      className="btn btn-outline btn-block"
-                      onClick={() => handleShowDetail(stationName)}
-                    >
-                      Lihat Detail
-                    </button>
-                  </div>
-                );
-              })
+              visibleStations.map((station) => (
+                <StationCard
+                  isDemoUser={isDemoUser}
+                  key={station.id}
+                  latestReading={latestReadingByStation.get(String(station.id))}
+                  onPrefetch={handlePrefetchDetail}
+                  onShowDetail={handleShowDetail}
+                  station={station}
+                />
+              ))
             ) : (
               <div>Tidak ada stasiun ditemukan.</div>
             )}
@@ -497,7 +579,9 @@ const Monitoring = () => {
           </button>
         </div>
         <div className="table-container">
-          {isMobile ? (
+          {isLoading && visibleHistoryData.length === 0 ? (
+            <TableRowsSkeleton />
+          ) : isMobile ? (
             <ul className="monitoring-mobile-list">
               {pagedHistoryData.length > 0 ? (
                 pagedHistoryData.map((row) => (

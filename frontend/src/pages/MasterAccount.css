@@ -593,7 +593,7 @@
   }
 
   .master-table-panel .pagination {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
     gap: 12px;
   }
@@ -603,8 +603,11 @@
   }
 
   .master-table-panel .page-controls {
-    justify-content: flex-start;
+    flex-wrap: nowrap;
+    justify-content: center;
     max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .master-table-panel .page-btn {

@@ -342,7 +342,7 @@ const MasterAccount = () => {
             <button className="page-btn"><i className="fa-solid fa-chevron-left"></i></button>
             <button className="page-btn active">1</button>
             <button className="page-btn">2</button>
-            <button className="page-btn">3</button>
+            {!isMobile && <button className="page-btn">3</button>}
             <button className="page-btn">...</button>
             <button className="page-btn">8</button>
             <button className="page-btn"><i className="fa-solid fa-chevron-right"></i></button>

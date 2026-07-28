@@ -1,11 +1,21 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './layouts/AdminLayout';
 import Login from './pages/Login';
 import { AuthProvider } from './contexts/AuthProvider';
 import useAuth from './contexts/useAuth';
 import DashboardSkeleton from './components/DashboardSkeleton';
+import {
+  DetailSkeleton,
+  MonitoringSkeleton,
+} from './components/PageSkeletons';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Monitoring = lazy(() => import('./pages/Monitoring'));
@@ -15,7 +25,19 @@ const MasterAccount = lazy(() => import('./pages/MasterAccount'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const AdminPlaceholder = lazy(() => import('./pages/AdminPlaceholder'));
 
-const PageFallback = () => <DashboardSkeleton />;
+const PageFallback = () => {
+  const { pathname } = useLocation();
+
+  if (pathname.includes('/monitoring')) {
+    return <MonitoringSkeleton />;
+  }
+
+  if (pathname.includes('/detail/')) {
+    return <DetailSkeleton />;
+  }
+
+  return <DashboardSkeleton />;
+};
 
 function isAdminUser(user) {
   const roleText = [
@@ -70,13 +92,13 @@ function App() {
             <Route path="/dashboard" element={<ProtectedRoute />}>
               <Route index element={<Dashboard />} />
               <Route path="monitoring" element={<Monitoring />} />
-              <Route path="detail/:id" element={<Detail />} />
+              <Route path="detail/:stationKey" element={<Detail />} />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="/admin" element={<ProtectedRoute layout={<AdminLayout />} requireAdmin />}>
               <Route index element={<Dashboard />} />
               <Route path="monitoring" element={<Monitoring />} />
-              <Route path="detail/:id" element={<Detail />} />
+              <Route path="detail/:stationKey" element={<Detail />} />
               <Route path="master-account" element={<MasterAccount />} />
               <Route path="settings" element={<Settings />} />
               <Route path="master-data" element={<AdminPlaceholder title="Master Data" icon="fa-database" />} />

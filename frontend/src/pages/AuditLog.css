@@ -837,8 +837,10 @@
     width: 100%;
     min-width: 0;
     gap: 4px;
-    justify-content: flex-start;
-    overflow: hidden;
+    flex-wrap: nowrap;
+    justify-content: center;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .audit-table-panel .page-btn,
