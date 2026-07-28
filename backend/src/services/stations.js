@@ -148,6 +148,7 @@ function buildFlowStationDataResponse(station, response, mode) {
     station,
     data: response.data,
     count: response.count,
+    total: response.total ?? response.count,
     limit: response.limit,
     offset: response.offset,
     has_more: mode === "latest" ? false : response.has_more,
@@ -235,6 +236,7 @@ async function listFlowStations(query) {
 async function getFlowStationData(stationIdValue, query) {
   const stationId = parseStationId(stationIdValue);
   const dataFilter = buildDataFilter(query);
+  const includeTotal = dataFilter.mode !== "latest";
 
   return withConnection(async (connection) => {
     const station = await findFlowStationById(connection, stationId);
@@ -259,7 +261,8 @@ async function getFlowStationData(stationIdValue, query) {
          "totalizer_2",
          "vcc",
          "logger_temp",
-         "logger_humid"
+         "logger_humid"${includeTotal ? `,
+         "__total"` : ""}
        FROM (
          SELECT page_query.*, ROWNUM AS "rn"
          FROM (
@@ -273,7 +276,8 @@ async function getFlowStationData(stationIdValue, query) {
              "totalizer_2" AS "totalizer_2",
              "vcc" AS "vcc",
              "logger_temp" AS "logger_temp",
-             "logger_humid" AS "logger_humid"
+             "logger_humid" AS "logger_humid"${includeTotal ? `,
+             COUNT(*) OVER () AS "__total"` : ""}
            FROM "${station.table_data}"
            ${dataFilter.whereSql}
            ORDER BY "datetime" DESC, "id" DESC
@@ -291,7 +295,18 @@ async function getFlowStationData(stationIdValue, query) {
         maxRows: dataFilter.pagination.limit + 1,
       },
     );
-    const response = buildListResponse(dataResult.rows, dataFilter.pagination);
+    const total = includeTotal
+      ? Number(dataResult.rows[0]?.__total || 0)
+      : Math.min(dataResult.rows.length, dataFilter.pagination.limit);
+    const rows = dataResult.rows.map((row) => {
+      const { __total: ignoredTotal, ...dataRow } = row;
+
+      return dataRow;
+    });
+    const response = {
+      ...buildListResponse(rows, dataFilter.pagination),
+      total,
+    };
 
     return buildFlowStationDataResponse(station, response, dataFilter.mode);
   });

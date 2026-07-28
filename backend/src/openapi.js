@@ -2561,6 +2561,7 @@ module.exports = {
           "station",
           "data",
           "count",
+          "total",
           "limit",
           "offset",
           "has_more",
@@ -2579,6 +2580,12 @@ module.exports = {
           count: {
             type: "integer",
             example: 100,
+          },
+          total: {
+            type: "integer",
+            example: 248,
+            description:
+              "Total rows matching the selected station data filter",
           },
           limit: {
             type: "integer",

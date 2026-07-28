@@ -57,6 +57,7 @@ function testLatestHasMore() {
   const page = {
     data: [{ id: 10 }],
     count: 1,
+    total: 25,
     limit: 1,
     offset: 0,
     has_more: true,
@@ -69,6 +70,10 @@ function testLatestHasMore() {
   assert.equal(
     buildFlowStationDataResponse(station, page, "today").has_more,
     true,
+  );
+  assert.equal(
+    buildFlowStationDataResponse(station, page, "today").total,
+    25,
   );
 }
 
