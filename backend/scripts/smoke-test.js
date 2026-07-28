@@ -62,44 +62,37 @@ async function main() {
       );
     }
 
-    const rejectedCrossSiteLogout = await requestJson(baseUrl, "/api/logout", {
+    const formLogin = await requestJson(baseUrl, "/api/login", {
       method: "POST",
       headers: {
-        origin: "https://attacker.example",
-        "x-trace-id": "tx-ci-logout-csrf",
+        "content-type": "application/x-www-form-urlencoded",
+        "x-trace-id": "tx-ci-login-form",
+      },
+      body: "email=user%40example.com&password=password123",
+    });
+
+    if (
+      formLogin.response.status !== 415 ||
+      formLogin.body.code !== "UNSUPPORTED_MEDIA_TYPE"
+    ) {
+      throw new Error(
+        `Expected form-encoded /api/login to return 415, got ${formLogin.response.status}`,
+      );
+    }
+
+    const logoutWithoutToken = await requestJson(baseUrl, "/api/logout", {
+      method: "POST",
+      headers: {
+        "x-trace-id": "tx-ci-logout-no-token",
       },
     });
 
     if (
-      rejectedCrossSiteLogout.response.status !== 403 ||
-      rejectedCrossSiteLogout.body.code !== "CSRF_ORIGIN_DENIED"
+      logoutWithoutToken.response.status !== 401 ||
+      logoutWithoutToken.body.code !== "UNAUTHORIZED"
     ) {
       throw new Error(
-        `Expected cross-site /api/logout to return 403 CSRF_ORIGIN_DENIED, got ${rejectedCrossSiteLogout.response.status}`,
-      );
-    }
-
-    const logoutResponse = await fetch(`${baseUrl}/api/logout`, {
-      method: "POST",
-      headers: {
-        "x-trace-id": "tx-ci-logout",
-      },
-    });
-
-    if (logoutResponse.status !== 204) {
-      throw new Error(
-        `Expected /api/logout to return 204, got ${logoutResponse.status}`,
-      );
-    }
-
-    const logoutCookie = logoutResponse.headers.get("set-cookie") || "";
-
-    if (
-      !logoutCookie.includes("pkl_session=") ||
-      !logoutCookie.includes("HttpOnly")
-    ) {
-      throw new Error(
-        "Expected /api/logout to clear the HttpOnly authentication cookie",
+        `Expected /api/logout without a bearer token to return 401, got ${logoutWithoutToken.response.status}`,
       );
     }
 
@@ -122,11 +115,27 @@ async function main() {
     }
 
     if (
-      companies.body.error !== "Missing or invalid session" ||
+      companies.body.error !== "Missing or invalid bearer token" ||
       companies.body.code !== "UNAUTHORIZED"
     ) {
       throw new Error(
-        "Expected /api/companies 401 body to include Missing or invalid session and UNAUTHORIZED",
+        "Expected /api/companies 401 body to include Missing or invalid bearer token and UNAUTHORIZED",
+      );
+    }
+
+    const cookieOnlyCompanies = await requestJson(baseUrl, "/api/companies", {
+      headers: {
+        cookie: "pkl_session=header.payload.signature",
+        "x-trace-id": "tx-ci-companies-cookie-only",
+      },
+    });
+
+    if (
+      cookieOnlyCompanies.response.status !== 401 ||
+      cookieOnlyCompanies.body.code !== "UNAUTHORIZED"
+    ) {
+      throw new Error(
+        `Expected /api/companies to reject cookie-only authentication, got ${cookieOnlyCompanies.response.status}`,
       );
     }
 
@@ -149,11 +158,11 @@ async function main() {
     }
 
     if (
-      meAccess.body.error !== "Missing or invalid session" ||
+      meAccess.body.error !== "Missing or invalid bearer token" ||
       meAccess.body.code !== "UNAUTHORIZED"
     ) {
       throw new Error(
-        "Expected /api/me/access 401 body to include Missing or invalid session and UNAUTHORIZED",
+        "Expected /api/me/access 401 body to include Missing or invalid bearer token and UNAUTHORIZED",
       );
     }
 

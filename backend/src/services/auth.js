@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const { randomUUID } = require("node:crypto");
 const jwt = require("jsonwebtoken");
 const oracledb = require("oracledb");
 const config = require("../config");
@@ -59,12 +60,15 @@ function createToken(user) {
       sub: String(user.id),
       email: user.email,
       company_id: user.company_id,
+      issued_at_ms: Date.now(),
     },
     config.auth.jwtSecret,
     {
       expiresIn: config.auth.jwtExpiresIn,
       issuer: config.auth.jwtIssuer,
       audience: config.auth.jwtAudience,
+      algorithm: "HS256",
+      jwtid: randomUUID(),
     },
   );
 }
@@ -308,6 +312,7 @@ async function loginUser(body, req) {
 }
 
 module.exports = {
+  createToken,
   loginUser,
   registerUser,
 };

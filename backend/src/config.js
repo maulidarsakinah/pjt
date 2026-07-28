@@ -2,11 +2,10 @@ require("dotenv").config({ quiet: true });
 
 const nodeEnv = process.env.NODE_ENV || "development";
 const jwtSecret = process.env.JWT_SECRET || "change-this-secret";
-const cookieSecure =
-  nodeEnv === "production" || process.env.AUTH_COOKIE_SECURE === "true";
-const cookieSameSite = (
-  process.env.AUTH_COOKIE_SAME_SITE || "lax"
-).toLowerCase();
+const revocationMaxItems =
+  process.env.TOKEN_REVOCATION_MAX_ITEMS === undefined
+    ? 10000
+    : Number(process.env.TOKEN_REVOCATION_MAX_ITEMS);
 
 if (
   nodeEnv === "production" &&
@@ -17,14 +16,8 @@ if (
   );
 }
 
-if (!["lax", "strict", "none"].includes(cookieSameSite)) {
-  throw new Error("AUTH_COOKIE_SAME_SITE must be lax, strict, or none");
-}
-
-if (cookieSameSite === "none" && !cookieSecure) {
-  throw new Error(
-    "AUTH_COOKIE_SECURE must be true when AUTH_COOKIE_SAME_SITE is none",
-  );
+if (!Number.isInteger(revocationMaxItems) || revocationMaxItems <= 0) {
+  throw new Error("TOKEN_REVOCATION_MAX_ITEMS must be a positive integer");
 }
 
 const config = {
@@ -44,14 +37,10 @@ const config = {
   },
   auth: {
     jwtSecret,
-    jwtExpiresIn: process.env.JWT_EXPIRES_IN || "1d",
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || "15m",
     jwtIssuer: process.env.JWT_ISSUER || "pkl-api",
     jwtAudience: process.env.JWT_AUDIENCE || "pkl-api-users",
-    cookieName:
-      process.env.AUTH_COOKIE_NAME ||
-      (nodeEnv === "production" ? "__Host-pkl_session" : "pkl_session"),
-    cookieSameSite,
-    cookieSecure,
+    revocationMaxItems,
   },
   security: {
     bodyLimit: process.env.BODY_LIMIT || "100kb",

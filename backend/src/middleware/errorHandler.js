@@ -64,6 +64,10 @@ function getPublicCode(error, statusCode) {
     return "PAYLOAD_TOO_LARGE";
   }
 
+  if (statusCode === 415) {
+    return "UNSUPPORTED_MEDIA_TYPE";
+  }
+
   if (statusCode === 429) {
     return "RATE_LIMITED";
   }

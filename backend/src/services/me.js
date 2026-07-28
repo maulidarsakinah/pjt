@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const authenticate = require("../middleware/authenticate");
 const { badRequest } = require("../utils/httpErrors");
+const { revokeUserTokens } = require("../tokenRevocation");
 const { getUserAccess } = require("./access");
 const { writeAuditEvent } = require("./audit");
 const { withConnection } = require("./database");
@@ -91,10 +92,10 @@ function validatePasswordChange(body) {
 }
 
 function missingTokenError() {
-  const error = new Error("Missing or invalid session");
+  const error = new Error("Missing or invalid bearer token");
 
   error.statusCode = 401;
-  error.publicMessage = "Missing or invalid session";
+  error.publicMessage = "Missing or invalid bearer token";
   error.publicCode = "UNAUTHORIZED";
   return error;
 }
@@ -154,6 +155,7 @@ async function changeMyPassword(userId, body, req) {
     );
 
     authenticate.invalidateUser(userId);
+    revokeUserTokens(userId);
 
     writeAuditEvent(req, {
       category: "auth",

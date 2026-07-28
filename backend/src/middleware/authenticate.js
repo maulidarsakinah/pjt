@@ -1,8 +1,9 @@
 const jwt = require("jsonwebtoken");
 const config = require("../config");
-const { getAuthToken } = require("../authCookie");
+const { getBearerToken } = require("../authToken");
 const { TtlCache } = require("../cache");
 const db = require("../db");
+const { isTokenRevoked } = require("../tokenRevocation");
 
 const authUserCache = new TtlCache({
   name: "auth_user",
@@ -13,7 +14,7 @@ const authUserCache = new TtlCache({
 function unauthorized(message = "authentication required") {
   const error = new Error(message);
   error.statusCode = 401;
-  error.publicMessage = "Missing or invalid session";
+  error.publicMessage = "Missing or invalid bearer token";
   error.publicCode = "UNAUTHORIZED";
   return error;
 }
@@ -65,7 +66,7 @@ async function findActiveUser(userId) {
 
 module.exports = async (req, res, next) => {
   try {
-    const token = getAuthToken(req);
+    const token = getBearerToken(req);
 
     if (!token) {
       throw unauthorized();
@@ -75,6 +76,7 @@ module.exports = async (req, res, next) => {
 
     try {
       payload = jwt.verify(token, config.auth.jwtSecret, {
+        algorithms: ["HS256"],
         audience: config.auth.jwtAudience,
         issuer: config.auth.jwtIssuer,
       });
@@ -88,6 +90,10 @@ module.exports = async (req, res, next) => {
       throw unauthorized("invalid or expired token");
     }
 
+    if (isTokenRevoked(payload)) {
+      throw unauthorized("revoked token");
+    }
+
     const user = await findActiveUser(userId);
 
     if (!user) {
@@ -95,6 +101,7 @@ module.exports = async (req, res, next) => {
     }
 
     req.user = user;
+    req.auth = { payload, token };
     next();
   } catch (error) {
     next(error);

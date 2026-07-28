@@ -3,8 +3,8 @@ const compression = require("compression");
 const config = require("./config");
 const {
   corsAllowlist,
-  csrfProtection,
   generalRateLimit,
+  requireJsonBody,
   securityHeaders,
 } = require("./middleware/security");
 const requestLogger = require("./middleware/requestLogger");
@@ -28,10 +28,10 @@ app.set("trust proxy", config.security.trustProxy);
 
 app.use(requestLogger);
 app.use(corsAllowlist);
-app.use(csrfProtection);
 app.use(securityHeaders);
 app.use(compression());
 app.use(generalRateLimit);
+app.use(requireJsonBody);
 app.use(express.json({ limit: config.security.bodyLimit }));
 
 app.get("/", (req, res) => {
