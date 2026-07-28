@@ -1,15 +1,111 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
+import useAuth from '../contexts/useAuth';
+import { getFlowStationData, getFlowStations } from '../services/api';
+import { formatDateTime, formatNumber, readingToRow } from '../utils/flowData';
 import 'leaflet/dist/leaflet.css';
 import './Monitoring.css';
 
-const monitoringHistoryData = [
+const DEMO_HISTORY_DATA = [
   { id: 1, station: 'FLOW-Ploso_Lamongan', debit: 142.50, totalizer: 452109, vcc: 12.42, temp: 29.5, status: 'Active', time: '2026-07-06 10:45' },
   { id: 2, station: 'FLOW-Babat_Hilir', debit: 95.40, totalizer: 210985, vcc: 12.38, temp: 30.1, status: 'Active', time: '2026-07-06 10:42' },
   { id: 3, station: 'FLOW-Ploso_Lamongan', debit: 140.20, totalizer: 451900, vcc: 12.40, temp: 29.4, status: 'Active', time: '2026-07-06 10:40' },
-  { id: 4, station: 'FLOW-Babat_Hilir', debit: 92.10, totalizer: 210500, vcc: 12.35, temp: 29.9, status: 'Active', time: '2026-07-06 10:35' }
+  { id: 4, station: 'FLOW-Babat_Hilir', debit: 92.10, totalizer: 210500, vcc: 12.35, temp: 29.9, status: 'Active', time: '2026-07-06 10:35' },
 ];
+
+const DEMO_STATIONS = [
+  {
+    id: 'ST-PLS-01',
+    kode_station: 'ST-PLS-01',
+    station_name: 'FLOW-Ploso_Lamongan',
+    latest_debit: '142.5',
+    latest_time: '2 menit yang lalu',
+  },
+  {
+    id: 'ST-BBT-02',
+    kode_station: 'ST-BBT-02',
+    station_name: 'FLOW-Babat_Hilir',
+    latest_debit: '95.4',
+    latest_time: '5 menit yang lalu',
+  },
+];
+
+const DEFAULT_LOCATION = 'all';
+const DEFAULT_TIME_RANGE = '24h';
+const HISTORY_PAGE_SIZE = 10;
+const LIVE_STATION_IDS = new Set(['697', '740']);
+
+function buildRangeQuery(timeRange) {
+  const end = new Date();
+  const durationMs = timeRange === '7d'
+    ? 7 * 24 * 60 * 60 * 1000
+    : 24 * 60 * 60 * 1000;
+  const start = new Date(end.getTime() - durationMs);
+
+  return {
+    mode: 'range',
+    start: start.toISOString(),
+    end: end.toISOString(),
+    limit: 200,
+    offset: 0,
+  };
+}
+
+function mapHistoryRow(station, reading, index) {
+  const row = readingToRow(station, reading);
+
+  return {
+    id: `${station.id}-${reading.id ?? index}`,
+    stationId: String(station.id),
+    station: row.stationName,
+    debit: row.flow1,
+    totalizer: row.totalizer1,
+    vcc: row.vcc,
+    temp: row.temp,
+    status: 'Active',
+    time: formatDateTime(row.datetime),
+    timestamp: row.datetime,
+  };
+}
+
+function escapeCsvCell(value) {
+  const text = String(value ?? '');
+  const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
+
+  return `"${safeText.replaceAll('"', '""')}"`;
+}
+
+function getPaginationItems(currentPage, pageCount) {
+  if (pageCount <= 5) {
+    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  }
+
+  if (currentPage <= 3) {
+    return [1, 2, 3, 4, 'ellipsis-end', pageCount];
+  }
+
+  if (currentPage >= pageCount - 2) {
+    return [
+      1,
+      'ellipsis-start',
+      pageCount - 3,
+      pageCount - 2,
+      pageCount - 1,
+      pageCount,
+    ];
+  }
+
+  return [
+    1,
+    'ellipsis-start',
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+    'ellipsis-end',
+    pageCount,
+  ];
+}
 
 function useMediaQuery(query) {
   const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
@@ -35,9 +131,11 @@ const MonitoringMobileRow = ({ row }) => (
         </span>
         <strong>{row.station}</strong>
         <span className="monitoring-mobile-log-meta">
-          <span>Debit: {row.debit.toFixed(2)} m³/s</span>
-          <span>VCC: {row.vcc.toFixed(2)} V</span>
-          <span className="monitoring-mobile-latency">Suhu: {row.temp} °C</span>
+          <span>Debit: {formatNumber(row.debit)} m³/s</span>
+          <span>VCC: {formatNumber(row.vcc)} V</span>
+          <span className="monitoring-mobile-latency">
+            Suhu: {formatNumber(row.temp, 1)} °C
+          </span>
         </span>
       </span>
     </div>
@@ -45,17 +143,217 @@ const MonitoringMobileRow = ({ row }) => (
 );
 
 const Monitoring = () => {
+  const { user } = useAuth();
+  const isDemoUser = Boolean(user?.is_demo);
   const isMobile = useMediaQuery('(max-width: 760px)');
   const navigate = useNavigate();
   const location = useLocation();
-  const detailBasePath = location.pathname.startsWith('/admin') ? '/admin/detail' : '/dashboard/detail';
+  const detailBasePath = location.pathname.startsWith('/admin')
+    ? '/admin/detail'
+    : '/dashboard/detail';
+  const [stations, setStations] = useState([]);
+  const [historyData, setHistoryData] = useState([]);
+  const [locationFilter, setLocationFilter] = useState(DEFAULT_LOCATION);
+  const [timeRange, setTimeRange] = useState(DEFAULT_TIME_RANGE);
+  const [appliedLocation, setAppliedLocation] = useState(DEFAULT_LOCATION);
+  const [appliedTimeRange, setAppliedTimeRange] = useState(DEFAULT_TIME_RANGE);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isDemoUser) {
+      return undefined;
+    }
+
+    let isActive = true;
+
+    async function loadMonitoringData() {
+      setIsLoading(true);
+      setError('');
+
+      try {
+        const stationResponse = await getFlowStations({ limit: 100, offset: 0 });
+        const stationRows = (stationResponse.data || []).filter(
+          (station) => LIVE_STATION_IDS.has(String(station.id))
+        );
+        const results = await Promise.allSettled(
+          stationRows.map(async (station) => {
+            const response = await getFlowStationData(
+              station.id,
+              buildRangeQuery(appliedTimeRange)
+            );
+
+            return (response.data || []).map((reading, index) => (
+              mapHistoryRow(station, reading, index)
+            ));
+          })
+        );
+        const failedRequestCount = results.filter(
+          (result) => result.status === 'rejected'
+        ).length;
+        const rows = results
+          .filter((result) => result.status === 'fulfilled')
+          .flatMap((result) => result.value)
+          .sort((left, right) => (
+            Date.parse(right.timestamp || 0) - Date.parse(left.timestamp || 0)
+          ));
+
+        if (isActive) {
+          setStations(stationRows);
+          setHistoryData(rows);
+
+          if (failedRequestCount > 0) {
+            setError(`Data dari ${failedRequestCount} stasiun gagal dimuat.`);
+          }
+        }
+      } catch (requestError) {
+        if (isActive) {
+          setStations([]);
+          setHistoryData([]);
+          setError(requestError.message || 'Gagal memuat data monitoring.');
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadMonitoringData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [appliedTimeRange, isDemoUser]);
+
+  const availableStations = isDemoUser ? DEMO_STATIONS : stations;
+  const allHistoryData = isDemoUser ? DEMO_HISTORY_DATA : historyData;
+  const visibleStations = useMemo(() => (
+    appliedLocation === DEFAULT_LOCATION
+      ? availableStations
+      : availableStations.filter(
+        (station) => String(station.id) === appliedLocation
+      )
+  ), [appliedLocation, availableStations]);
+  const visibleHistoryData = useMemo(() => (
+    appliedLocation === DEFAULT_LOCATION
+      ? allHistoryData
+      : allHistoryData.filter((row) => {
+        if (isDemoUser) {
+          const selectedStation = availableStations.find(
+            (station) => String(station.id) === appliedLocation
+          );
+
+          return row.station === selectedStation?.station_name;
+        }
+
+        return row.stationId === appliedLocation;
+      })
+  ), [allHistoryData, appliedLocation, availableStations, isDemoUser]);
+  const historyPageCount = Math.max(
+    1,
+    Math.ceil(visibleHistoryData.length / HISTORY_PAGE_SIZE)
+  );
+  const activeHistoryPage = Math.min(historyPage, historyPageCount);
+  const historyPaginationItems = getPaginationItems(
+    activeHistoryPage,
+    historyPageCount
+  );
+  const pagedHistoryData = useMemo(() => {
+    const startIndex = (activeHistoryPage - 1) * HISTORY_PAGE_SIZE;
+
+    return visibleHistoryData.slice(
+      startIndex,
+      startIndex + HISTORY_PAGE_SIZE
+    );
+  }, [activeHistoryPage, visibleHistoryData]);
+  const firstVisibleHistoryRow = visibleHistoryData.length
+    ? (activeHistoryPage - 1) * HISTORY_PAGE_SIZE + 1
+    : 0;
+  const lastVisibleHistoryRow = Math.min(
+    activeHistoryPage * HISTORY_PAGE_SIZE,
+    visibleHistoryData.length
+  );
+  const latestReadingByStation = useMemo(() => {
+    const readings = new Map();
+
+    allHistoryData.forEach((row) => {
+      const station = availableStations.find((item) => (
+        isDemoUser
+          ? item.station_name === row.station
+          : String(item.id) === row.stationId
+      ));
+      const key = station ? String(station.id) : null;
+
+      if (key && !readings.has(key)) {
+        readings.set(key, row);
+      }
+    });
+
+    return readings;
+  }, [allHistoryData, availableStations, isDemoUser]);
 
   const handleShowDetail = (stationName) => {
     navigate(`${detailBasePath}/${stationName}`);
   };
 
+  const handleApplyFilter = () => {
+    setHistoryPage(1);
+    setAppliedLocation(locationFilter);
+    setAppliedTimeRange(timeRange);
+  };
+
+  const handleResetFilter = () => {
+    setLocationFilter(DEFAULT_LOCATION);
+    setTimeRange(DEFAULT_TIME_RANGE);
+    setHistoryPage(1);
+    setAppliedLocation(DEFAULT_LOCATION);
+    setAppliedTimeRange(DEFAULT_TIME_RANGE);
+  };
+
+  const handleExportCsv = () => {
+    const headers = [
+      'Lokasi Stasiun',
+      'Debit (m3/s)',
+      'Totalizer (L)',
+      'VCC (V)',
+      'Suhu (C)',
+      'Status',
+      'Last Update',
+    ];
+    const rows = visibleHistoryData.map((row) => [
+      row.station,
+      formatNumber(row.debit),
+      formatNumber(row.totalizer, 0),
+      formatNumber(row.vcc),
+      formatNumber(row.temp, 1),
+      row.status,
+      row.time,
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map(escapeCsvCell).join(','))
+      .join('\r\n');
+    const blob = new Blob([`\uFEFF${csv}`], {
+      type: 'text/csv;charset=utf-8',
+    });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = downloadUrl;
+    link.download = 'monitoring-flow.csv';
+    link.click();
+    window.URL.revokeObjectURL(downloadUrl);
+  };
+
   return (
     <div className="view-section">
+      {error && (
+        <div className="panel" style={{ color: '#b91c1c' }}>
+          {error}
+        </div>
+      )}
+
       <div className="header-section">
         <h1>Monitoring</h1>
         <p>Status jaringan sensor hidrologi real-time</p>
@@ -64,12 +362,19 @@ const Monitoring = () => {
       <div className="filter-section">
         <div className="filter-group">
           <label>Lokasi Pemasangan</label>
-          <select defaultValue="Semua Lokasi">
-            <option>Semua Lokasi</option>
-            <option>FLOW-Ploso_Lamongan</option>
-            <option>FLOW-Babat_Hilir</option>
+          <select
+            value={locationFilter}
+            onChange={(event) => setLocationFilter(event.target.value)}
+          >
+            <option value={DEFAULT_LOCATION}>Semua Lokasi</option>
+            {availableStations.map((station) => (
+              <option key={station.id} value={String(station.id)}>
+                {station.station_name || station.kode_station}
+              </option>
+            ))}
           </select>
         </div>
+
         <div className="filter-group">
           <label>Status Perangkat</label>
           <select defaultValue="Semua Status">
@@ -77,22 +382,44 @@ const Monitoring = () => {
             <option>Online (Active)</option>
           </select>
         </div>
+
         <div className="filter-group">
           <label>Rentang Waktu</label>
-          <select defaultValue="24 Jam Terakhir">
-            <option>24 Jam Terakhir</option>
-            <option>7 Hari Terakhir</option>
+          <select
+            value={timeRange}
+            onChange={(event) => setTimeRange(event.target.value)}
+          >
+            <option value="24h">24 Jam Terakhir</option>
+            <option value="7d">7 Hari Terakhir</option>
           </select>
         </div>
+
         <div className="filter-actions">
-          <button className="btn btn-dark">Apply Filter</button>
-          <button className="btn btn-outline" style={{ marginLeft: '10px' }}>Reset</button>
+          <button
+            className="btn btn-dark"
+            onClick={handleApplyFilter}
+            disabled={isLoading}
+          >
+            Apply Filter
+          </button>
+          <button
+            className="btn btn-outline"
+            style={{ marginLeft: '10px' }}
+            onClick={handleResetFilter}
+            disabled={isLoading}
+          >
+            Reset
+          </button>
         </div>
       </div>
 
       <div className="monitoring-layout">
         <div className="map-monitoring-container">
-          <MapContainer center={[-7.1147, 112.4146]} zoom={11} style={{ height: '100%', width: '100%', zIndex: 1 }}>
+          <MapContainer
+            center={[-7.1147, 112.4146]}
+            zoom={11}
+            style={{ height: '100%', width: '100%', zIndex: 1 }}
+          >
             <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
             <Marker position={[-7.121, 112.414]}>
               <Popup><b>FLOW-Ploso_Lamongan</b></Popup>
@@ -102,41 +429,57 @@ const Monitoring = () => {
             </Marker>
           </MapContainer>
         </div>
-        
+
         <div className="station-list">
           <div className="station-list-header">
             <h3>Daftar Stasiun</h3>
-            <span>2 Ditemukan</span>
+            <span>{visibleStations.length} Ditemukan</span>
           </div>
           <div className="station-items">
-            <div className="station-card">
-              <div className="station-card-top">
-                <div className="station-name">FLOW-Ploso_Lamongan</div>
-                <span className="badge badge-normal">ACTIVE</span>
-              </div>
-              <div className="station-id">ID: ST-PLS-01</div>
-              <div className="station-metric">
-                <span className="station-metric-val">Debit: 142.5 m³/s</span>
-                <span className="station-time">2 menit yang lalu</span>
-              </div>
-              <button className="btn btn-outline btn-block" onClick={() => handleShowDetail('FLOW-Ploso_Lamongan')}>
-                Lihat Detail
-              </button>
-            </div>
-            <div className="station-card">
-              <div className="station-card-top">
-                <div className="station-name">FLOW-Babat_Hilir</div>
-                <span className="badge badge-normal">ACTIVE</span>
-              </div>
-              <div className="station-id">ID: ST-BBT-02</div>
-              <div className="station-metric">
-                <span className="station-metric-val">Debit: 95.4 m³/s</span>
-                <span className="station-time">5 menit yang lalu</span>
-              </div>
-              <button className="btn btn-outline btn-block" onClick={() => handleShowDetail('FLOW-Babat_Hilir')}>
-                Lihat Detail
-              </button>
-            </div>
+            {isLoading && visibleStations.length === 0 ? (
+              <div>Memuat data stasiun...</div>
+            ) : visibleStations.length > 0 ? (
+              visibleStations.map((station) => {
+                const latestReading = latestReadingByStation.get(
+                  String(station.id)
+                );
+                const stationName = station.station_name
+                  || station.kode_station
+                  || `Station ${station.id}`;
+                const latestDebit = isDemoUser
+                  ? station.latest_debit
+                  : formatNumber(latestReading?.debit);
+                const latestTime = isDemoUser
+                  ? station.latest_time
+                  : latestReading?.time || '-';
+
+                return (
+                  <div className="station-card" key={station.id}>
+                    <div className="station-card-top">
+                      <div className="station-name">{stationName}</div>
+                      <span className="badge badge-normal">ACTIVE</span>
+                    </div>
+                    <div className="station-id">
+                      ID: {station.kode_station || station.id}
+                    </div>
+                    <div className="station-metric">
+                      <span className="station-metric-val">
+                        Debit: {latestDebit} m³/s
+                      </span>
+                      <span className="station-time">{latestTime}</span>
+                    </div>
+                    <button
+                      className="btn btn-outline btn-block"
+                      onClick={() => handleShowDetail(stationName)}
+                    >
+                      Lihat Detail
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <div>Tidak ada stasiun ditemukan.</div>
+            )}
           </div>
         </div>
       </div>
@@ -144,16 +487,29 @@ const Monitoring = () => {
       <div className="panel" style={{ marginTop: '8px' }}>
         <div className="panel-header" style={{ marginBottom: '10px' }}>
           <div className="panel-title">Data Monitoring Historis</div>
-          <button className="btn btn-outline" style={{ fontSize: '12px', padding: '8px 14px' }}>
+          <button
+            className="btn btn-outline"
+            style={{ fontSize: '12px', padding: '8px 14px' }}
+            onClick={handleExportCsv}
+            disabled={visibleHistoryData.length === 0}
+          >
             <i className="fa-solid fa-download"></i> Export CSV
           </button>
         </div>
         <div className="table-container">
           {isMobile ? (
             <ul className="monitoring-mobile-list">
-              {monitoringHistoryData.map((row) => (
-                <MonitoringMobileRow key={row.id} row={row} />
-              ))}
+              {pagedHistoryData.length > 0 ? (
+                pagedHistoryData.map((row) => (
+                  <MonitoringMobileRow key={row.id} row={row} />
+                ))
+              ) : (
+                <li style={{ padding: '24px', textAlign: 'center' }}>
+                  {isLoading
+                    ? 'Memuat data monitoring...'
+                    : 'Tidak ada data monitoring.'}
+                </li>
+              )}
             </ul>
           ) : (
             <table>
@@ -169,27 +525,80 @@ const Monitoring = () => {
                 </tr>
               </thead>
               <tbody>
-                {monitoringHistoryData.map((row) => (
-                  <tr key={row.id}>
-                    <td><b>{row.station}</b></td>
-                    <td>{row.debit.toFixed(2)}</td>
-                    <td>{row.totalizer}</td>
-                    <td>{row.vcc.toFixed(2)}</td>
-                    <td>{row.temp.toFixed(1)}</td>
-                    <td><span className="badge-dot"></span>{row.status}</td>
-                    <td>{row.time}</td>
+                {pagedHistoryData.length > 0 ? (
+                  pagedHistoryData.map((row) => (
+                    <tr key={row.id}>
+                      <td><b>{row.station}</b></td>
+                      <td>{formatNumber(row.debit)}</td>
+                      <td>{formatNumber(row.totalizer, 0)}</td>
+                      <td>{formatNumber(row.vcc)}</td>
+                      <td>{formatNumber(row.temp, 1)}</td>
+                      <td><span className="badge-dot"></span>{row.status}</td>
+                      <td>{row.time}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan="7"
+                      style={{ padding: '30px', textAlign: 'center' }}
+                    >
+                      {isLoading
+                        ? 'Memuat data monitoring...'
+                        : 'Tidak ada data monitoring.'}
+                    </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           )}
         </div>
         <div className="pagination">
-          <div className="page-info">Menampilkan 1-4 dari 4 entri</div>
+          <div className="page-info">
+            Menampilkan {firstVisibleHistoryRow}-{lastVisibleHistoryRow} dari{' '}
+            {visibleHistoryData.length} entri
+          </div>
           <div className="page-controls">
-            <button className="page-btn"><i className="fa-solid fa-chevron-left"></i></button>
-            <button className="page-btn active">1</button>
-            <button className="page-btn"><i className="fa-solid fa-chevron-right"></i></button>
+            <button
+              className="page-btn"
+              aria-label="Halaman sebelumnya"
+              disabled={activeHistoryPage === 1}
+              onClick={() => setHistoryPage(
+                Math.max(1, activeHistoryPage - 1)
+              )}
+            >
+              <i className="fa-solid fa-chevron-left"></i>
+            </button>
+            {historyPaginationItems.map((item) => (
+              typeof item === 'number' ? (
+                <button
+                  className={`page-btn ${item === activeHistoryPage ? 'active' : ''}`}
+                  aria-current={item === activeHistoryPage ? 'page' : undefined}
+                  key={item}
+                  onClick={() => setHistoryPage(item)}
+                >
+                  {item}
+                </button>
+              ) : (
+                <span
+                  className="monitoring-page-ellipsis"
+                  aria-hidden="true"
+                  key={item}
+                >
+                  …
+                </span>
+              )
+            ))}
+            <button
+              className="page-btn"
+              aria-label="Halaman berikutnya"
+              disabled={activeHistoryPage === historyPageCount}
+              onClick={() => setHistoryPage(
+                Math.min(historyPageCount, activeHistoryPage + 1)
+              )}
+            >
+              <i className="fa-solid fa-chevron-right"></i>
+            </button>
           </div>
         </div>
       </div>

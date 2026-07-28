@@ -24,6 +24,13 @@
 .station-time { font-size: 11px; color: var(--text-secondary); }
 .btn-block { width: 100%; text-align: center; }
 
+.monitoring-page-ellipsis {
+  min-width: 34px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-secondary);
+}
+
 @media (max-width: 900px) {
   .monitoring-layout { grid-template-columns: 1fr; }
   .map-monitoring-container { height: 300px; }
