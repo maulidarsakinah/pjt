@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import DeferredFlowChart from '../components/DeferredFlowChart';
 import useAuth from '../contexts/useAuth';
@@ -178,6 +178,120 @@ const DetailMobileRow = memo(({ row, locationName }) => (
     </div>
   </li>
 ));
+
+const ManualDateInput = ({ value, onChange }) => {
+  const [textValue, setTextValue] = useState(() => {
+    if (!value) return '';
+    const [y, m, d] = value.split('-');
+    return `${d}/${m}/${y}`;
+  });
+
+  useEffect(() => {
+    if (!value) {
+      setTextValue('');
+    } else {
+      const [y, m, d] = value.split('-');
+      const formatted = `${d}/${m}/${y}`;
+      if (textValue !== formatted) {
+        setTextValue(formatted);
+      }
+    }
+  }, [value]);
+
+  const handleTextChange = (e) => {
+    let val = e.target.value;
+    val = val.replace(/[^0-9/]/g, '');
+    
+    if (val.length === 2 && !val.includes('/')) {
+       if (textValue.length < val.length) val += '/';
+    } else if (val.length === 5 && val.split('/').length === 2) {
+       if (textValue.length < val.length) val += '/';
+    }
+    
+    if (val.length > 10) val = val.substring(0, 10);
+    
+    setTextValue(val);
+    
+    const parts = val.split('/');
+    if (parts.length === 3 && parts[2].length === 4) {
+      const d = parts[0].padStart(2, '0');
+      const m = parts[1].padStart(2, '0');
+      const y = parts[2];
+      
+      const parsedDate = new Date(`${y}-${m}-${d}`);
+      if (!isNaN(parsedDate.getTime())) {
+        onChange(`${y}-${m}-${d}`);
+      }
+    } else if (val === '') {
+      onChange('');
+    }
+  };
+
+  const handleDateChange = (e) => {
+    const newVal = e.target.value;
+    onChange(newVal);
+    if (newVal) {
+      const [y, m, d] = newVal.split('-');
+      setTextValue(`${d}/${m}/${y}`);
+    } else {
+      setTextValue('');
+    }
+  };
+
+  const dateInputRef = useRef(null);
+
+  return (
+    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+      <input
+        type="text"
+        className={`detail-date-input ${value ? 'has-value' : ''}`}
+        placeholder="dd/mm/yyyy"
+        value={textValue}
+        onChange={handleTextChange}
+        style={{ paddingRight: '36px', width: '100%' }}
+      />
+      <div 
+        style={{ 
+          position: 'absolute', 
+          right: 0, 
+          top: 0,
+          bottom: 0,
+          width: '36px',
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          cursor: 'pointer',
+          zIndex: 2
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          if (dateInputRef.current && typeof dateInputRef.current.showPicker === 'function') {
+            dateInputRef.current.showPicker();
+          }
+        }}
+        title="Pilih dari kalender"
+      >
+        <i className="fa-regular fa-calendar" style={{ color: 'var(--text-secondary)' }}></i>
+      </div>
+      <input
+        ref={dateInputRef}
+        type="date"
+        value={value}
+        onChange={handleDateChange}
+        style={{
+          position: 'absolute',
+          width: 0,
+          height: 0,
+          opacity: 0,
+          border: 'none',
+          padding: 0,
+          pointerEvents: 'none'
+        }}
+        tabIndex="-1"
+      />
+    </div>
+  );
+};
 
 const Detail = () => {
   const { user } = useAuth();
@@ -568,8 +682,8 @@ const Detail = () => {
           }}
         >
           <div className="panel-title">Data Monitoring Historis (Detail)</div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <div style={{ position: 'relative' }}>
+          <div className="detail-controls-container">
+            <div className="detail-search-wrapper">
               <i
                 className="fa-solid fa-search"
                 style={{
@@ -589,41 +703,20 @@ const Detail = () => {
                   setPage(1);
                   setSearchTerm(event.target.value);
                 }}
-                style={{
-                  padding: '8px 14px 8px 32px',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  outline: 'none',
-                  width: '200px',
-                }}
+                className="detail-search-input"
               />
             </div>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="date"
+            <div className="detail-date-wrapper">
+              <ManualDateInput
                 value={filterDate}
-                onChange={(event) => {
+                onChange={(newVal) => {
                   setPage(1);
-                  setFilterDate(event.target.value);
-                }}
-                title="Filter berdasarkan tanggal"
-                style={{
-                  padding: '7px 14px',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  outline: 'none',
-                  color: filterDate ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontFamily: 'inherit',
-                  cursor: 'pointer',
-                  backgroundColor: 'transparent',
+                  setFilterDate(newVal);
                 }}
               />
             </div>
             <button
-              className="btn btn-outline"
-              style={{ fontSize: '12px', padding: '8px 14px' }}
+              className="btn btn-outline detail-export-btn"
               disabled={filteredAndSortedData.length === 0}
               onClick={handleExportCsv}
             >

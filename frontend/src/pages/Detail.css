@@ -159,3 +159,73 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+.detail-controls-container {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.detail-search-wrapper,
+.detail-date-wrapper {
+  position: relative;
+}
+
+.detail-search-input {
+  padding: 8px 14px 8px 32px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  width: 200px;
+  box-sizing: border-box;
+}
+
+.detail-date-input {
+  padding: 7px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  background-color: transparent;
+  box-sizing: border-box;
+  min-width: 140px;
+}
+
+.detail-date-input.has-value {
+  color: var(--text-primary);
+}
+
+.detail-export-btn {
+  font-size: 12px;
+  padding: 8px 14px;
+}
+
+@media (max-width: 760px) {
+  .detail-controls-container {
+    width: 100%;
+  }
+
+  .detail-search-wrapper {
+    flex: 1 1 100%;
+  }
+
+  .detail-search-input {
+    width: 100%;
+  }
+
+  .detail-date-wrapper {
+    flex: 1 1 auto;
+  }
+  
+  .detail-date-input {
+    width: 100%;
+  }
+
+  .detail-export-btn {
+    flex: 1 1 auto;
+  }
+}

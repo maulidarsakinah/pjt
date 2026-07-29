@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import LogoutModal from '../components/LogoutModal';
 import Topbar from '../components/Topbar';
@@ -19,6 +19,11 @@ const AdminLayout = () => {
     closeLogoutModal();
     navigate('/login', { replace: true });
   };
+
+  const location = useLocation();
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="main-layout-container">
