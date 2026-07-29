@@ -15,25 +15,37 @@ import {
 } from '../utils/flowData';
 import './Detail.css';
 
-const DEMO_CHART_DATA = [
-  { time: '01:00', debit: 138.10, totalizer: 450420, vcc: 12.45, suhu: 28.5 },
-  { time: '02:00', debit: 137.00, totalizer: 450605, vcc: 12.48, suhu: 28.2 },
-  { time: '03:00', debit: 136.20, totalizer: 450780, vcc: 12.49, suhu: 27.9 },
-  { time: '04:00', debit: 135.50, totalizer: 450950, vcc: 12.49, suhu: 27.8 },
-  { time: '05:00', debit: 136.00, totalizer: 451125, vcc: 12.48, suhu: 28.0 },
-  { time: '06:00', debit: 137.10, totalizer: 451320, vcc: 12.48, suhu: 28.5 },
-  { time: '07:00', debit: 138.50, totalizer: 451510, vcc: 12.45, suhu: 29.0 },
-  { time: '08:00', debit: 139.80, totalizer: 451705, vcc: 12.43, suhu: 29.2 },
-  { time: '09:00', debit: 141.20, totalizer: 451900, vcc: 12.40, suhu: 29.4 },
-  { time: '10:00', debit: 142.50, totalizer: 452109, vcc: 12.42, suhu: 29.5 },
-];
+const generateDemoData = () => {
+  const dates = ['2026-07-04', '2026-07-05', '2026-07-06', '2026-07-07'];
+  const data = [];
+  let totalizer = 445000;
+  
+  dates.forEach((date) => {
+    for (let hour = 0; hour < 24; hour++) {
+      const timeStr = `${String(hour).padStart(2, '0')}:00`;
+      const debit = 135 + Math.random() * 8;
+      const vcc = 12.3 + Math.random() * 0.3;
+      const suhu = 27 + Math.random() * 3;
+      totalizer += 150 + Math.random() * 50;
+      
+      data.push({
+        id: `${date}-${timeStr}`,
+        time: timeStr,
+        date: date,
+        debit: parseFloat(debit.toFixed(2)),
+        totalizer: Math.round(totalizer),
+        vcc: parseFloat(vcc.toFixed(2)),
+        suhu: parseFloat(suhu.toFixed(1)),
+        datetimeLabel: `${date} ${timeStr}`,
+        timestamp: Date.parse(`${date}T${timeStr}:00+07:00`),
+      });
+    }
+  });
+  return data;
+};
 
-const DEMO_TABLE_DATA = [...DEMO_CHART_DATA].reverse().map((row) => ({
-  ...row,
-  id: row.time,
-  datetimeLabel: `2026-07-06 ${row.time}`,
-  timestamp: Date.parse(`2026-07-06T${row.time}:00+07:00`),
-}));
+const ALL_DEMO_DATA = generateDemoData();
+const DEMO_TABLE_DATA = [...ALL_DEMO_DATA].reverse();
 const DETAIL_PAGE_SIZE = 10;
 const LIVE_STATION_IDS = new Set(['697', '740']);
 const FLOW_DOMAIN = [130, 150];
@@ -178,7 +190,18 @@ const Detail = () => {
     ? '/admin/monitoring'
     : '/dashboard/monitoring';
   const navigationStation = location.state?.station;
+  const [filterDate, setFilterDate] = useState('');
   const historyRange = useMemo(() => {
+    if (filterDate) {
+      const start = new Date(`${filterDate}T00:00:00`);
+      const end = new Date(`${filterDate}T23:59:59.999`);
+      return {
+        mode: 'range',
+        start: start.toISOString(),
+        end: end.toISOString(),
+      };
+    }
+
     const navigationQuery = location.state?.historyQuery;
 
     if (
@@ -194,7 +217,7 @@ const Detail = () => {
     }
 
     return buildHistoryRange();
-  }, [location.state]);
+  }, [location.state, filterDate]);
   const [station, setStation] = useState(() => (
     navigationStation && stationMatchesKey(navigationStation, stationKey)
       ? navigationStation
@@ -352,16 +375,32 @@ const Detail = () => {
   const tableData = isDemoUser ? DEMO_TABLE_DATA : liveTableData;
   const filteredAndSortedData = useMemo(() => {
     const searchString = searchTerm.trim().toLowerCase();
-    const filteredData = tableData.filter((item) => (
-      !searchString ||
-      locationName.toLowerCase().includes(searchString) ||
-      item.debit.toString().includes(searchString) ||
-      item.totalizer.toString().includes(searchString) ||
-      item.vcc.toString().includes(searchString) ||
-      item.suhu.toString().includes(searchString) ||
-      item.datetimeLabel.toLowerCase().includes(searchString) ||
-      'active'.includes(searchString)
-    ));
+    const filteredData = tableData.filter((item) => {
+      if (filterDate) {
+        const itemDate = new Date(item.timestamp);
+        const year = itemDate.getFullYear();
+        const month = String(itemDate.getMonth() + 1).padStart(2, '0');
+        const day = String(itemDate.getDate()).padStart(2, '0');
+        const itemDateString = `${year}-${month}-${day}`;
+        if (itemDateString !== filterDate) {
+          return false;
+        }
+      }
+
+      if (!searchString) {
+        return true;
+      }
+
+      return (
+        locationName.toLowerCase().includes(searchString) ||
+        item.debit.toString().includes(searchString) ||
+        item.totalizer.toString().includes(searchString) ||
+        item.vcc.toString().includes(searchString) ||
+        item.suhu.toString().includes(searchString) ||
+        item.datetimeLabel.toLowerCase().includes(searchString) ||
+        'active'.includes(searchString)
+      );
+    });
 
     if (sortConfig.key) {
       filteredData.sort((left, right) => {
@@ -396,7 +435,7 @@ const Detail = () => {
     }
 
     return filteredData;
-  }, [locationName, searchTerm, sortConfig, tableData]);
+  }, [locationName, searchTerm, sortConfig, tableData, filterDate]);
   const pageCount = isDemoUser
     ? Math.max(1, Math.ceil(filteredAndSortedData.length / DETAIL_PAGE_SIZE))
     : Math.max(1, Math.ceil(totalRows / DETAIL_PAGE_SIZE));
@@ -421,11 +460,15 @@ const Detail = () => {
     activePage * DETAIL_PAGE_SIZE,
     filteredAndSortedData.length
   );
-  const chartData = useMemo(() => (
-    isDemoUser
-      ? DEMO_CHART_DATA
-      : liveChartData
-  ), [isDemoUser, liveChartData]);
+  const chartData = useMemo(() => {
+    if (isDemoUser) {
+      if (filterDate) {
+        return ALL_DEMO_DATA.filter((row) => row.date === filterDate);
+      }
+      return ALL_DEMO_DATA.slice(-24);
+    }
+    return liveChartData;
+  }, [isDemoUser, liveChartData, filterDate]);
   const isTableLoading = !isDemoUser && isLoading && loadedPage !== page;
 
   const handleSort = (key) => {
@@ -553,6 +596,28 @@ const Detail = () => {
                   fontSize: '13px',
                   outline: 'none',
                   width: '200px',
+                }}
+              />
+            </div>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="date"
+                value={filterDate}
+                onChange={(event) => {
+                  setPage(1);
+                  setFilterDate(event.target.value);
+                }}
+                title="Filter berdasarkan tanggal"
+                style={{
+                  padding: '7px 14px',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  outline: 'none',
+                  color: filterDate ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  backgroundColor: 'transparent',
                 }}
               />
             </div>
