@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import './AdminSidebar.css';
 
 const adminNavItems = [
@@ -13,8 +13,11 @@ const adminNavItems = [
   { to: '/admin/settings', icon: 'fa-gear', label: 'Pengaturan' },
 ];
 
-const AdminSidebar = ({ openLogoutModal }) => (
-  <aside className="sidebar admin-sidebar">
+const AdminSidebar = ({ openLogoutModal }) => {
+  const location = useLocation();
+
+  return (
+    <aside className="sidebar admin-sidebar">
     <div className="logo-container admin-logo-container">
       <div className="logo-mark">
         <img className="logo-image" src="/logo-hydrotrack.svg" alt="HydroTrack logo" />
@@ -31,7 +34,13 @@ const AdminSidebar = ({ openLogoutModal }) => (
           key={item.to}
           to={item.to}
           end={item.end}
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          className={({ isActive }) => {
+            let isDetailActive = false;
+            if (item.to === '/admin/monitoring' && location.pathname.startsWith('/admin/detail/')) {
+              isDetailActive = true;
+            }
+            return `nav-item ${isActive || isDetailActive ? 'active' : ''}`;
+          }}
         >
           <i className={`fa-solid ${item.icon}`}></i> {item.label}
         </NavLink>
@@ -44,6 +53,7 @@ const AdminSidebar = ({ openLogoutModal }) => (
       </div>
     </ul>
   </aside>
-);
+  );
+};
 
 export default memo(AdminSidebar);

@@ -1,8 +1,10 @@
 import { memo } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import './Sidebar.css';
 
 const Sidebar = ({ openLogoutModal }) => {
+  const location = useLocation();
+
   return (
     <aside className="sidebar">
       <div className="logo-container">
@@ -24,7 +26,10 @@ const Sidebar = ({ openLogoutModal }) => {
         </NavLink>
         <NavLink 
           to="/dashboard/monitoring" 
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          className={({ isActive }) => {
+            const isDetailActive = location.pathname.startsWith('/dashboard/detail/');
+            return `nav-item ${isActive || isDetailActive ? 'active' : ''}`;
+          }}
         >
           <i className="fa-solid fa-satellite-dish"></i> Monitoring
         </NavLink>
