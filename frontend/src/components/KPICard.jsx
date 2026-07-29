@@ -26,12 +26,13 @@ const KPICard = ({
         {value} {unit && <span className="kpi-unit">{unit}</span>}
       </div>
       <div className={`kpi-desc ${descClass || ''}`}>
-        {descClass === 'trend-up' ? (
+        {descClass === 'trend-up' && (
           <span className="trend-up"><i className={`fa-solid ${descIcon || 'fa-arrow-up'}`}></i></span>
-        ) : (
+        )}
+        {descClass !== 'trend-up' && descIcon && (
           <i className={`fa-solid ${descIcon}`}></i>
-        )} 
-        {' '}{descText}
+        )}
+        {descText}
       </div>
     </div>
   );
