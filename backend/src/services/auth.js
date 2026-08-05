@@ -3,14 +3,8 @@ const { randomUUID } = require("node:crypto");
 const jwt = require("jsonwebtoken");
 const oracledb = require("oracledb");
 const config = require("../config");
-const {
-  createRefreshToken,
-  verifyRefreshToken,
-} = require("../refreshToken");
-const {
-  isTokenRevoked,
-  revokeToken,
-} = require("../tokenRevocation");
+const { createRefreshToken, verifyRefreshToken } = require("../refreshToken");
+const { isTokenRevoked, revokeToken } = require("../tokenRevocation");
 const { writeAuditEvent } = require("./audit");
 const { withConnection } = require("./database");
 
@@ -333,11 +327,7 @@ async function refreshUserSession(token) {
 
   const userId = Number(payload.sub);
 
-  if (
-    !Number.isInteger(userId) ||
-    userId <= 0 ||
-    isTokenRevoked(payload)
-  ) {
+  if (!Number.isInteger(userId) || userId <= 0 || isTokenRevoked(payload)) {
     throw unauthorized("invalid or expired refresh token");
   }
 

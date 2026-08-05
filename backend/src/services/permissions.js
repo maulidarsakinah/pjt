@@ -1,5 +1,5 @@
 const { clearAccessCache } = require("./access");
-const { writeAuditEvent } = require("./audit");
+const { buildFieldChanges, writeAuditEvent } = require("./audit");
 const { withConnection, withTransaction } = require("./database");
 const { badRequest, notFound } = require("../utils/httpErrors");
 const { requiredString } = require("../utils/validation");
@@ -146,6 +146,12 @@ async function createPermission(body, req) {
 async function updatePermission(id, body, req, { partial = true } = {}) {
   const payload = validatePermissionPayload(body, { partial });
   const result = await withTransaction(async (connection) => {
+    const before = await getPermissionById(connection, id);
+
+    if (!before) {
+      throw notFound("permission not found");
+    }
+
     const setClauses = Object.keys(payload).map(
       (field) => `"${field}" = :${field}`,
     );
@@ -168,12 +174,27 @@ async function updatePermission(id, body, req, { partial = true } = {}) {
 
     return {
       permission: await getPermissionById(connection, id),
+      before,
       fields: Object.keys(payload),
     };
   });
 
   clearAccessCache();
-  logPermissionAudit(req, "update_permission", id, { fields: result.fields });
+  writeAuditEvent(req, {
+    category: "access_admin",
+    action: "update_permission",
+    targetType: "permission",
+    targetId: id,
+    changes: buildFieldChanges(
+      result.before,
+      result.permission,
+      result.fields,
+      {
+        targetType: "permission",
+      },
+    ),
+    metadata: { fields: result.fields },
+  });
   return result.permission;
 }
 

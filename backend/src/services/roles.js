@@ -1,5 +1,5 @@
 const { clearAccessCache } = require("./access");
-const { writeAuditEvent } = require("./audit");
+const { buildFieldChanges, writeAuditEvent } = require("./audit");
 const { withConnection, withTransaction } = require("./database");
 const { badRequest, notFound } = require("../utils/httpErrors");
 const { parsePositiveInteger, requiredString } = require("../utils/validation");
@@ -195,6 +195,12 @@ async function createRole(body, req) {
 async function updateRole(id, body, req, { partial = true } = {}) {
   const payload = validateRolePayload(body, { partial });
   const result = await withTransaction(async (connection) => {
+    const before = await getRoleById(connection, id);
+
+    if (!before) {
+      throw notFound("role not found");
+    }
+
     const setClauses = Object.keys(payload).map(
       (field) => `"${field}" = :${field}`,
     );
@@ -217,12 +223,22 @@ async function updateRole(id, body, req, { partial = true } = {}) {
 
     return {
       role: await getRoleById(connection, id),
+      before,
       fields: Object.keys(payload),
     };
   });
 
   clearAccessCache();
-  logRoleAudit(req, "update_role", id, { fields: result.fields });
+  writeAuditEvent(req, {
+    category: "access_admin",
+    action: "update_role",
+    targetType: "role",
+    targetId: id,
+    changes: buildFieldChanges(result.before, result.role, result.fields, {
+      targetType: "role",
+    }),
+    metadata: { fields: result.fields },
+  });
   return result.role;
 }
 

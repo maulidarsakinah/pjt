@@ -60,7 +60,9 @@ function parseCookies(cookieHeader) {
 }
 
 function getRefreshToken(req) {
-  return parseCookies(req.headers.cookie)[config.auth.refreshCookieName] || null;
+  return (
+    parseCookies(req.headers.cookie)[config.auth.refreshCookieName] || null
+  );
 }
 
 function refreshCookieOptions() {

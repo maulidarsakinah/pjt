@@ -20,10 +20,7 @@ function verifyAccessToken(token) {
     issuer: config.auth.jwtIssuer,
   });
 
-  if (
-    payload.token_type !== undefined &&
-    payload.token_type !== "access"
-  ) {
+  if (payload.token_type !== undefined && payload.token_type !== "access") {
     throw new jwt.JsonWebTokenError("invalid token type");
   }
 

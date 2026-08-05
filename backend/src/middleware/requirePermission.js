@@ -1,4 +1,5 @@
 const { getUserAccess } = require("../services/access");
+const { logJourneyStage } = require("./requestLogger");
 
 function forbidden(message = "forbidden") {
   const error = new Error(message);
@@ -20,8 +21,14 @@ module.exports = (permission) => async (req, res, next) => {
       throw forbidden(`missing permission: ${permission}`);
     }
 
+    logJourneyStage(req, "authorization", "success", {
+      required_permission: permission,
+    });
     next();
   } catch (error) {
+    logJourneyStage(req, "authorization", "failed", {
+      required_permission: permission,
+    });
     next(error);
   }
 };

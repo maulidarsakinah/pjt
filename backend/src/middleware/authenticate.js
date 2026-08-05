@@ -3,6 +3,7 @@ const { getBearerToken, verifyAccessToken } = require("../authToken");
 const { TtlCache } = require("../cache");
 const db = require("../db");
 const { isTokenRevoked } = require("../tokenRevocation");
+const { logJourneyStage } = require("./requestLogger");
 
 const authUserCache = new TtlCache({
   name: "auth_user",
@@ -97,8 +98,12 @@ module.exports = async (req, res, next) => {
 
     req.user = user;
     req.auth = { payload, token };
+    logJourneyStage(req, "authentication", "success");
     next();
   } catch (error) {
+    logJourneyStage(req, "authentication", "failed", {
+      auth_error: error.publicCode || "UNAUTHORIZED",
+    });
     next(error);
   }
 };
