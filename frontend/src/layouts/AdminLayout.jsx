@@ -17,7 +17,7 @@ const AdminLayout = () => {
   const confirmLogout = async () => {
     await logout();
     closeLogoutModal();
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   };
 
   const location = useLocation();
@@ -27,13 +27,21 @@ const AdminLayout = () => {
 
   return (
     <div className="main-layout-container">
-      <div className={`sidebar-wrapper ${isSidebarOpen ? 'open' : ''}`}>
+      <div className={`sidebar-wrapper ${isSidebarOpen ? "open" : ""}`}>
         <AdminSidebar openLogoutModal={openLogoutModal} />
       </div>
-      {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>}
+      {isSidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
 
       <main className="main-content">
-        <Topbar toggleSidebar={() => setIsSidebarOpen((value) => !value)} openLogoutModal={openLogoutModal} />
+        <Topbar
+          toggleSidebar={() => setIsSidebarOpen((value) => !value)}
+          openLogoutModal={openLogoutModal}
+        />
         <Outlet />
       </main>
 

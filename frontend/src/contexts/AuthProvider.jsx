@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getMe,
   logout as logoutRequest,
   refreshSession,
   setAccessToken,
   setUnauthorizedHandler,
-} from '../services/api';
-import AuthContext from './authContext';
+} from "../services/api";
+import AuthContext from "./authContext";
 
-const DEMO_SESSION_KEY = 'hydrotrack_demo_session';
+const DEMO_SESSION_KEY = "hydrotrack_demo_session";
 
 function normalizeUser(user) {
   if (!user) {
@@ -17,7 +17,7 @@ function normalizeUser(user) {
 
   return {
     ...user,
-    company_name: user.company?.name || user.company_name || 'Company',
+    company_name: user.company?.name || user.company_name || "Company",
   };
 }
 
@@ -25,20 +25,20 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isRefreshingUser, setIsRefreshingUser] = useState(false);
-  const [authMessage, setAuthMessage] = useState('');
+  const [authMessage, setAuthMessage] = useState("");
 
   const saveAuthSession = useCallback((session) => {
     const nextUser = normalizeUser(session.user);
 
     setAccessToken(session.token);
     setUser(nextUser);
-    setAuthMessage('');
+    setAuthMessage("");
     setIsInitializing(false);
 
     if (nextUser?.is_demo) {
       window.sessionStorage.setItem(
         DEMO_SESSION_KEY,
-        JSON.stringify({ user: nextUser })
+        JSON.stringify({ user: nextUser }),
       );
     } else {
       window.sessionStorage.removeItem(DEMO_SESSION_KEY);
@@ -60,7 +60,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(
-    async ({ remote = true, message = '' } = {}) => {
+    async ({ remote = true, message = "" } = {}) => {
       try {
         if (remote && user && !user.is_demo) {
           await logoutRequest();
@@ -73,18 +73,18 @@ export function AuthProvider({ children }) {
         setIsInitializing(false);
       }
     },
-    [user]
+    [user],
   );
 
   const clearAuthMessage = useCallback(() => {
-    setAuthMessage('');
+    setAuthMessage("");
   }, []);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
       setUser(null);
       window.sessionStorage.removeItem(DEMO_SESSION_KEY);
-      setAuthMessage('Sesi berakhir. Silakan login kembali.');
+      setAuthMessage("Sesi berakhir. Silakan login kembali.");
       setIsInitializing(false);
     });
 
@@ -159,7 +159,7 @@ export function AuthProvider({ children }) {
       refreshUser,
       saveAuthSession,
       user,
-    ]
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
