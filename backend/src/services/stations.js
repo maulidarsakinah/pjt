@@ -250,62 +250,72 @@ async function getFlowStationData(stationIdValue, query) {
 
     assertSafeTableName(station.table_data);
 
-    const dataResult = await connection.execute(
-      `SELECT
-         "id",
-         "nama_station",
-         "datetime",
-         "flow_1",
-         "flow_2",
-         "totalizer_1",
-         "totalizer_2",
-         "vcc",
-         "logger_temp",
-         "logger_humid"${includeTotal ? `,
-         "__total"` : ""}
-       FROM (
-         SELECT page_query.*, ROWNUM AS "rn"
+    // Run count and data queries in parallel when total is needed.
+    // Separating them ensures total is always accurate even when offset
+    // exceeds the number of available rows (which would make rows empty).
+    const [dataResult, total] = await Promise.all([
+      connection.execute(
+        `SELECT
+           "id",
+           "nama_station",
+           "datetime",
+           "flow_1",
+           "flow_2",
+           "totalizer_1",
+           "totalizer_2",
+           "vcc",
+           "logger_temp",
+           "logger_humid"
          FROM (
-           SELECT
-             "id" AS "id",
-             "nama_station" AS "nama_station",
-             "datetime" AS "datetime",
-             "flow_1" AS "flow_1",
-             "flow_2" AS "flow_2",
-             "totalizer_1" AS "totalizer_1",
-             "totalizer_2" AS "totalizer_2",
-             "vcc" AS "vcc",
-             "logger_temp" AS "logger_temp",
-             "logger_humid" AS "logger_humid"${includeTotal ? `,
-             COUNT(*) OVER () AS "__total"` : ""}
-           FROM "${station.table_data}"
-           ${dataFilter.whereSql}
-           ORDER BY "datetime" DESC, "id" DESC
-         ) page_query
-         WHERE ROWNUM <= :page_end
-       )
-       WHERE "rn" > :offset`,
-      {
-        ...dataFilter.binds,
-        page_end: dataFilter.pagination.pageEnd,
-        offset: dataFilter.pagination.offset,
-      },
-      {
-        fetchArraySize: Math.min(dataFilter.pagination.limit + 1, 100),
-        maxRows: dataFilter.pagination.limit + 1,
-      },
-    );
-    const total = includeTotal
-      ? Number(dataResult.rows[0]?.__total || 0)
-      : Math.min(dataResult.rows.length, dataFilter.pagination.limit);
-    const rows = dataResult.rows.map((row) => {
-      const { __total: ignoredTotal, ...dataRow } = row;
+           SELECT page_query.*, ROWNUM AS "rn"
+           FROM (
+             SELECT
+               "id" AS "id",
+               "nama_station" AS "nama_station",
+               "datetime" AS "datetime",
+               "flow_1" AS "flow_1",
+               "flow_2" AS "flow_2",
+               "totalizer_1" AS "totalizer_1",
+               "totalizer_2" AS "totalizer_2",
+               "vcc" AS "vcc",
+               "logger_temp" AS "logger_temp",
+               "logger_humid" AS "logger_humid"
+             FROM "${station.table_data}"
+             ${dataFilter.whereSql}
+             ORDER BY "datetime" DESC, "id" DESC
+           ) page_query
+           WHERE ROWNUM <= :page_end
+         )
+         WHERE "rn" > :offset`,
+        {
+          ...dataFilter.binds,
+          page_end: dataFilter.pagination.pageEnd,
+          offset: dataFilter.pagination.offset,
+        },
+        {
+          fetchArraySize: Math.min(dataFilter.pagination.limit + 1, 100),
+          maxRows: dataFilter.pagination.limit + 1,
+        },
+      ),
+      includeTotal
+        ? connection
+            .execute(
+              `SELECT COUNT(*) AS "total"
+               FROM "${station.table_data}"
+               ${dataFilter.whereSql}`,
+              dataFilter.binds,
+              { fetchArraySize: 1, maxRows: 1 },
+            )
+            .then((r) => Number(r.rows[0]?.total ?? 0))
+        : Promise.resolve(null),
+    ]);
 
-      return dataRow;
-    });
+    const resolved_total = includeTotal
+      ? total
+      : Math.min(dataResult.rows.length, dataFilter.pagination.limit);
     const response = {
-      ...buildListResponse(rows, dataFilter.pagination),
-      total,
+      ...buildListResponse(dataResult.rows, dataFilter.pagination),
+      total: resolved_total,
     };
 
     return buildFlowStationDataResponse(station, response, dataFilter.mode);
