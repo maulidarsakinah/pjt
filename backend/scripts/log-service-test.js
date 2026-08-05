@@ -7,6 +7,7 @@ const {
   clearLogCache,
   getLogCacheStats,
   listLogs,
+  listTraceJourney,
   normalizeLogEntry,
   parseLogFilters,
 } = require("../src/services/logs");
@@ -26,6 +27,12 @@ async function main() {
         path: "/api/health",
         status: "success",
         status_code: 200,
+        user_id: 21,
+        mutation: {
+          payload_bytes: 18,
+          fields_touched: ["status"],
+          safe_values: { status: "active" },
+        },
         message: "request_completed",
         token: "must-not-be-returned",
       },
@@ -94,6 +101,8 @@ async function main() {
     assert.equal(secondPage.count, 1);
     assert.equal(secondPage.total, 2);
     assert.equal(secondPage.data[0].trace_id, "tx-success");
+    assert.equal(secondPage.data[0].user_id, 21);
+    assert.deepEqual(secondPage.data[0].mutation, entries[0].mutation);
     assert.equal(secondPage.has_more, false);
     assert.equal(
       secondPage.data.some((entry) => entry.trace_id === "tx-audit-read"),
@@ -160,6 +169,50 @@ async function main() {
       /200 characters or fewer/,
     );
     assert.equal(normalizeLogEntry(null), null);
+    assert.equal(
+      normalizeLogEntry({
+        time: "2026-07-20T01:00:00.000Z",
+        actor: { user_id: 22 },
+      }).user_id,
+      22,
+    );
+    const journeyDirectory = await fs.mkdtemp(
+      path.join(os.tmpdir(), "pkl-journey-test-"),
+    );
+    await fs.writeFile(
+      path.join(journeyDirectory, "journey.log"),
+      [
+        {
+          time: "2026-07-20T05:00:00.000Z",
+          trace_id: "tx-journey",
+          journey_stage: "request_received",
+          message: "journey_stage",
+        },
+        {
+          time: "2026-07-20T05:00:01.000Z",
+          trace_id: "tx-journey",
+          journey_stage: "response_completed",
+          message: "request_completed",
+        },
+      ]
+        .map(JSON.stringify)
+        .join("\n"),
+      "utf8",
+    );
+    const auditList = await listLogs({
+      directory: journeyDirectory,
+      pagination: { limit: 10, offset: 0 },
+      filters: parseLogFilters({}),
+    });
+    assert.equal(auditList.count, 1);
+    assert.equal(auditList.data[0].journey_stage, "response_completed");
+    const journey = await listTraceJourney("tx-journey", {
+      directory: journeyDirectory,
+    });
+    assert.equal(journey.count, 2);
+    assert.equal(journey.data[0].journey_stage, "request_received");
+    assert.equal(journey.data[1].journey_stage, "response_completed");
+    await fs.rm(journeyDirectory, { recursive: true, force: true });
     assert.throws(
       () => parseLogFilters({ date: "2026-02-30" }),
       /valid calendar date/,
@@ -173,10 +226,29 @@ async function main() {
     );
     assert.equal(
       requestLogger.shouldSkipRequestLog(
+        { method: "GET", originalUrl: "/api/logs/journey/tx-journey" },
+        200,
+      ),
+      true,
+    );
+    assert.equal(
+      requestLogger.shouldSkipRequestLog(
         { method: "GET", originalUrl: "/api/logs" },
         401,
       ),
       false,
+    );
+    assert.equal(
+      requestLogger.getJourneyLogLevel("authentication", "success"),
+      "debug",
+    );
+    assert.equal(
+      requestLogger.getJourneyLogLevel("authorization", "failed"),
+      "warn",
+    );
+    assert.equal(
+      requestLogger.getJourneyLogLevel("authorization", "success"),
+      "debug",
     );
 
     console.log("Log service tests passed");

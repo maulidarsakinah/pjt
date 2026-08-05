@@ -70,9 +70,10 @@ function setCachedValue(cache, key, value, maxItems, now) {
   }
 }
 
-function buildFilterCacheKey(directory, filters) {
+function buildFilterCacheKey(directory, filters, includeJourneyStages) {
   return [
     path.resolve(directory),
+    includeJourneyStages ? "journey" : "audit",
     filters.date || "",
     filters.level || "",
     filters.method || "",
@@ -187,6 +188,10 @@ function inferStatus(entry) {
     return entry.event_outcome === "success" ? "success" : "failed";
   }
 
+  if (entry.journey_outcome) {
+    return entry.journey_outcome === "success" ? "success" : "failed";
+  }
+
   if (
     Number(entry.status_code) >= 400 ||
     entry.level === "error" ||
@@ -205,6 +210,11 @@ function normalizeLogEntry(entry) {
 
   const request =
     entry.request && typeof entry.request === "object" ? entry.request : {};
+  const actor =
+    entry.actor && typeof entry.actor === "object" ? entry.actor : {};
+  const rawUserId = entry.user_id ?? actor.user_id;
+  const userId = Number(rawUserId);
+  const mutation = entry.mutation ?? entry.metadata?.mutation;
   const time = typeof entry.time === "string" ? entry.time : undefined;
 
   if (!time || Number.isNaN(Date.parse(time))) {
@@ -221,6 +231,27 @@ function normalizeLogEntry(entry) {
     path: entry.path || request.path,
     ip: entry.ip || request.ip,
     user_agent: entry.user_agent || request.user_agent,
+    user_id: Number.isInteger(userId) && userId > 0 ? userId : undefined,
+    journey_stage:
+      typeof entry.journey_stage === "string" ? entry.journey_stage : undefined,
+    journey_outcome:
+      typeof entry.journey_outcome === "string"
+        ? entry.journey_outcome
+        : undefined,
+    required_permission:
+      typeof entry.required_permission === "string"
+        ? entry.required_permission
+        : undefined,
+    event_category:
+      typeof entry.event_category === "string"
+        ? entry.event_category
+        : undefined,
+    event_action:
+      typeof entry.event_action === "string" ? entry.event_action : undefined,
+    mutation:
+      mutation && typeof mutation === "object" && !Array.isArray(mutation)
+        ? mutation
+        : undefined,
     status: inferStatus(entry),
     status_code: Number.isInteger(entry.status_code)
       ? entry.status_code
@@ -257,6 +288,11 @@ function matchesFilters(entry, filters) {
     entry.message,
     entry.error_code,
     entry.error_message,
+    entry.user_id,
+    entry.journey_stage,
+    entry.required_permission,
+    entry.event_action,
+    entry.mutation?.fields_touched?.join(" "),
   ];
 
   return (
@@ -273,12 +309,45 @@ function matchesFilters(entry, filters) {
   );
 }
 
+function validateTraceId(value) {
+  if (typeof value !== "string" || !/^[A-Za-z0-9._:-]{1,200}$/.test(value)) {
+    throw badRequest("trace id is invalid");
+  }
+
+  return value;
+}
+
+async function listTraceJourney(traceIdValue, options = {}) {
+  const traceId = validateTraceId(traceIdValue);
+  const response = await listLogs({
+    pagination: { limit: 200, offset: 0 },
+    filters: parseLogFilters({ search: traceId }),
+    directory: options.directory,
+    now: options.now,
+    includeJourneyStages: true,
+  });
+  const data = response.data
+    .filter((entry) => entry.trace_id === traceId)
+    .sort((left, right) => Date.parse(left.time) - Date.parse(right.time));
+
+  return {
+    trace_id: traceId,
+    data,
+    count: data.length,
+    truncated: response.has_more,
+  };
+}
+
 function isSuccessfulAuditRead(entry) {
   return (
     entry.method === "GET" &&
     entry.path === "/api/logs" &&
     entry.status === "success"
   );
+}
+
+function isInternalJourneyStage(entry) {
+  return entry.message === "journey_stage";
 }
 
 async function listLogFiles(directory) {
@@ -367,8 +436,13 @@ async function listLogs({
   filters,
   directory = DEFAULT_LOG_DIRECTORY,
   now = Date.now(),
+  includeJourneyStages = false,
 }) {
-  const filterCacheKey = buildFilterCacheKey(directory, filters);
+  const filterCacheKey = buildFilterCacheKey(
+    directory,
+    filters,
+    includeJourneyStages,
+  );
   const pageCacheKey = `${filterCacheKey}|${pagination.limit}|${pagination.offset}`;
   const cachedPage = getCachedValue(pageCache, pageCacheKey, now);
 
@@ -419,6 +493,7 @@ async function listLogs({
       if (
         entry &&
         !isSuccessfulAuditRead(entry) &&
+        (includeJourneyStages || !isInternalJourneyStage(entry)) &&
         matchesFilters(entry, filters)
       ) {
         if (
@@ -476,6 +551,7 @@ module.exports = {
   clearLogCache,
   getLogCacheStats,
   listLogs,
+  listTraceJourney,
   normalizeLogEntry,
   parseLogFilters,
 };

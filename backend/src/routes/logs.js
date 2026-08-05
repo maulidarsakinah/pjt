@@ -1,10 +1,42 @@
 const router = require("express").Router();
 const authenticate = require("../middleware/authenticate");
 const requirePermission = require("../middleware/requirePermission");
-const { listLogs, parseLogFilters } = require("../services/logs");
+const {
+  listLogs,
+  listTraceJourney,
+  parseLogFilters,
+} = require("../services/logs");
+const { getUserIdentities } = require("../services/users");
 const { parsePagination } = require("../utils/pagination");
 
 router.use(authenticate);
+
+async function enrichLogUsers(entries) {
+  const identities = await getUserIdentities(
+    entries.map((entry) => entry.user_id),
+  );
+
+  return entries.map((entry) => ({
+    ...entry,
+    user_name: identities.get(Number(entry.user_id)),
+  }));
+}
+
+router.get(
+  "/journey/:traceId",
+  requirePermission("list accesses"),
+  async (req, res, next) => {
+    try {
+      const journey = await listTraceJourney(req.params.traceId);
+      res.json({
+        ...journey,
+        data: await enrichLogUsers(journey.data),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 router.get("/", requirePermission("list accesses"), async (req, res, next) => {
   try {
@@ -14,7 +46,11 @@ router.get("/", requirePermission("list accesses"), async (req, res, next) => {
     });
     const filters = parseLogFilters(req.query);
 
-    res.json(await listLogs({ pagination, filters }));
+    const response = await listLogs({ pagination, filters });
+    res.json({
+      ...response,
+      data: await enrichLogUsers(response.data),
+    });
   } catch (error) {
     next(error);
   }

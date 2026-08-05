@@ -108,6 +108,9 @@ function buildErrorLogPayload(error, req, statusCode, traceId) {
     error_source: getErrorSource(error),
     error_code: getErrorCode(error, statusCode),
     error_message: error.message,
+    journey: true,
+    journey_stage: "request_failed",
+    journey_outcome: "failed",
   };
 
   if (error.errorNum !== undefined) {
