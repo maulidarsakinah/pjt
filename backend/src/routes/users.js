@@ -11,10 +11,63 @@ const {
   replaceUserPermissions,
   replaceUserRoles,
 } = require("../services/userAccess");
+const {
+  createUser,
+  getUser,
+  getUserSummary,
+  listUsers,
+  resetUserPassword,
+  updateUser,
+} = require("../services/users");
 const { buildListResponse, parsePagination } = require("../utils/pagination");
 const { parsePositiveInteger } = require("../utils/validation");
 
 router.use(authenticate);
+
+router.get("/", requirePermission("list users"), async (req, res, next) => {
+  try {
+    const pagination = parsePagination(req.query);
+    const result = await listUsers({
+      ...pagination,
+      search: req.query.search,
+      roleId:
+        req.query.role_id === undefined
+          ? undefined
+          : parsePositiveInteger(req.query.role_id, "role_id"),
+      status: req.query.status,
+    });
+    res.json({
+      data: result.data,
+      count: result.data.length,
+      total: result.total,
+      limit: pagination.limit,
+      offset: pagination.offset,
+      has_more: result.has_more,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get(
+  "/summary",
+  requirePermission("list users"),
+  async (req, res, next) => {
+    try {
+      res.json({ data: await getUserSummary() });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.post("/", requirePermission("create users"), async (req, res, next) => {
+  try {
+    res.status(201).json({ data: await createUser(req.body, req.user, req) });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get(
   "/accesses",
@@ -23,8 +76,56 @@ router.get(
     try {
       const pagination = parsePagination(req.query);
       const accesses = await listUserAccesses(pagination);
-
       res.json(buildListResponse(accesses, pagination));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.get("/:id", requirePermission("view users"), async (req, res, next) => {
+  try {
+    const user = await getUser(parsePositiveInteger(req.params.id));
+    if (!user)
+      throw Object.assign(new Error("user not found"), {
+        statusCode: 404,
+        publicMessage: "User not found",
+      });
+    res.json({ data: user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch(
+  "/:id",
+  requirePermission("update users"),
+  async (req, res, next) => {
+    try {
+      res.json({
+        data: await updateUser(
+          parsePositiveInteger(req.params.id),
+          req.body,
+          req,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.post(
+  "/:id/reset-password",
+  requirePermission("update users"),
+  async (req, res, next) => {
+    try {
+      await resetUserPassword(
+        parsePositiveInteger(req.params.id),
+        req.body.password,
+        req,
+      );
+      res.status(204).send();
     } catch (error) {
       next(error);
     }
