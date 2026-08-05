@@ -1,68 +1,56 @@
-import { memo, useEffect, useMemo, useState, useRef } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import DeferredFlowChart from '../components/DeferredFlowChart';
-import useAuth from '../contexts/useAuth';
+import { memo, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import DeferredFlowChart from "../components/DeferredFlowChart";
+import useAuth from "../contexts/useAuth";
 import {
   getFlowStationData,
   getFlowStations,
   prefetchFlowStationData,
-} from '../services/api';
+} from "../services/api";
 import {
   formatDateTime,
   formatNumber,
   formatTime,
   readingToRow,
-} from '../utils/flowData';
-import './Detail.css';
+} from "../utils/flowData";
+import "./Detail.css";
 
-const generateDemoData = () => {
-  const dates = ['2026-07-04', '2026-07-05', '2026-07-06', '2026-07-07'];
-  const data = [];
-  let totalizer = 445000;
-  
-  dates.forEach((date) => {
-    for (let hour = 0; hour < 24; hour++) {
-      const timeStr = `${String(hour).padStart(2, '0')}:00`;
-      const debit = 135 + Math.random() * 8;
-      const vcc = 12.3 + Math.random() * 0.3;
-      const suhu = 27 + Math.random() * 3;
-      totalizer += 150 + Math.random() * 50;
-      
-      data.push({
-        id: `${date}-${timeStr}`,
-        time: timeStr,
-        date: date,
-        debit: parseFloat(debit.toFixed(2)),
-        totalizer: Math.round(totalizer),
-        vcc: parseFloat(vcc.toFixed(2)),
-        suhu: parseFloat(suhu.toFixed(1)),
-        datetimeLabel: `${date} ${timeStr}`,
-        timestamp: Date.parse(`${date}T${timeStr}:00+07:00`),
-      });
-    }
-  });
-  return data;
-};
+const DEMO_CHART_DATA = [
+  { time: "01:00", debit: 138.1, totalizer: 450420, vcc: 12.45, suhu: 28.5 },
+  { time: "02:00", debit: 137.0, totalizer: 450605, vcc: 12.48, suhu: 28.2 },
+  { time: "03:00", debit: 136.2, totalizer: 450780, vcc: 12.49, suhu: 27.9 },
+  { time: "04:00", debit: 135.5, totalizer: 450950, vcc: 12.49, suhu: 27.8 },
+  { time: "05:00", debit: 136.0, totalizer: 451125, vcc: 12.48, suhu: 28.0 },
+  { time: "06:00", debit: 137.1, totalizer: 451320, vcc: 12.48, suhu: 28.5 },
+  { time: "07:00", debit: 138.5, totalizer: 451510, vcc: 12.45, suhu: 29.0 },
+  { time: "08:00", debit: 139.8, totalizer: 451705, vcc: 12.43, suhu: 29.2 },
+  { time: "09:00", debit: 141.2, totalizer: 451900, vcc: 12.4, suhu: 29.4 },
+  { time: "10:00", debit: 142.5, totalizer: 452109, vcc: 12.42, suhu: 29.5 },
+];
 
-const ALL_DEMO_DATA = generateDemoData();
-const DEMO_TABLE_DATA = [...ALL_DEMO_DATA].reverse();
+const DEMO_TABLE_DATA = [...DEMO_CHART_DATA].reverse().map((row) => ({
+  ...row,
+  id: row.time,
+  datetimeLabel: `2026-07-06 ${row.time}`,
+  timestamp: Date.parse(`2026-07-06T${row.time}:00+07:00`),
+}));
 const DETAIL_PAGE_SIZE = 10;
-const LIVE_STATION_IDS = new Set(['697', '740']);
+const LIVE_STATION_IDS = new Set(["697", "740"]);
 const FLOW_DOMAIN = [130, 150];
 const TOTALIZER_DOMAIN = [450000, 453000];
 const VCC_DOMAIN = [12.2, 12.6];
 const TEMPERATURE_DOMAIN = [25, 32];
 const FLOW_SERIES = [
-  { dataKey: 'debit', name: 'Debit', color: '#3A4BCF', unit: 'm³/s' },
+  { dataKey: "debit", name: "Debit", color: "#3A4BCF", unit: "m³/s" },
 ];
 const TOTALIZER_SERIES = [
-  { dataKey: 'totalizer', name: 'Totalizer', color: '#10b981', unit: 'L' },
+  { dataKey: "totalizer", name: "Totalizer", color: "#10b981", unit: "L" },
 ];
 const VCC_SERIES = [
-  { dataKey: 'vcc', name: 'VCC', color: '#f59e0b', unit: 'V' },
+  { dataKey: "vcc", name: "VCC", color: "#f59e0b", unit: "V" },
 ];
 const TEMPERATURE_SERIES = [
-  { dataKey: 'suhu', name: 'Suhu', color: '#ef4444', unit: '°C' },
+  { dataKey: "suhu", name: "Suhu", color: "#ef4444", unit: "°C" },
 ];
 
 function buildHistoryRange() {
@@ -73,24 +61,24 @@ function buildHistoryRange() {
   const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
 
   return {
-    mode: 'range',
+    mode: "range",
     start: start.toISOString(),
     end: end.toISOString(),
   };
 }
 
 function normalizeStationKey(value) {
-  return String(value || '').trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function stationMatchesKey(station, stationKey) {
   const normalizedKey = normalizeStationKey(stationKey);
 
-  return [
-    station.id,
-    station.kode_station,
-    station.station_name,
-  ].some((value) => normalizeStationKey(value) === normalizedKey);
+  return [station.id, station.kode_station, station.station_name].some(
+    (value) => normalizeStationKey(value) === normalizedKey,
+  );
 }
 
 function mapLiveReading(station, reading, index) {
@@ -115,44 +103,34 @@ function getPaginationItems(currentPage, pageCount) {
   }
 
   if (currentPage <= 3) {
-    return [1, 2, 3, 'ellipsis-end', pageCount];
+    return [1, 2, 3, "ellipsis-end", pageCount];
   }
 
   if (currentPage >= pageCount - 2) {
-    return [
-      1,
-      'ellipsis-start',
-      pageCount - 2,
-      pageCount - 1,
-      pageCount,
-    ];
+    return [1, "ellipsis-start", pageCount - 2, pageCount - 1, pageCount];
   }
 
-  return [
-    1,
-    'ellipsis-start',
-    currentPage,
-    'ellipsis-end',
-    pageCount,
-  ];
+  return [1, "ellipsis-start", currentPage, "ellipsis-end", pageCount];
 }
 
 function escapeCsvCell(value) {
-  const text = String(value ?? '');
+  const text = String(value ?? "");
   const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
 
   return `"${safeText.replaceAll('"', '""')}"`;
 }
 
 function useMediaQuery(query) {
-  const [matches, setMatches] = useState(() => window.matchMedia(query).matches);
+  const [matches, setMatches] = useState(
+    () => window.matchMedia(query).matches,
+  );
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(query);
     const handleChange = (event) => setMatches(event.matches);
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, [query]);
 
   return matches;
@@ -179,176 +157,51 @@ const DetailMobileRow = memo(({ row, locationName }) => (
   </li>
 ));
 
-const ManualDateInput = ({ value, onChange }) => {
-  const [textValue, setTextValue] = useState(() => {
-    if (!value) return '';
-    const [y, m, d] = value.split('-');
-    return `${d}/${m}/${y}`;
-  });
-
-  useEffect(() => {
-    if (!value) {
-      setTextValue('');
-    } else {
-      const [y, m, d] = value.split('-');
-      const formatted = `${d}/${m}/${y}`;
-      if (textValue !== formatted) {
-        setTextValue(formatted);
-      }
-    }
-  }, [value]);
-
-  const handleTextChange = (e) => {
-    let val = e.target.value;
-    val = val.replace(/[^0-9/]/g, '');
-    
-    if (val.length === 2 && !val.includes('/')) {
-       if (textValue.length < val.length) val += '/';
-    } else if (val.length === 5 && val.split('/').length === 2) {
-       if (textValue.length < val.length) val += '/';
-    }
-    
-    if (val.length > 10) val = val.substring(0, 10);
-    
-    setTextValue(val);
-    
-    const parts = val.split('/');
-    if (parts.length === 3 && parts[2].length === 4) {
-      const d = parts[0].padStart(2, '0');
-      const m = parts[1].padStart(2, '0');
-      const y = parts[2];
-      
-      const parsedDate = new Date(`${y}-${m}-${d}`);
-      if (!isNaN(parsedDate.getTime())) {
-        onChange(`${y}-${m}-${d}`);
-      }
-    } else if (val === '') {
-      onChange('');
-    }
-  };
-
-  const handleDateChange = (e) => {
-    const newVal = e.target.value;
-    onChange(newVal);
-    if (newVal) {
-      const [y, m, d] = newVal.split('-');
-      setTextValue(`${d}/${m}/${y}`);
-    } else {
-      setTextValue('');
-    }
-  };
-
-  const dateInputRef = useRef(null);
-
-  return (
-    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
-      <input
-        type="text"
-        className={`detail-date-input ${value ? 'has-value' : ''}`}
-        placeholder="dd/mm/yyyy"
-        value={textValue}
-        onChange={handleTextChange}
-        style={{ paddingRight: '36px', width: '100%' }}
-      />
-      <div 
-        style={{ 
-          position: 'absolute', 
-          right: 0, 
-          top: 0,
-          bottom: 0,
-          width: '36px',
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 2
-        }}
-        onClick={(e) => {
-          e.preventDefault();
-          if (dateInputRef.current && typeof dateInputRef.current.showPicker === 'function') {
-            dateInputRef.current.showPicker();
-          }
-        }}
-        title="Pilih dari kalender"
-      >
-        <i className="fa-regular fa-calendar" style={{ color: 'var(--text-secondary)' }}></i>
-      </div>
-      <input
-        ref={dateInputRef}
-        type="date"
-        value={value}
-        onChange={handleDateChange}
-        style={{
-          position: 'absolute',
-          width: 0,
-          height: 0,
-          opacity: 0,
-          border: 'none',
-          padding: 0,
-          pointerEvents: 'none'
-        }}
-        tabIndex="-1"
-      />
-    </div>
-  );
-};
-
 const Detail = () => {
   const { user } = useAuth();
   const isDemoUser = Boolean(user?.is_demo);
-  const isMobile = useMediaQuery('(max-width: 760px)');
+  const isMobile = useMediaQuery("(max-width: 760px)");
   const { stationKey } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const backPath = location.pathname.startsWith('/admin')
-    ? '/admin/monitoring'
-    : '/dashboard/monitoring';
+  const backPath = location.pathname.startsWith("/admin")
+    ? "/admin/monitoring"
+    : "/dashboard/monitoring";
   const navigationStation = location.state?.station;
-  const [filterDate, setFilterDate] = useState('');
   const historyRange = useMemo(() => {
-    if (filterDate) {
-      const start = new Date(`${filterDate}T00:00:00`);
-      const end = new Date(`${filterDate}T23:59:59.999`);
-      return {
-        mode: 'range',
-        start: start.toISOString(),
-        end: end.toISOString(),
-      };
-    }
-
     const navigationQuery = location.state?.historyQuery;
 
     if (
-      navigationQuery?.mode === 'range' &&
+      navigationQuery?.mode === "range" &&
       navigationQuery.start &&
       navigationQuery.end
     ) {
       return {
-        mode: 'range',
+        mode: "range",
         start: navigationQuery.start,
         end: navigationQuery.end,
       };
     }
 
     return buildHistoryRange();
-  }, [location.state, filterDate]);
-  const [station, setStation] = useState(() => (
+  }, [location.state]);
+  const [station, setStation] = useState(() =>
     navigationStation && stationMatchesKey(navigationStation, stationKey)
       ? navigationStation
-      : null
-  ));
+      : null,
+  );
   const [liveTableData, setLiveTableData] = useState([]);
   const [liveChartData, setLiveChartData] = useState([]);
   const [totalRows, setTotalRows] = useState(0);
   const [loadedPage, setLoadedPage] = useState(0);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({
     key: null,
-    direction: 'asc',
+    direction: "asc",
   });
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (isDemoUser) {
@@ -360,16 +213,15 @@ const Detail = () => {
 
     async function loadStationDetail() {
       setIsLoading(true);
-      setError('');
+      setError("");
 
       try {
-        let selectedStation = (
+        let selectedStation =
           navigationStation &&
           LIVE_STATION_IDS.has(String(navigationStation.id)) &&
           stationMatchesKey(navigationStation, stationKey)
-        )
-          ? navigationStation
-          : null;
+            ? navigationStation
+            : null;
 
         if (!selectedStation) {
           const stationResponse = await getFlowStations(
@@ -377,18 +229,17 @@ const Detail = () => {
               limit: 100,
               offset: 0,
             },
-            { signal: controller.signal }
+            { signal: controller.signal },
           );
           selectedStation = (stationResponse.data || []).find(
-            (candidate) => (
+            (candidate) =>
               LIVE_STATION_IDS.has(String(candidate.id)) &&
-              stationMatchesKey(candidate, stationKey)
-            )
+              stationMatchesKey(candidate, stationKey),
           );
         }
 
         if (!selectedStation) {
-          throw new Error('Stasiun tidak ditemukan.');
+          throw new Error("Stasiun tidak ditemukan.");
         }
 
         const dataResponse = await getFlowStationData(
@@ -398,21 +249,19 @@ const Detail = () => {
             limit: DETAIL_PAGE_SIZE,
             offset: (page - 1) * DETAIL_PAGE_SIZE,
           },
-          { signal: controller.signal }
+          { signal: controller.signal },
         );
-        const rows = (dataResponse.data || []).map((reading, index) => (
-          mapLiveReading(selectedStation, reading, index)
-        ));
+        const rows = (dataResponse.data || []).map((reading, index) =>
+          mapLiveReading(selectedStation, reading, index),
+        );
 
         if (isActive) {
           const responseTotal = Number(dataResponse.total);
           const nextTotalRows = Number.isInteger(responseTotal)
             ? responseTotal
-            : (
-              (page - 1) * DETAIL_PAGE_SIZE +
+            : (page - 1) * DETAIL_PAGE_SIZE +
               rows.length +
-              (dataResponse.has_more ? 1 : 0)
-            );
+              (dataResponse.has_more ? 1 : 0);
 
           setStation(selectedStation);
           setLiveTableData(rows);
@@ -421,46 +270,46 @@ const Detail = () => {
           setLiveChartData((currentRows) => {
             if (page === 1) {
               return [...rows].sort(
-                (left, right) => left.timestamp - right.timestamp
+                (left, right) => left.timestamp - right.timestamp,
               );
             }
 
             const rowsById = new Map(
               [
                 ...currentRows.filter(
-                  (row) => row.stationId === String(selectedStation.id)
+                  (row) => row.stationId === String(selectedStation.id),
                 ),
                 ...rows,
-              ].map((row) => [row.id, row])
+              ].map((row) => [row.id, row]),
             );
 
             return Array.from(rowsById.values()).sort(
-              (left, right) => left.timestamp - right.timestamp
+              (left, right) => left.timestamp - right.timestamp,
             );
           });
 
           if (dataResponse.has_more) {
-            void prefetchFlowStationData(
-              selectedStation.id,
-              {
-                ...historyRange,
-                limit: DETAIL_PAGE_SIZE,
-                offset: page * DETAIL_PAGE_SIZE,
-              }
-            ).catch((prefetchError) => {
-              if (prefetchError.name !== 'AbortError') {
-                console.warn('Next detail page prefetch failed.', prefetchError);
+            void prefetchFlowStationData(selectedStation.id, {
+              ...historyRange,
+              limit: DETAIL_PAGE_SIZE,
+              offset: page * DETAIL_PAGE_SIZE,
+            }).catch((prefetchError) => {
+              if (prefetchError.name !== "AbortError") {
+                console.warn(
+                  "Next detail page prefetch failed.",
+                  prefetchError,
+                );
               }
             });
           }
         }
       } catch (requestError) {
-        if (isActive && requestError.name !== 'AbortError') {
+        if (isActive && requestError.name !== "AbortError") {
           setStation(null);
           setLiveTableData([]);
           setTotalRows(0);
           setLoadedPage(0);
-          setError(requestError.message || 'Gagal memuat detail stasiun.');
+          setError(requestError.message || "Gagal memuat detail stasiun.");
         }
       } finally {
         if (isActive) {
@@ -475,73 +324,52 @@ const Detail = () => {
       isActive = false;
       controller.abort();
     };
-  }, [
-    historyRange,
-    isDemoUser,
-    navigationStation,
-    page,
-    stationKey,
-  ]);
+  }, [historyRange, isDemoUser, navigationStation, page, stationKey]);
 
   const locationName = isDemoUser
-    ? stationKey || 'FLOW-Ploso'
-    : station?.station_name || station?.kode_station || stationKey || '-';
+    ? stationKey || "FLOW-Ploso"
+    : station?.station_name || station?.kode_station || stationKey || "-";
   const tableData = isDemoUser ? DEMO_TABLE_DATA : liveTableData;
   const filteredAndSortedData = useMemo(() => {
     const searchString = searchTerm.trim().toLowerCase();
-    const filteredData = tableData.filter((item) => {
-      if (filterDate) {
-        const itemDate = new Date(item.timestamp);
-        const year = itemDate.getFullYear();
-        const month = String(itemDate.getMonth() + 1).padStart(2, '0');
-        const day = String(itemDate.getDate()).padStart(2, '0');
-        const itemDateString = `${year}-${month}-${day}`;
-        if (itemDateString !== filterDate) {
-          return false;
-        }
-      }
-
-      if (!searchString) {
-        return true;
-      }
-
-      return (
+    const filteredData = tableData.filter(
+      (item) =>
+        !searchString ||
         locationName.toLowerCase().includes(searchString) ||
         item.debit.toString().includes(searchString) ||
         item.totalizer.toString().includes(searchString) ||
         item.vcc.toString().includes(searchString) ||
         item.suhu.toString().includes(searchString) ||
         item.datetimeLabel.toLowerCase().includes(searchString) ||
-        'active'.includes(searchString)
-      );
-    });
+        "active".includes(searchString),
+    );
 
     if (sortConfig.key) {
       filteredData.sort((left, right) => {
         let leftValue = left[sortConfig.key];
         let rightValue = right[sortConfig.key];
 
-        if (sortConfig.key === 'location') {
+        if (sortConfig.key === "location") {
           leftValue = locationName;
           rightValue = locationName;
         }
 
-        if (sortConfig.key === 'status') {
-          leftValue = 'Active';
-          rightValue = 'Active';
+        if (sortConfig.key === "status") {
+          leftValue = "Active";
+          rightValue = "Active";
         }
 
-        if (sortConfig.key === 'time') {
+        if (sortConfig.key === "time") {
           leftValue = left.timestamp;
           rightValue = right.timestamp;
         }
 
         if (leftValue < rightValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
+          return sortConfig.direction === "asc" ? -1 : 1;
         }
 
         if (leftValue > rightValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
+          return sortConfig.direction === "asc" ? 1 : -1;
         }
 
         return 0;
@@ -549,7 +377,7 @@ const Detail = () => {
     }
 
     return filteredData;
-  }, [locationName, searchTerm, sortConfig, tableData, filterDate]);
+  }, [locationName, searchTerm, sortConfig, tableData]);
   const pageCount = isDemoUser
     ? Math.max(1, Math.ceil(filteredAndSortedData.length / DETAIL_PAGE_SIZE))
     : Math.max(1, Math.ceil(totalRows / DETAIL_PAGE_SIZE));
@@ -564,7 +392,7 @@ const Detail = () => {
 
     return filteredAndSortedData.slice(
       startIndex,
-      startIndex + DETAIL_PAGE_SIZE
+      startIndex + DETAIL_PAGE_SIZE,
     );
   }, [activePage, filteredAndSortedData, isDemoUser]);
   const firstVisibleRow = filteredAndSortedData.length
@@ -572,23 +400,17 @@ const Detail = () => {
     : 0;
   const lastVisibleRow = Math.min(
     activePage * DETAIL_PAGE_SIZE,
-    filteredAndSortedData.length
+    filteredAndSortedData.length,
   );
-  const chartData = useMemo(() => {
-    if (isDemoUser) {
-      if (filterDate) {
-        return ALL_DEMO_DATA.filter((row) => row.date === filterDate);
-      }
-      return ALL_DEMO_DATA.slice(-24);
-    }
-    return liveChartData;
-  }, [isDemoUser, liveChartData, filterDate]);
+  const chartData = useMemo(
+    () => (isDemoUser ? DEMO_CHART_DATA : liveChartData),
+    [isDemoUser, liveChartData],
+  );
   const isTableLoading = !isDemoUser && isLoading && loadedPage !== page;
 
   const handleSort = (key) => {
-    const direction = sortConfig.key === key && sortConfig.direction === 'asc'
-      ? 'desc'
-      : 'asc';
+    const direction =
+      sortConfig.key === key && sortConfig.direction === "asc" ? "desc" : "asc";
 
     setPage(1);
     setSortConfig({ key, direction });
@@ -599,7 +421,7 @@ const Detail = () => {
       return (
         <i
           className="fa-solid fa-sort"
-          style={{ color: '#cbd5e1', marginLeft: '6px' }}
+          style={{ color: "#cbd5e1", marginLeft: "6px" }}
         ></i>
       );
     }
@@ -607,22 +429,22 @@ const Detail = () => {
     return (
       <i
         className={`fa-solid ${
-          sortConfig.direction === 'asc' ? 'fa-sort-up' : 'fa-sort-down'
+          sortConfig.direction === "asc" ? "fa-sort-up" : "fa-sort-down"
         }`}
-        style={{ color: 'var(--text-primary)', marginLeft: '6px' }}
+        style={{ color: "var(--text-primary)", marginLeft: "6px" }}
       ></i>
     );
   };
 
   const handleExportCsv = () => {
     const headers = [
-      'Lokasi Stasiun',
-      'Debit (m3/s)',
-      'Totalizer (L)',
-      'VCC (V)',
-      'Suhu (C)',
-      'Status',
-      'Waktu',
+      "Lokasi Stasiun",
+      "Debit (m3/s)",
+      "Totalizer (L)",
+      "VCC (V)",
+      "Suhu (C)",
+      "Status",
+      "Waktu",
     ];
     const rows = filteredAndSortedData.map((row) => [
       locationName,
@@ -630,20 +452,20 @@ const Detail = () => {
       formatNumber(row.totalizer, 0),
       formatNumber(row.vcc),
       formatNumber(row.suhu, 1),
-      'Active',
+      "Active",
       row.datetimeLabel,
     ]);
     const csv = [headers, ...rows]
-      .map((row) => row.map(escapeCsvCell).join(','))
-      .join('\r\n');
+      .map((row) => row.map(escapeCsvCell).join(","))
+      .join("\r\n");
     const blob = new Blob([`\uFEFF${csv}`], {
-      type: 'text/csv;charset=utf-8',
+      type: "text/csv;charset=utf-8",
     });
     const downloadUrl = window.URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
+    const anchor = document.createElement("a");
 
     anchor.href = downloadUrl;
-    anchor.download = `${station?.kode_station || stationKey || 'station'}-detail.csv`;
+    anchor.download = `${station?.kode_station || stationKey || "station"}-detail.csv`;
     anchor.click();
     window.URL.revokeObjectURL(downloadUrl);
   };
@@ -659,7 +481,7 @@ const Detail = () => {
       </button>
 
       {error && (
-        <div className="panel" style={{ color: '#b91c1c' }}>
+        <div className="panel" style={{ color: "#b91c1c" }}>
           {error}
         </div>
       )}
@@ -673,26 +495,26 @@ const Detail = () => {
         <div
           className="panel-header"
           style={{
-            marginBottom: '10px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '15px',
+            marginBottom: "10px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "15px",
           }}
         >
           <div className="panel-title">Data Monitoring Historis (Detail)</div>
-          <div className="detail-controls-container">
-            <div className="detail-search-wrapper">
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <div style={{ position: "relative" }}>
               <i
                 className="fa-solid fa-search"
                 style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: 'var(--text-secondary)',
-                  fontSize: '13px',
+                  position: "absolute",
+                  left: "12px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "var(--text-secondary)",
+                  fontSize: "13px",
                 }}
               ></i>
               <input
@@ -703,20 +525,19 @@ const Detail = () => {
                   setPage(1);
                   setSearchTerm(event.target.value);
                 }}
-                className="detail-search-input"
-              />
-            </div>
-            <div className="detail-date-wrapper">
-              <ManualDateInput
-                value={filterDate}
-                onChange={(newVal) => {
-                  setPage(1);
-                  setFilterDate(newVal);
+                style={{
+                  padding: "8px 14px 8px 32px",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "6px",
+                  fontSize: "13px",
+                  outline: "none",
+                  width: "200px",
                 }}
               />
             </div>
             <button
-              className="btn btn-outline detail-export-btn"
+              className="btn btn-outline"
+              style={{ fontSize: "12px", padding: "8px 14px" }}
               disabled={filteredAndSortedData.length === 0}
               onClick={handleExportCsv}
             >
@@ -727,7 +548,7 @@ const Detail = () => {
 
         <div
           className={`table-container detail-table-container ${
-            isTableLoading ? 'detail-table-container--loading' : ''
+            isTableLoading ? "detail-table-container--loading" : ""
           }`}
           aria-busy={isTableLoading}
         >
@@ -745,8 +566,10 @@ const Detail = () => {
                   />
                 ))
               ) : (
-                <li style={{ textAlign: 'center', padding: '30px' }}>
-                  {isLoading ? 'Memuat detail stasiun...' : 'Tidak ada data yang cocok.'}
+                <li style={{ textAlign: "center", padding: "30px" }}>
+                  {isLoading
+                    ? "Memuat detail stasiun..."
+                    : "Tidak ada data yang cocok."}
                 </li>
               )}
             </ul>
@@ -754,26 +577,47 @@ const Detail = () => {
             <table>
               <thead>
                 <tr>
-                  <th onClick={() => handleSort('location')} style={{ cursor: 'pointer' }}>
-                    LOKASI STASIUN {getSortIcon('location')}
+                  <th
+                    onClick={() => handleSort("location")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    LOKASI STASIUN {getSortIcon("location")}
                   </th>
-                  <th onClick={() => handleSort('debit')} style={{ cursor: 'pointer' }}>
-                    DEBIT (m³/s) {getSortIcon('debit')}
+                  <th
+                    onClick={() => handleSort("debit")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    DEBIT (m³/s) {getSortIcon("debit")}
                   </th>
-                  <th onClick={() => handleSort('totalizer')} style={{ cursor: 'pointer' }}>
-                    TOTALIZER (L) {getSortIcon('totalizer')}
+                  <th
+                    onClick={() => handleSort("totalizer")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    TOTALIZER (L) {getSortIcon("totalizer")}
                   </th>
-                  <th onClick={() => handleSort('vcc')} style={{ cursor: 'pointer' }}>
-                    VCC (V) {getSortIcon('vcc')}
+                  <th
+                    onClick={() => handleSort("vcc")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    VCC (V) {getSortIcon("vcc")}
                   </th>
-                  <th onClick={() => handleSort('suhu')} style={{ cursor: 'pointer' }}>
-                    SUHU (°C) {getSortIcon('suhu')}
+                  <th
+                    onClick={() => handleSort("suhu")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    SUHU (°C) {getSortIcon("suhu")}
                   </th>
-                  <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>
-                    STATUS {getSortIcon('status')}
+                  <th
+                    onClick={() => handleSort("status")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    STATUS {getSortIcon("status")}
                   </th>
-                  <th onClick={() => handleSort('time')} style={{ cursor: 'pointer' }}>
-                    WAKTU {getSortIcon('time')}
+                  <th
+                    onClick={() => handleSort("time")}
+                    style={{ cursor: "pointer" }}
+                  >
+                    WAKTU {getSortIcon("time")}
                   </th>
                 </tr>
               </thead>
@@ -781,19 +625,28 @@ const Detail = () => {
                 {pagedTableData.length > 0 ? (
                   pagedTableData.map((row) => (
                     <tr key={row.id}>
-                      <td><b>{locationName}</b></td>
+                      <td>
+                        <b>{locationName}</b>
+                      </td>
                       <td>{formatNumber(row.debit)}</td>
                       <td>{formatNumber(row.totalizer, 0)}</td>
                       <td>{formatNumber(row.vcc)}</td>
                       <td>{formatNumber(row.suhu, 1)}</td>
-                      <td><span className="badge-dot"></span>Active</td>
+                      <td>
+                        <span className="badge-dot"></span>Active
+                      </td>
                       <td>{row.datetimeLabel}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '30px' }}>
-                      {isLoading ? 'Memuat detail stasiun...' : 'Tidak ada data yang cocok.'}
+                    <td
+                      colSpan="7"
+                      style={{ textAlign: "center", padding: "30px" }}
+                    >
+                      {isLoading
+                        ? "Memuat detail stasiun..."
+                        : "Tidak ada data yang cocok."}
                     </td>
                   </tr>
                 )}
@@ -806,14 +659,14 @@ const Detail = () => {
           <div className="page-info">
             {isDemoUser ? (
               <>
-                Menampilkan {firstVisibleRow}-{lastVisibleRow} dari{' '}
+                Menampilkan {firstVisibleRow}-{lastVisibleRow} dari{" "}
                 {filteredAndSortedData.length} entri
               </>
             ) : (
               <>
-                Menampilkan {firstVisibleRow}-{lastVisibleRow} dari{' '}
-                {totalRows} entri
-                {isTableLoading ? ' · Memuat halaman...' : ''}
+                Menampilkan {firstVisibleRow}-{lastVisibleRow} dari {totalRows}{" "}
+                entri
+                {isTableLoading ? " · Memuat halaman..." : ""}
               </>
             )}
           </div>
@@ -826,11 +679,11 @@ const Detail = () => {
             >
               <i className="fa-solid fa-chevron-left"></i>
             </button>
-            {paginationItems.map((item) => (
-              typeof item === 'number' ? (
+            {paginationItems.map((item) =>
+              typeof item === "number" ? (
                 <button
-                  className={`page-btn ${item === activePage ? 'active' : ''}`}
-                  aria-current={item === activePage ? 'page' : undefined}
+                  className={`page-btn ${item === activePage ? "active" : ""}`}
+                  aria-current={item === activePage ? "page" : undefined}
                   disabled={isLoading}
                   key={item}
                   onClick={() => setPage(item)}
@@ -838,11 +691,15 @@ const Detail = () => {
                   {item}
                 </button>
               ) : (
-                <span className="detail-page-ellipsis" aria-hidden="true" key={item}>
+                <span
+                  className="detail-page-ellipsis"
+                  aria-hidden="true"
+                  key={item}
+                >
                   …
                 </span>
-              )
-            ))}
+              ),
+            )}
             <button
               className="page-btn"
               aria-label="Halaman berikutnya"
@@ -857,12 +714,12 @@ const Detail = () => {
 
       <div className="detail-charts-grid">
         <div className="panel">
-          <div className="panel-header" style={{ marginBottom: '10px' }}>
-            <div className="panel-title" style={{ fontSize: '14px' }}>
+          <div className="panel-header" style={{ marginBottom: "10px" }}>
+            <div className="panel-title" style={{ fontSize: "14px" }}>
               Grafik Debit Air (m³/s)
             </div>
           </div>
-          <div className="chart-canvas-container" style={{ height: '200px' }}>
+          <div className="chart-canvas-container" style={{ height: "200px" }}>
             <DeferredFlowChart
               data={chartData}
               xKey="time"
@@ -876,12 +733,12 @@ const Detail = () => {
         </div>
 
         <div className="panel">
-          <div className="panel-header" style={{ marginBottom: '10px' }}>
-            <div className="panel-title" style={{ fontSize: '14px' }}>
+          <div className="panel-header" style={{ marginBottom: "10px" }}>
+            <div className="panel-title" style={{ fontSize: "14px" }}>
               Grafik Totalizer (L)
             </div>
           </div>
-          <div className="chart-canvas-container" style={{ height: '200px' }}>
+          <div className="chart-canvas-container" style={{ height: "200px" }}>
             <DeferredFlowChart
               data={chartData}
               xKey="time"
@@ -895,12 +752,12 @@ const Detail = () => {
         </div>
 
         <div className="panel">
-          <div className="panel-header" style={{ marginBottom: '10px' }}>
-            <div className="panel-title" style={{ fontSize: '14px' }}>
+          <div className="panel-header" style={{ marginBottom: "10px" }}>
+            <div className="panel-title" style={{ fontSize: "14px" }}>
               Grafik Tegangan VCC (V)
             </div>
           </div>
-          <div className="chart-canvas-container" style={{ height: '200px' }}>
+          <div className="chart-canvas-container" style={{ height: "200px" }}>
             <DeferredFlowChart
               data={chartData}
               xKey="time"
@@ -914,12 +771,12 @@ const Detail = () => {
         </div>
 
         <div className="panel">
-          <div className="panel-header" style={{ marginBottom: '10px' }}>
-            <div className="panel-title" style={{ fontSize: '14px' }}>
+          <div className="panel-header" style={{ marginBottom: "10px" }}>
+            <div className="panel-title" style={{ fontSize: "14px" }}>
               Grafik Suhu (°C)
             </div>
           </div>
-          <div className="chart-canvas-container" style={{ height: '200px' }}>
+          <div className="chart-canvas-container" style={{ height: "200px" }}>
             <DeferredFlowChart
               data={chartData}
               xKey="time"

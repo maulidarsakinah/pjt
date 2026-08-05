@@ -14,9 +14,16 @@
   transition: 0.2s;
 }
 
-.back-nav:hover { color: var(--primary-color); }
+.back-nav:hover {
+  color: var(--primary-color);
+}
 
-.detail-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px;}
+.detail-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 24px;
+}
 
 .detail-page-ellipsis {
   display: inline-flex;
@@ -67,8 +74,13 @@
 }
 
 @media (max-width: 900px) {
-  .detail-charts-grid { grid-template-columns: 1fr; }
-  .view-section { padding: 15px; gap: 15px; }
+  .detail-charts-grid {
+    grid-template-columns: 1fr;
+  }
+  .view-section {
+    padding: 15px;
+    gap: 15px;
+  }
 }
 
 @media (max-width: 760px) {
