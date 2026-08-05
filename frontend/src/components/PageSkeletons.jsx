@@ -1,6 +1,6 @@
-import './PageSkeletons.css';
+import "./PageSkeletons.css";
 
-const SkeletonLine = ({ className = '' }) => (
+const SkeletonLine = ({ className = "" }) => (
   <div className={`page-skeleton-line ${className}`} aria-hidden="true" />
 );
 
@@ -20,14 +20,14 @@ export const StationListSkeleton = ({ count = 2 }) => (
 export const TableRowsSkeleton = ({ columns = 7, rows = 10 }) => (
   <div
     className="table-skeleton"
-    style={{ '--skeleton-columns': columns }}
+    style={{ "--skeleton-columns": columns }}
     aria-label="Memuat data tabel"
   >
     {Array.from({ length: rows }, (_, rowIndex) => (
       <div className="table-skeleton-row" key={rowIndex}>
         {Array.from({ length: columns }, (_, columnIndex) => (
           <SkeletonLine
-            className={columnIndex === 0 ? 'page-skeleton-line--title' : ''}
+            className={columnIndex === 0 ? "page-skeleton-line--title" : ""}
             key={columnIndex}
           />
         ))}
@@ -55,7 +55,10 @@ export const ChartSkeleton = () => (
 );
 
 export const MonitoringSkeleton = () => (
-  <div className="view-section page-skeleton-view" aria-label="Memuat halaman monitoring">
+  <div
+    className="view-section page-skeleton-view"
+    aria-label="Memuat halaman monitoring"
+  >
     <div className="page-skeleton-heading">
       <SkeletonLine className="page-skeleton-line--heading" />
       <SkeletonLine className="page-skeleton-line--subtitle" />
@@ -89,7 +92,10 @@ export const MonitoringSkeleton = () => (
 );
 
 export const DetailSkeleton = () => (
-  <div className="view-section page-skeleton-view" aria-label="Memuat detail stasiun">
+  <div
+    className="view-section page-skeleton-view"
+    aria-label="Memuat detail stasiun"
+  >
     <SkeletonLine className="page-skeleton-line--short" />
     <div className="page-skeleton-heading">
       <SkeletonLine className="page-skeleton-line--heading" />

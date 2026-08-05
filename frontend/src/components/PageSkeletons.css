@@ -54,12 +54,7 @@
 .page-skeleton-input,
 .map-skeleton,
 .chart-skeleton-bars span {
-  background: linear-gradient(
-    90deg,
-    #e8edf4 25%,
-    #f5f7fa 50%,
-    #e8edf4 75%
-  );
+  background: linear-gradient(90deg, #e8edf4 25%, #f5f7fa 50%, #e8edf4 75%);
   background-size: 200% 100%;
   animation: page-skeleton-shimmer 1.4s ease-in-out infinite;
 }

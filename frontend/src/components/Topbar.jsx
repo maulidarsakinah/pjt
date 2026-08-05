@@ -1,22 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import useAuth from '../contexts/useAuth';
-import './Topbar.css';
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
+import useAuth from "../contexts/useAuth";
+import "./Topbar.css";
 
 const Topbar = ({ toggleSidebar, openLogoutModal }) => {
   const location = useLocation();
   const { user } = useAuth();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const accountRef = useRef(null);
-  const displayName = user?.name || 'Operator';
-  const companyName = user?.company?.name || user?.company_name || 'Company';
-  const roleText = user?.role || user?.role_name || user?.roles?.join(', ') || 'Operator';
-  const initials = displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'OP';
+  const displayName = user?.name || "Operator";
+  const companyName = user?.company?.name || user?.company_name || "Company";
+  const roleText =
+    user?.role || user?.role_name || user?.roles?.join(", ") || "Operator";
+  const initials =
+    displayName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "OP";
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -25,10 +27,10 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -36,79 +38,134 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
     setIsAccountOpen(false);
     openLogoutModal?.();
   };
-  
+
   const getBreadcrumb = () => {
     switch (location.pathname) {
-      case '/dashboard':
+      case "/dashboard":
         return <span>Dashboard</span>;
-      case '/dashboard/monitoring':
+      case "/dashboard/monitoring":
         return (
           <>
-            Dashboard <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Monitoring</span>
+            Dashboard{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Monitoring</span>
           </>
         );
-      case '/dashboard/settings':
+      case "/dashboard/settings":
         return (
           <>
-            Dashboard <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Pengaturan</span>
+            Dashboard{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Pengaturan</span>
           </>
         );
-      case '/admin':
+      case "/admin":
         return <span>Admin Dashboard</span>;
-      case '/admin/monitoring':
+      case "/admin/monitoring":
         return (
           <>
-            Admin <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Monitoring</span>
+            Admin{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Monitoring</span>
           </>
         );
-      case '/admin/master-account':
+      case "/admin/master-account":
         return (
           <>
-            Admin <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Master Akun</span>
+            Admin{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Master Akun</span>
           </>
         );
-      case '/admin/master-data':
+      case "/admin/master-data":
         return (
           <>
-            Admin <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Master Data</span>
+            Admin{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Master Data</span>
           </>
         );
-      case '/admin/master-alat':
+      case "/admin/master-alat":
         return (
           <>
-            Admin <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Master Alat</span>
+            Admin{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Master Alat</span>
           </>
         );
-      case '/admin/reports':
+      case "/admin/reports":
         return (
           <>
-            Admin <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Laporan</span>
+            Admin{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Laporan</span>
           </>
         );
-      case '/admin/audit-log':
+      case "/admin/audit-log":
         return (
           <>
-            Admin <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Audit Log</span>
+            Admin{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Audit Log</span>
           </>
         );
-      case '/admin/settings':
+      case "/admin/settings":
         return (
           <>
-            Admin <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Pengaturan</span>
+            Admin{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Pengaturan</span>
           </>
         );
       default:
-        if (location.pathname.startsWith('/dashboard/detail')) {
+        if (location.pathname.startsWith("/dashboard/detail")) {
           return (
             <>
-              Dashboard <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Detail Stasiun</span>
+              Dashboard{" "}
+              <i
+                className="fa-solid fa-chevron-right"
+                style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+              ></i>{" "}
+              <span>Detail Stasiun</span>
             </>
           );
         }
-        if (location.pathname.startsWith('/admin/detail')) {
+        if (location.pathname.startsWith("/admin/detail")) {
           return (
             <>
-              Admin <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', margin: '0 8px', color: '#cbd5e1' }}></i> <span>Detail Stasiun</span>
+              Admin{" "}
+              <i
+                className="fa-solid fa-chevron-right"
+                style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+              ></i>{" "}
+              <span>Detail Stasiun</span>
             </>
           );
         }
@@ -122,18 +179,20 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
         <button className="hamburger-btn" onClick={toggleSidebar}>
           <i className="fa-solid fa-bars"></i>
         </button>
-        <img className="topbar-logo" src="/logo-hydrotrack.svg" alt="HydroTrack" />
+        <img
+          className="topbar-logo"
+          src="/logo-hydrotrack.svg"
+          alt="HydroTrack"
+        />
         <div className="topbar-copy">
           <span className="topbar-app-name">HydroTrack Control Center</span>
-          <div className="breadcrumb">
-            {getBreadcrumb()}
-          </div>
+          <div className="breadcrumb">{getBreadcrumb()}</div>
         </div>
       </div>
       <div className="topbar-right">
         <div className="account-menu" ref={accountRef}>
           <button
-            className={`user-dropdown ${isAccountOpen ? 'active' : ''}`}
+            className={`user-dropdown ${isAccountOpen ? "active" : ""}`}
             type="button"
             onClick={() => setIsAccountOpen((value) => !value)}
             aria-expanded={isAccountOpen}
@@ -152,7 +211,7 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
                 <div className="account-dropdown-avatar">{initials}</div>
                 <div className="account-dropdown-identity">
                   <strong>{displayName}</strong>
-                  <span>{user?.email || 'Email belum tersedia'}</span>
+                  <span>{user?.email || "Email belum tersedia"}</span>
                 </div>
               </div>
 
@@ -165,17 +224,20 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
                 <strong>{companyName}</strong>
               </div>
 
-              <button className="account-exit-button" type="button" onClick={handleExit} role="menuitem">
+              <button
+                className="account-exit-button"
+                type="button"
+                onClick={handleExit}
+                role="menuitem"
+              >
                 <i className="fa-solid fa-arrow-right-from-bracket"></i> Keluar
               </button>
             </div>
           )}
-          </div>
+        </div>
       </div>
     </header>
   );
 };
 
 export default Topbar;
-
-

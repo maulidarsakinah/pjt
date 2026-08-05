@@ -1,4 +1,4 @@
-import '../pages/Dashboard.css';
+import "../pages/Dashboard.css";
 
 const DashboardSkeleton = () => (
   <div className="view-section dashboard-page">

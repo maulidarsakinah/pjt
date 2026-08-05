@@ -4,7 +4,11 @@
 
 .admin-logo-container {
   background:
-    radial-gradient(circle at top left, rgba(58, 75, 207, 0.12), transparent 46%),
+    radial-gradient(
+      circle at top left,
+      rgba(58, 75, 207, 0.12),
+      transparent 46%
+    ),
     rgba(255, 255, 255, 0.82);
 }
 
@@ -13,7 +17,7 @@
 }
 
 .admin-nav-menu .nav-item.active {
-  background-color: #B1CFF6;
+  background-color: #b1cff6;
 }
 
 .admin-nav-menu .nav-item.text-danger {

@@ -3,14 +3,14 @@ import { NavLink, useLocation } from 'react-router-dom';
 import './AdminSidebar.css';
 
 const adminNavItems = [
-  { to: '/admin', end: true, icon: 'fa-border-all', label: 'Dashboard' },
-  { to: '/admin/monitoring', icon: 'fa-satellite-dish', label: 'Monitoring' },
-  { to: '/admin/master-data', icon: 'fa-database', label: 'Master Data' },
-  { to: '/admin/master-alat', icon: 'fa-microchip', label: 'Master Alat' },
-  { to: '/admin/master-account', icon: 'fa-users-gear', label: 'Master Akun' },
-  { to: '/admin/reports', icon: 'fa-file-lines', label: 'Laporan' },
-  { to: '/admin/audit-log', icon: 'fa-clock-rotate-left', label: 'Audit Log' },
-  { to: '/admin/settings', icon: 'fa-gear', label: 'Pengaturan' },
+  { to: "/admin", end: true, icon: "fa-border-all", label: "Dashboard" },
+  { to: "/admin/monitoring", icon: "fa-satellite-dish", label: "Monitoring" },
+  { to: "/admin/master-data", icon: "fa-database", label: "Master Data" },
+  { to: "/admin/master-alat", icon: "fa-microchip", label: "Master Alat" },
+  { to: "/admin/master-account", icon: "fa-users-gear", label: "Master Akun" },
+  { to: "/admin/reports", icon: "fa-file-lines", label: "Laporan" },
+  { to: "/admin/audit-log", icon: "fa-clock-rotate-left", label: "Audit Log" },
+  { to: "/admin/settings", icon: "fa-gear", label: "Pengaturan" },
 ];
 
 const AdminSidebar = ({ openLogoutModal }) => {
@@ -20,7 +20,11 @@ const AdminSidebar = ({ openLogoutModal }) => {
     <aside className="sidebar admin-sidebar">
     <div className="logo-container admin-logo-container">
       <div className="logo-mark">
-        <img className="logo-image" src="/logo-hydrotrack.svg" alt="HydroTrack logo" />
+        <img
+          className="logo-image"
+          src="/logo-hydrotrack.svg"
+          alt="HydroTrack logo"
+        />
       </div>
       <div className="logo-copy">
         <div className="logo-title">HydroTrack</div>

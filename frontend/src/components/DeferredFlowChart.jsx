@@ -1,7 +1,7 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { ChartSkeleton } from './PageSkeletons';
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { ChartSkeleton } from "./PageSkeletons";
 
-const FlowAreaChart = lazy(() => import('./FlowAreaChart'));
+const FlowAreaChart = lazy(() => import("./FlowAreaChart"));
 
 const DeferredFlowChart = (props) => {
   const containerRef = useRef(null);
@@ -14,7 +14,7 @@ const DeferredFlowChart = (props) => {
 
     const container = containerRef.current;
 
-    if (!container || !('IntersectionObserver' in window)) {
+    if (!container || !("IntersectionObserver" in window)) {
       setShouldRender(true);
       return undefined;
     }
@@ -26,7 +26,7 @@ const DeferredFlowChart = (props) => {
           observer.disconnect();
         }
       },
-      { rootMargin: '240px' }
+      { rootMargin: "240px" },
     );
 
     observer.observe(container);
