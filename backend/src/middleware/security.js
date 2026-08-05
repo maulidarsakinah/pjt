@@ -17,7 +17,7 @@ function corsAllowlist(req, res, next) {
         status_code: 403,
         origin,
       },
-      "cors_origin_denied"
+      "cors_origin_denied",
     );
 
     res.status(403).json({
@@ -29,9 +29,16 @@ function corsAllowlist(req, res, next) {
   }
 
   res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Vary", "Origin");
-  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-Id, X-Trace-Id");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Authorization, Content-Type, X-Request-Id, X-Trace-Id",
+  );
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  );
 
   if (req.method === "OPTIONS") {
     res.status(204).send();
@@ -48,6 +55,23 @@ const securityHeaders = helmet({
   },
 });
 
+function requireJsonBody(req, res, next) {
+  const contentLength = Number(req.headers["content-length"] || 0);
+  const hasBody =
+    contentLength > 0 || typeof req.headers["transfer-encoding"] === "string";
+
+  if (!hasBody || req.is("application/json")) {
+    next();
+    return;
+  }
+
+  res.status(415).json({
+    error: "Content-Type must be application/json",
+    code: "UNSUPPORTED_MEDIA_TYPE",
+    trace_id: req.trace_id,
+  });
+}
+
 function createRateLimitHandler(message) {
   return (req, res) => {
     req.log.warn(
@@ -56,7 +80,7 @@ function createRateLimitHandler(message) {
         status_code: 429,
         error: message,
       },
-      "rate_limit_exceeded"
+      "rate_limit_exceeded",
     );
 
     res.status(429).json({
@@ -90,5 +114,6 @@ module.exports = {
   authRateLimit,
   corsAllowlist,
   generalRateLimit,
+  requireJsonBody,
   securityHeaders,
 };

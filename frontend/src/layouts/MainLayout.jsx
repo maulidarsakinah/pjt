@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Topbar from '../components/Topbar';
 import LogoutModal from '../components/LogoutModal';
@@ -14,29 +14,42 @@ const MainLayout = () => {
 
   const openLogoutModal = () => setIsLogoutModalOpen(true);
   const closeLogoutModal = () => setIsLogoutModalOpen(false);
-  const confirmLogout = () => {
-    logout();
+  const confirmLogout = async () => {
+    await logout();
     closeLogoutModal();
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   };
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  const location = useLocation();
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="main-layout-container">
-      <div className={`sidebar-wrapper ${isSidebarOpen ? 'open' : ''}`}>
+      <div className={`sidebar-wrapper ${isSidebarOpen ? "open" : ""}`}>
         <Sidebar openLogoutModal={openLogoutModal} />
       </div>
-      {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>}
-      
+      {isSidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
+
       <main className="main-content">
-        <Topbar toggleSidebar={toggleSidebar} openLogoutModal={openLogoutModal} />
+        <Topbar
+          toggleSidebar={toggleSidebar}
+          openLogoutModal={openLogoutModal}
+        />
         <Outlet />
       </main>
-      <LogoutModal 
-        isOpen={isLogoutModalOpen} 
-        onClose={closeLogoutModal} 
-        onConfirm={confirmLogout} 
+      <LogoutModal
+        isOpen={isLogoutModalOpen}
+        onClose={closeLogoutModal}
+        onConfirm={confirmLogout}
       />
     </div>
   );

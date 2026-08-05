@@ -9,7 +9,7 @@ const server = app.listen(config.port, () => {
       port: config.port,
       oracleDriverMode: config.db.useThickMode ? "thick" : "thin",
     },
-    "server_started"
+    "server_started",
   );
 });
 
@@ -18,7 +18,10 @@ const shutdown = (signal) => {
 
   server.close(async (error) => {
     if (error) {
-      logger.error({ err: error, error: error.message }, "server_shutdown_failed");
+      logger.error(
+        { err: error, error: error.message },
+        "server_shutdown_failed",
+      );
       process.exit(1);
     }
 
@@ -27,7 +30,7 @@ const shutdown = (signal) => {
     } catch (poolError) {
       logger.error(
         { err: poolError, error: poolError.message },
-        "database_pool_close_failed"
+        "database_pool_close_failed",
       );
       process.exit(1);
     }

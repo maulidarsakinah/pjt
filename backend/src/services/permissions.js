@@ -1,5 +1,5 @@
 const { clearAccessCache } = require("./access");
-const { writeAuditEvent } = require("./audit");
+const { buildFieldChanges, writeAuditEvent } = require("./audit");
 const { withConnection, withTransaction } = require("./database");
 const { badRequest, notFound } = require("../utils/httpErrors");
 const { requiredString } = require("../utils/validation");
@@ -49,7 +49,7 @@ async function getPermissionById(connection, id) {
     {
       fetchArraySize: 1,
       maxRows: 1,
-    }
+    },
   );
 
   return result.rows[0];
@@ -86,7 +86,7 @@ async function listPermissions(pagination) {
       {
         fetchArraySize: Math.min(pagination.limit + 1, 100),
         maxRows: pagination.limit + 1,
-      }
+      },
     );
 
     return result.rows;
@@ -104,7 +104,7 @@ async function createPermission(body, req) {
 
     const idResult = await connection.execute(
       `SELECT NVL(MAX("id"), 0) + 1 AS "next_id"
-       FROM "permissions"`
+       FROM "permissions"`,
     );
     const nextId = idResult.rows[0].next_id;
 
@@ -126,7 +126,7 @@ async function createPermission(body, req) {
         id: nextId,
         name: payload.name,
         guard_name: payload.guard_name,
-      }
+      },
     );
 
     return {
@@ -137,14 +137,24 @@ async function createPermission(body, req) {
   });
 
   clearAccessCache();
-  logPermissionAudit(req, "create_permission", result.permissionId, { name: result.name });
+  logPermissionAudit(req, "create_permission", result.permissionId, {
+    name: result.name,
+  });
   return result.permission;
 }
 
 async function updatePermission(id, body, req, { partial = true } = {}) {
   const payload = validatePermissionPayload(body, { partial });
   const result = await withTransaction(async (connection) => {
-    const setClauses = Object.keys(payload).map((field) => `"${field}" = :${field}`);
+    const before = await getPermissionById(connection, id);
+
+    if (!before) {
+      throw notFound("permission not found");
+    }
+
+    const setClauses = Object.keys(payload).map(
+      (field) => `"${field}" = :${field}`,
+    );
 
     setClauses.push(`"updated_at" = SYSTIMESTAMP`);
 
@@ -155,7 +165,7 @@ async function updatePermission(id, body, req, { partial = true } = {}) {
       {
         ...payload,
         id,
-      }
+      },
     );
 
     if (result.rowsAffected === 0) {
@@ -164,12 +174,27 @@ async function updatePermission(id, body, req, { partial = true } = {}) {
 
     return {
       permission: await getPermissionById(connection, id),
+      before,
       fields: Object.keys(payload),
     };
   });
 
   clearAccessCache();
-  logPermissionAudit(req, "update_permission", id, { fields: result.fields });
+  writeAuditEvent(req, {
+    category: "access_admin",
+    action: "update_permission",
+    targetType: "permission",
+    targetId: id,
+    changes: buildFieldChanges(
+      result.before,
+      result.permission,
+      result.fields,
+      {
+        targetType: "permission",
+      },
+    ),
+    metadata: { fields: result.fields },
+  });
   return result.permission;
 }
 
@@ -178,17 +203,17 @@ async function deletePermission(id, req) {
     await connection.execute(
       `DELETE FROM "role_has_permissions"
        WHERE "permission_id" = :id`,
-      { id }
+      { id },
     );
     await connection.execute(
       `DELETE FROM "model_has_permissions"
        WHERE "permission_id" = :id`,
-      { id }
+      { id },
     );
     const result = await connection.execute(
       `DELETE FROM "permissions"
        WHERE "id" = :id`,
-      { id }
+      { id },
     );
 
     if (result.rowsAffected === 0) {

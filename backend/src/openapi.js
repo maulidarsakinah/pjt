@@ -94,6 +94,9 @@ module.exports = {
               },
             },
           },
+          415: {
+            description: "Request body is not JSON",
+          },
         },
       },
     },
@@ -101,6 +104,8 @@ module.exports = {
       post: {
         tags: ["Auth"],
         summary: "Login a user",
+        description:
+          "Returns a short-lived bearer token and sets a rotating HttpOnly refresh-token cookie.",
         operationId: "loginUser",
         requestBody: {
           required: true,
@@ -115,6 +120,12 @@ module.exports = {
         responses: {
           200: {
             description: "Login successful",
+            headers: {
+              "Set-Cookie": {
+                description: "HttpOnly, SameSite=Strict refresh-token cookie",
+                schema: { type: "string" },
+              },
+            },
             content: {
               "application/json": {
                 schema: {
@@ -142,6 +153,58 @@ module.exports = {
                 },
               },
             },
+          },
+          415: {
+            description: "Request body is not JSON",
+          },
+        },
+      },
+    },
+    "/api/refresh": {
+      post: {
+        tags: ["Auth"],
+        summary: "Rotate the refresh cookie and issue a new access token",
+        operationId: "refreshUserSession",
+        security: [{ refreshCookie: [] }],
+        responses: {
+          200: {
+            description: "Session refreshed successfully",
+            headers: {
+              "Set-Cookie": {
+                description:
+                  "Rotated HttpOnly, SameSite=Strict refresh-token cookie",
+                schema: { type: "string" },
+              },
+            },
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/AuthResponse",
+                },
+              },
+            },
+          },
+          401: {
+            description: "Missing, invalid, expired, or revoked refresh token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/logout": {
+      post: {
+        tags: ["Auth"],
+        summary: "Revoke available session tokens and clear the refresh cookie",
+        operationId: "logoutUser",
+        responses: {
+          204: {
+            description: "Session tokens revoked when valid and cookie cleared",
           },
         },
       },
@@ -563,7 +626,8 @@ module.exports = {
     "/api/me": {
       get: {
         tags: ["Access"],
-        summary: "Get authenticated user's profile, company, roles, and permissions",
+        summary:
+          "Get authenticated user's profile, company, roles, and permissions",
         operationId: "getMe",
         security: [
           {
@@ -1055,6 +1119,161 @@ module.exports = {
         },
       },
     },
+    "/api/users": {
+      get: {
+        tags: ["Users"],
+        summary: "List user accounts",
+        description: "Requires the `list users` permission.",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/LimitQuery" },
+          { $ref: "#/components/parameters/OffsetQuery" },
+          {
+            name: "search",
+            in: "query",
+            schema: { type: "string", maxLength: 200 },
+          },
+          {
+            name: "role_id",
+            in: "query",
+            schema: { type: "integer", minimum: 1 },
+          },
+          {
+            name: "status",
+            in: "query",
+            schema: { type: "string", enum: ["0", "1", "active", "inactive"] },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Paginated user accounts",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/UsersResponse" },
+              },
+            },
+          },
+          403: { description: "Missing required permission" },
+        },
+      },
+      post: {
+        tags: ["Users"],
+        summary: "Create a user account",
+        description: "Requires the `create users` permission.",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AdminCreateUserRequest" },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "User created",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/UserAdminResponse" },
+              },
+            },
+          },
+          409: { description: "Email already registered" },
+        },
+      },
+    },
+    "/api/users/summary": {
+      get: {
+        tags: ["Users"],
+        summary: "Get user account totals",
+        description: "Requires the `list users` permission.",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: "User totals returned",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/UserSummaryResponse" },
+              },
+            },
+          },
+        },
+      },
+    },
+    "/api/users/{id}": {
+      get: {
+        tags: ["Users"],
+        summary: "Get a user account",
+        description: "Requires the `view users` permission.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdPath" }],
+        responses: {
+          200: {
+            description: "User returned",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/UserAdminResponse" },
+              },
+            },
+          },
+          404: { description: "User not found" },
+        },
+      },
+      patch: {
+        tags: ["Users"],
+        summary: "Update or deactivate a user account",
+        description: "Requires the `update users` permission.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdPath" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/AdminUpdateUserRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "User updated",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/UserAdminResponse" },
+              },
+            },
+          },
+          404: { description: "User not found" },
+        },
+      },
+    },
+    "/api/users/{id}/reset-password": {
+      post: {
+        tags: ["Users"],
+        summary: "Reset a user's password",
+        description:
+          "Requires the `update users` permission and revokes the user's active tokens.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdPath" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["password"],
+                properties: {
+                  password: { type: "string", minLength: 8, maxLength: 255 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          204: { description: "Password reset" },
+          404: { description: "User not found" },
+        },
+      },
+    },
     "/api/users/accesses": {
       get: {
         tags: ["Access"],
@@ -1116,7 +1335,8 @@ module.exports = {
       put: {
         tags: ["Access"],
         summary: "Replace a user's roles",
-        description: "Requires the `update accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `update accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "syncUserRoles",
         security: [{ bearerAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
@@ -1144,7 +1364,8 @@ module.exports = {
       post: {
         tags: ["Access"],
         summary: "Attach one role to a user",
-        description: "Requires the `create accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `create accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "attachUserRole",
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1165,7 +1386,8 @@ module.exports = {
       delete: {
         tags: ["Access"],
         summary: "Detach one role from a user",
-        description: "Requires the `delete accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `delete accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "detachUserRole",
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1182,7 +1404,8 @@ module.exports = {
       put: {
         tags: ["Access"],
         summary: "Replace a user's direct permissions",
-        description: "Requires the `update accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `update accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "syncUserDirectPermissions",
         security: [{ bearerAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/IdPath" }],
@@ -1210,7 +1433,8 @@ module.exports = {
       post: {
         tags: ["Access"],
         summary: "Attach one direct permission to a user",
-        description: "Requires the `create accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `create accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "attachUserDirectPermission",
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1231,7 +1455,8 @@ module.exports = {
       delete: {
         tags: ["Access"],
         summary: "Detach one direct permission from a user",
-        description: "Requires the `delete accesses` permission. The caller cannot modify their own access assignments.",
+        description:
+          "Requires the `delete accesses` permission. The caller cannot modify their own access assignments.",
         operationId: "detachUserDirectPermission",
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1248,7 +1473,8 @@ module.exports = {
       get: {
         tags: ["Logs"],
         summary: "List backend log entries",
-        description: "Reads normalized entries from the backend log directory. Successful reads of this endpoint are excluded to prevent self-generated audit noise. Totals and pages may be cached for up to 5 seconds. Requires the `list accesses` permission.",
+        description:
+          "Reads normalized entries from the backend log directory. Successful reads of this endpoint are excluded to prevent self-generated audit noise. Totals and pages may be cached for up to 5 seconds. Requires the `list accesses` permission.",
         operationId: "listLogs",
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1286,7 +1512,15 @@ module.exports = {
             required: false,
             schema: {
               type: "string",
-              enum: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+              enum: [
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS",
+                "HEAD",
+              ],
             },
           },
           {
@@ -1299,7 +1533,8 @@ module.exports = {
             name: "search",
             in: "query",
             required: false,
-            description: "Case-insensitive search across trace ID, method, endpoint, message, and error fields.",
+            description:
+              "Case-insensitive search across trace ID, method, endpoint, message, and error fields.",
             schema: { type: "string", maxLength: 200 },
           },
         ],
@@ -1333,11 +1568,43 @@ module.exports = {
         },
       },
     },
+    "/api/logs/journey/{traceId}": {
+      get: {
+        tags: ["Logs"],
+        summary: "Get the chronological journey for one trace ID",
+        description:
+          "Returns up to 200 exact trace matches ordered oldest first. Requires the `list accesses` permission.",
+        operationId: "getLogJourney",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: "traceId",
+            in: "path",
+            required: true,
+            schema: { type: "string", minLength: 1, maxLength: 200 },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Trace journey returned chronologically",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/LogJourneyResponse" },
+              },
+            },
+          },
+          400: { description: "Invalid trace ID" },
+          401: { description: "Missing or invalid bearer token" },
+          403: { description: "Missing the list accesses permission" },
+        },
+      },
+    },
     "/api/stations/flow": {
       get: {
         tags: ["Stations"],
         summary: "Get stations whose station type starts with FLOW_",
-        description: "Requires a valid bearer token. No named permission is required.",
+        description:
+          "Requires a valid bearer token. No named permission is required.",
         operationId: "getFlowStations",
         security: [
           {
@@ -1409,7 +1676,8 @@ module.exports = {
       get: {
         tags: ["Stations"],
         summary: "Get IoT data rows for a FLOW_ station",
-        description: "Requires a valid bearer token. No named permission is required.",
+        description:
+          "Requires a valid bearer token. No named permission is required.",
         operationId: "getFlowStationData",
         security: [
           {
@@ -1582,12 +1850,29 @@ module.exports = {
         },
         description: "Number of records to skip before returning results",
       },
+      LimitQuery: {
+        name: "limit",
+        in: "query",
+        required: false,
+        schema: {
+          type: "integer",
+          minimum: 1,
+          maximum: 500,
+          default: 100,
+        },
+        description: "Maximum number of records to return",
+      },
     },
     securitySchemes: {
       bearerAuth: {
         type: "http",
         scheme: "bearer",
         bearerFormat: "JWT",
+      },
+      refreshCookie: {
+        type: "apiKey",
+        in: "cookie",
+        name: "hydrotrack_refresh",
       },
     },
     schemas: {
@@ -1643,7 +1928,11 @@ module.exports = {
       },
       ChangePasswordRequest: {
         type: "object",
-        required: ["current_password", "new_password", "new_password_confirmation"],
+        required: [
+          "current_password",
+          "new_password",
+          "new_password_confirmation",
+        ],
         properties: {
           current_password: {
             type: "string",
@@ -1726,14 +2015,15 @@ module.exports = {
       },
       AuthResponse: {
         type: "object",
-        required: ["user", "token"],
+        required: ["token", "user"],
         properties: {
-          user: {
-            $ref: "#/components/schemas/User",
-          },
           token: {
             type: "string",
-            example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            description:
+              "Short-lived JWT access token for the Authorization header",
+          },
+          user: {
+            $ref: "#/components/schemas/User",
           },
         },
       },
@@ -1899,7 +2189,15 @@ module.exports = {
       },
       Me: {
         type: "object",
-        required: ["id", "name", "email", "company_id", "company", "roles", "permissions"],
+        required: [
+          "id",
+          "name",
+          "email",
+          "company_id",
+          "company",
+          "roles",
+          "permissions",
+        ],
         properties: {
           id: {
             type: "integer",
@@ -2169,6 +2467,104 @@ module.exports = {
           },
         },
       },
+      UserAdmin: {
+        type: "object",
+        required: ["id", "name", "email", "status", "roles"],
+        properties: {
+          id: { type: "integer", format: "int64" },
+          name: { type: "string" },
+          email: { type: "string", format: "email" },
+          phone: { type: "string", nullable: true },
+          status: { type: "string", enum: ["0", "1"] },
+          company_id: { type: "integer", format: "int64", nullable: true },
+          role_name: { type: "string", nullable: true },
+          roles: {
+            type: "array",
+            items: {
+              oneOf: [
+                { type: "string" },
+                { $ref: "#/components/schemas/Role" },
+              ],
+            },
+          },
+          last_login_at: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+          },
+          created_at: { type: "string", format: "date-time" },
+          updated_at: { type: "string", format: "date-time" },
+        },
+      },
+      UserAdminResponse: {
+        type: "object",
+        required: ["data"],
+        properties: { data: { $ref: "#/components/schemas/UserAdmin" } },
+      },
+      UsersResponse: {
+        type: "object",
+        required: ["data", "count", "total", "limit", "offset", "has_more"],
+        properties: {
+          data: {
+            type: "array",
+            items: { $ref: "#/components/schemas/UserAdmin" },
+          },
+          count: { type: "integer" },
+          total: { type: "integer" },
+          limit: { type: "integer" },
+          offset: { type: "integer" },
+          has_more: { type: "boolean" },
+        },
+      },
+      UserSummaryResponse: {
+        type: "object",
+        required: ["data"],
+        properties: {
+          data: {
+            type: "object",
+            required: ["total", "active", "admin", "operator"],
+            properties: {
+              total: { type: "integer" },
+              active: { type: "integer" },
+              admin: { type: "integer" },
+              operator: { type: "integer" },
+            },
+          },
+        },
+      },
+      AdminCreateUserRequest: {
+        type: "object",
+        required: ["name", "email", "password"],
+        properties: {
+          name: { type: "string", maxLength: 255 },
+          email: { type: "string", format: "email", maxLength: 255 },
+          password: { type: "string", minLength: 8, maxLength: 255 },
+          phone: { type: "string", nullable: true, maxLength: 255 },
+          status: { type: "string", enum: ["0", "1", "active", "inactive"] },
+          company_id: { type: "integer", minimum: 1 },
+          role_ids: {
+            type: "array",
+            uniqueItems: true,
+            items: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+      AdminUpdateUserRequest: {
+        type: "object",
+        minProperties: 1,
+        properties: {
+          name: { type: "string", maxLength: 255 },
+          email: { type: "string", format: "email", maxLength: 255 },
+          phone: { type: "string", nullable: true, maxLength: 255 },
+          status: { type: "string", enum: ["0", "1", "active", "inactive"] },
+          company_id: { type: "integer", minimum: 1 },
+          role_ids: {
+            type: "array",
+            uniqueItems: true,
+            items: { type: "integer", minimum: 1 },
+          },
+        },
+      },
       UserAccessListItem: {
         type: "object",
         properties: {
@@ -2294,14 +2690,83 @@ module.exports = {
           method: { type: "string", nullable: true, example: "GET" },
           path: { type: "string", nullable: true, example: "/api/health" },
           ip: { type: "string", nullable: true, example: "127.0.0.1" },
-          user_agent: { type: "string", nullable: true, example: "Mozilla/5.0" },
+          user_agent: {
+            type: "string",
+            nullable: true,
+            example: "Mozilla/5.0",
+          },
+          user_id: {
+            type: "integer",
+            format: "int64",
+            nullable: true,
+            example: 21,
+          },
+          user_name: {
+            type: "string",
+            nullable: true,
+            example: "Budi Setiawan",
+          },
+          journey_stage: {
+            type: "string",
+            nullable: true,
+            example: "authentication",
+          },
+          journey_outcome: {
+            type: "string",
+            nullable: true,
+            example: "success",
+          },
+          required_permission: {
+            type: "string",
+            nullable: true,
+            example: "list accesses",
+          },
+          event_category: { type: "string", nullable: true },
+          event_action: { type: "string", nullable: true },
+          mutation: {
+            type: "object",
+            nullable: true,
+            description:
+              "Sanitized POST/PUT/PATCH metadata. Sensitive and PII values are never included.",
+            properties: {
+              payload_bytes: { type: "integer", minimum: 0 },
+              fields_touched: {
+                type: "array",
+                items: { type: "string" },
+              },
+              fields_truncated: { type: "boolean" },
+              safe_values: { type: "object", additionalProperties: true },
+              changes: { type: "object", additionalProperties: true },
+              target: {
+                type: "object",
+                properties: {
+                  type: { type: "string" },
+                  id: {
+                    oneOf: [{ type: "string" }, { type: "integer" }],
+                  },
+                },
+              },
+            },
+          },
           status: { type: "string", enum: ["success", "failed"] },
           status_code: { type: "integer", nullable: true, example: 200 },
           latency_ms: { type: "number", nullable: true, example: 25 },
-          error_source: { type: "string", nullable: true, example: "application" },
+          error_source: {
+            type: "string",
+            nullable: true,
+            example: "application",
+          },
           error_code: { type: "string", nullable: true, example: "Error" },
-          error_message: { type: "string", nullable: true, example: "authentication required" },
-          message: { type: "string", nullable: true, example: "request_completed" },
+          error_message: {
+            type: "string",
+            nullable: true,
+            example: "authentication required",
+          },
+          message: {
+            type: "string",
+            nullable: true,
+            example: "request_completed",
+          },
         },
       },
       LogsResponse: {
@@ -2317,6 +2782,19 @@ module.exports = {
           limit: { type: "integer", example: 10 },
           offset: { type: "integer", example: 0 },
           has_more: { type: "boolean", example: true },
+        },
+      },
+      LogJourneyResponse: {
+        type: "object",
+        required: ["trace_id", "data", "count", "truncated"],
+        properties: {
+          trace_id: { type: "string" },
+          data: {
+            type: "array",
+            items: { $ref: "#/components/schemas/LogEntry" },
+          },
+          count: { type: "integer" },
+          truncated: { type: "boolean" },
         },
       },
       Station: {
@@ -2440,7 +2918,16 @@ module.exports = {
       },
       FlowStationDataResponse: {
         type: "object",
-        required: ["station", "data", "count", "limit", "offset", "has_more", "mode"],
+        required: [
+          "station",
+          "data",
+          "count",
+          "total",
+          "limit",
+          "offset",
+          "has_more",
+          "mode",
+        ],
         properties: {
           station: {
             $ref: "#/components/schemas/Station",
@@ -2454,6 +2941,11 @@ module.exports = {
           count: {
             type: "integer",
             example: 100,
+          },
+          total: {
+            type: "integer",
+            example: 248,
+            description: "Total rows matching the selected station data filter",
           },
           limit: {
             type: "integer",

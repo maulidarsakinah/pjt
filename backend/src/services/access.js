@@ -23,7 +23,7 @@ async function getUserRoles(connection, userId) {
     {
       user_id: userId,
       model_type: USER_MODEL_TYPE,
-    }
+    },
   );
 
   return result.rows.map((role) => role.name);
@@ -53,7 +53,7 @@ async function getUserPermissions(connection, userId) {
     {
       user_id: userId,
       model_type: USER_MODEL_TYPE,
-    }
+    },
   );
 
   return result.rows.map((permission) => permission.name);

@@ -62,7 +62,7 @@ async function getCompanyById(connection, id) {
     {
       fetchArraySize: 1,
       maxRows: 1,
-    }
+    },
   );
 
   return result.rows[0];
@@ -104,7 +104,7 @@ async function listCompanies(pagination) {
       {
         fetchArraySize: Math.min(pagination.limit + 1, 100),
         maxRows: pagination.limit + 1,
-      }
+      },
     );
 
     return result.rows;
@@ -140,7 +140,7 @@ async function createCompany(payload) {
 
     const idResult = await connection.execute(
       `SELECT NVL(MAX("id"), 0) + 1 AS "next_id"
-       FROM "companies"`
+       FROM "companies"`,
     );
     const nextId = idResult.rows[0].next_id;
 
@@ -165,7 +165,7 @@ async function createCompany(payload) {
         name: payload.name,
         address: payload.address || null,
         contact: payload.contact || null,
-      }
+      },
     );
 
     await connection.commit();
@@ -190,7 +190,9 @@ async function updateCompany(id, payload) {
   let shouldRollback = false;
 
   try {
-    const setClauses = Object.keys(payload).map((field) => `"${field}" = :${field}`);
+    const setClauses = Object.keys(payload).map(
+      (field) => `"${field}" = :${field}`,
+    );
 
     setClauses.push(`"updated_at" = SYSTIMESTAMP`);
 
@@ -204,7 +206,7 @@ async function updateCompany(id, payload) {
       {
         ...payload,
         id,
-      }
+      },
     );
 
     if (result.rowsAffected === 0) {
@@ -239,7 +241,7 @@ async function deleteCompany(id) {
     const result = await connection.execute(
       `DELETE FROM "companies"
        WHERE "id" = :id`,
-      { id }
+      { id },
     );
 
     if (result.rowsAffected === 0) {

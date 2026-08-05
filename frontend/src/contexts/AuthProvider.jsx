@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { clearSession, getMe, getStoredUser, getToken, setSession } from '../services/api';
-import AuthContext from './authContext';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  getMe,
+  logout as logoutRequest,
+  refreshSession,
+  setAccessToken,
+  setUnauthorizedHandler,
+} from "../services/api";
+import AuthContext from "./authContext";
+
+const DEMO_SESSION_KEY = "hydrotrack_demo_session";
 
 function normalizeUser(user) {
   if (!user) {
@@ -9,85 +17,149 @@ function normalizeUser(user) {
 
   return {
     ...user,
-    company_name: user.company?.name || user.company_name || 'Company',
+    company_name: user.company?.name || user.company_name || "Company",
   };
 }
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => getToken());
-  const [user, setUser] = useState(() => normalizeUser(getStoredUser()));
-  const [hasLoadedProfile, setHasLoadedProfile] = useState(() => {
-    const storedUser = getStoredUser();
-    return Boolean(storedUser?.roles || storedUser?.is_demo);
-  });
+  const [user, setUser] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [isRefreshingUser, setIsRefreshingUser] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
 
   const saveAuthSession = useCallback((session) => {
     const nextUser = normalizeUser(session.user);
 
-    setSession({ token: session.token, user: nextUser });
-    setToken(session.token);
+    setAccessToken(session.token);
     setUser(nextUser);
-    setHasLoadedProfile(Boolean(nextUser?.roles || nextUser?.is_demo));
+    setAuthMessage("");
+    setIsInitializing(false);
+
+    if (nextUser?.is_demo) {
+      window.sessionStorage.setItem(
+        DEMO_SESSION_KEY,
+        JSON.stringify({ user: nextUser }),
+      );
+    } else {
+      window.sessionStorage.removeItem(DEMO_SESSION_KEY);
+    }
   }, []);
 
   const refreshUser = useCallback(async () => {
-    if (!getToken()) {
-      return null;
-    }
-
-    if (user?.is_demo) {
-      return user;
-    }
-
     setIsRefreshingUser(true);
 
     try {
       const response = await getMe();
       const nextUser = normalizeUser(response.data);
-      const currentToken = getToken();
 
-      if (currentToken) {
-        setSession({ token: currentToken, user: nextUser });
-      }
-
-      setToken(currentToken);
       setUser(nextUser);
-      setHasLoadedProfile(true);
       return nextUser;
     } finally {
       setIsRefreshingUser(false);
     }
-  }, [user]);
+  }, []);
 
-  const logout = useCallback(() => {
-    clearSession();
-    setToken(null);
-    setUser(null);
-    setHasLoadedProfile(false);
+  const logout = useCallback(
+    async ({ remote = true, message = "" } = {}) => {
+      try {
+        if (remote && user && !user.is_demo) {
+          await logoutRequest();
+        }
+      } finally {
+        setAccessToken(null);
+        setUser(null);
+        window.sessionStorage.removeItem(DEMO_SESSION_KEY);
+        setAuthMessage(message);
+        setIsInitializing(false);
+      }
+    },
+    [user],
+  );
+
+  const clearAuthMessage = useCallback(() => {
+    setAuthMessage("");
   }, []);
 
   useEffect(() => {
-    if (!token || hasLoadedProfile || user?.is_demo) {
-      return;
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      window.sessionStorage.removeItem(DEMO_SESSION_KEY);
+      setAuthMessage("Sesi berakhir. Silakan login kembali.");
+      setIsInitializing(false);
+    });
+
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function restoreAuthSession() {
+      const storedDemoSession = window.sessionStorage.getItem(DEMO_SESSION_KEY);
+
+      if (storedDemoSession) {
+        try {
+          const session = JSON.parse(storedDemoSession);
+
+          if (session.user?.is_demo) {
+            if (isActive) {
+              setUser(normalizeUser(session.user));
+              setIsInitializing(false);
+            }
+            return;
+          }
+        } catch {
+          window.sessionStorage.removeItem(DEMO_SESSION_KEY);
+        }
+      }
+
+      try {
+        await refreshSession();
+        const response = await getMe();
+
+        if (isActive) {
+          setUser(normalizeUser(response.data));
+        }
+      } catch {
+        setAccessToken(null);
+      } finally {
+        if (isActive) {
+          setIsInitializing(false);
+        }
+      }
     }
 
-    Promise.resolve().then(refreshUser).catch(() => {
-      logout();
-    });
-  }, [hasLoadedProfile, logout, refreshUser, token, user]);
+    restoreAuthSession();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   const value = useMemo(
     () => ({
-      isAuthenticated: Boolean(token),
+      isAuthenticated: Boolean(user),
+      isInitializing,
+      isRefreshingUser,
+      authMessage,
+      clearAuthMessage,
+      logout,
+      refreshUser,
+      saveAuthSession,
+      user,
+    }),
+    [
+      authMessage,
+      clearAuthMessage,
+      isInitializing,
       isRefreshingUser,
       logout,
       refreshUser,
       saveAuthSession,
-      token,
       user,
-    }),
-    [isRefreshingUser, logout, refreshUser, saveAuthSession, token, user]
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

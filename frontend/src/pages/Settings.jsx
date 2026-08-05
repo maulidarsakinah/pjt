@@ -1,83 +1,88 @@
-import { useState } from 'react';
-import useAuth from '../contexts/useAuth';
-import { changePassword } from '../services/api';
-import './Settings.css';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import useAuth from "../contexts/useAuth";
+import { changePassword } from "../services/api";
+import "./Settings.css";
 
-const STATIC_PASSWORD = 'pjt123456';
+const STATIC_PASSWORD = "pjt123456";
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('profil');
-  const [passwordStatus, setPasswordStatus] = useState('');
-  const [passwordStatusType, setPasswordStatusType] = useState('warning');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [activeTab, setActiveTab] = useState("profil");
+  const [passwordStatus, setPasswordStatus] = useState("");
+  const [passwordStatusType, setPasswordStatusType] = useState("warning");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const { user } = useAuth();
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
   const isDemoUser = Boolean(user?.is_demo);
-  const roles = user?.roles?.length ? user.roles.join(', ') : '-';
-  const companyName = user?.company?.name || user?.company_name || '-';
-  const displayName = user?.name || 'Pengguna HydroTrack';
-  const username = user?.username || user?.email?.split('@')?.[0] || '-';
+  const roles = user?.roles?.length ? user.roles.join(", ") : "-";
+  const companyName = user?.company?.name || user?.company_name || "-";
+  const displayName = user?.name || "Pengguna HydroTrack";
+  const username = user?.username || user?.email?.split("@")?.[0] || "-";
   const position = user?.position || user?.job_title || roles;
-  const initials = displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'HT';
+  const initials =
+    displayName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "HT";
   const profileDetails = [
-    { label: 'Nama Lengkap', value: displayName },
-    { label: 'Username', value: username },
-    { label: 'Email', value: user?.email || '-' },
-    { label: 'Nomor Telepon', value: user?.phone || '-' },
-    { label: 'Posisi', value: position },
-    { label: 'Perusahaan', value: companyName },
+    { label: "Nama Lengkap", value: displayName },
+    { label: "Username", value: username },
+    { label: "Email", value: user?.email || "-" },
+    { label: "Nomor Telepon", value: user?.phone || "-" },
+    { label: "Posisi", value: position },
+    { label: "Perusahaan", value: companyName },
   ];
 
   const scrollToSection = (sectionId) => {
     setActiveTab(sectionId);
     const element = document.getElementById(`sec-${sectionId}`);
     if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+      element.scrollIntoView({ behavior: "smooth" });
     }
   };
 
   const handleChangePassword = async () => {
-    setPasswordStatus('');
-    setPasswordStatusType('warning');
+    setPasswordStatus("");
+    setPasswordStatusType("warning");
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordStatus('Password lama, password baru, dan konfirmasi wajib diisi.');
+      setPasswordStatus(
+        "Password lama, password baru, dan konfirmasi wajib diisi.",
+      );
       return;
     }
 
     if (newPassword.length < 8) {
-      setPasswordStatus('Password baru minimal 8 karakter.');
+      setPasswordStatus("Password baru minimal 8 karakter.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setPasswordStatus('Konfirmasi password baru tidak sama.');
+      setPasswordStatus("Konfirmasi password baru tidak sama.");
       return;
     }
 
     if (currentPassword === newPassword) {
-      setPasswordStatus('Password baru harus berbeda dari password lama.');
+      setPasswordStatus("Password baru harus berbeda dari password lama.");
       return;
     }
 
     if (isDemoUser && currentPassword !== STATIC_PASSWORD) {
-      setPasswordStatus('Password lama tidak sesuai dengan akun static.');
+      setPasswordStatus("Password lama tidak sesuai dengan akun static.");
       return;
     }
 
     if (isDemoUser) {
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setPasswordStatusType('success');
-      setPasswordStatus('Password berhasil diperbarui secara lokal.');
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordStatusType("success");
+      setPasswordStatus("Password berhasil diperbarui secara lokal.");
       return;
     }
 
@@ -85,14 +90,19 @@ const Settings = () => {
 
     try {
       await changePassword(currentPassword, newPassword, confirmPassword);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setPasswordStatusType('success');
-      setPasswordStatus('Password berhasil diperbarui.');
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordStatusType("success");
+      setPasswordStatus("Password berhasil diperbarui.");
+      await logout({
+        remote: false,
+        message: "Password berhasil diperbarui. Silakan login kembali.",
+      });
+      navigate("/login", { replace: true });
     } catch (error) {
-      setPasswordStatusType('warning');
-      setPasswordStatus(error.message || 'Gagal memperbarui password.');
+      setPasswordStatusType("warning");
+      setPasswordStatus(error.message || "Gagal memperbarui password.");
     } finally {
       setIsChangingPassword(false);
     }
@@ -107,22 +117,21 @@ const Settings = () => {
 
       <div className="settings-layout">
         <div className="settings-nav">
-          <div 
-            className={`settings-nav-item ${activeTab === 'profil' ? 'active' : ''}`} 
-            onClick={() => scrollToSection('profil')}
+          <div
+            className={`settings-nav-item ${activeTab === "profil" ? "active" : ""}`}
+            onClick={() => scrollToSection("profil")}
           >
             Profil
           </div>
-          <div 
-            className={`settings-nav-item ${activeTab === 'keamanan' ? 'active' : ''}`} 
-            onClick={() => scrollToSection('keamanan')}
+          <div
+            className={`settings-nav-item ${activeTab === "keamanan" ? "active" : ""}`}
+            onClick={() => scrollToSection("keamanan")}
           >
             Keamanan
           </div>
         </div>
 
         <div className="settings-content">
-          
           <div className="settings-card" id="sec-profil">
             <div className="settings-card-title">Informasi Profil</div>
             <div className="profile-info-panel">
@@ -132,7 +141,10 @@ const Settings = () => {
                   <span className="profile-status-badge">Akun Aktif</span>
                 </div>
 
-                <div className="profile-detail-list" aria-label="Informasi profil pengguna">
+                <div
+                  className="profile-detail-list"
+                  aria-label="Informasi profil pengguna"
+                >
                   {profileDetails.map((item) => (
                     <div className="profile-detail-row" key={item.label}>
                       <span>{item.label}</span>
@@ -181,7 +193,9 @@ const Settings = () => {
               {passwordStatus && (
                 <div
                   className={`settings-status ${
-                    passwordStatusType === 'success' ? 'settings-status-success' : 'settings-status-warning'
+                    passwordStatusType === "success"
+                      ? "settings-status-success"
+                      : "settings-status-warning"
                   }`}
                 >
                   {passwordStatus}
@@ -191,11 +205,11 @@ const Settings = () => {
                 <button
                   type="button"
                   className="btn btn-primary"
-                  style={{ marginTop: '10px' }}
+                  style={{ marginTop: "10px" }}
                   onClick={handleChangePassword}
                   disabled={isChangingPassword}
                 >
-                  {isChangingPassword ? 'Menyimpan...' : 'Simpan Password'}
+                  {isChangingPassword ? "Menyimpan..." : "Simpan Password"}
                 </button>
               </div>
             </div>
@@ -207,5 +221,3 @@ const Settings = () => {
 };
 
 export default Settings;
-
-

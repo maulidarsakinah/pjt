@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const authenticate = require("../middleware/authenticate");
 const { badRequest } = require("../utils/httpErrors");
+const { revokeUserTokens } = require("../tokenRevocation");
 const { getUserAccess } = require("./access");
 const { writeAuditEvent } = require("./audit");
 const { withConnection } = require("./database");
@@ -25,7 +26,7 @@ async function getMyProfile(user) {
         {
           fetchArraySize: 1,
           maxRows: 1,
-        }
+        },
       );
 
       company = result.rows[0] || null;
@@ -57,11 +58,15 @@ function validatePasswordChange(body) {
     typeof newPassword !== "string" ||
     typeof newPasswordConfirmation !== "string"
   ) {
-    throw badRequest("current_password, new_password, and new_password_confirmation are required");
+    throw badRequest(
+      "current_password, new_password, and new_password_confirmation are required",
+    );
   }
 
   if (!currentPassword || !newPassword || !newPasswordConfirmation) {
-    throw badRequest("current_password, new_password, and new_password_confirmation are required");
+    throw badRequest(
+      "current_password, new_password, and new_password_confirmation are required",
+    );
   }
 
   if (currentPassword.length > 255 || newPassword.length > 255) {
@@ -87,10 +92,10 @@ function validatePasswordChange(body) {
 }
 
 function missingTokenError() {
-  const error = new Error("Missing or invalid token");
+  const error = new Error("Missing or invalid bearer token");
 
   error.statusCode = 401;
-  error.publicMessage = "Missing or invalid token";
+  error.publicMessage = "Missing or invalid bearer token";
   error.publicCode = "UNAUTHORIZED";
   return error;
 }
@@ -109,7 +114,7 @@ async function changeMyPassword(userId, body, req) {
       {
         fetchArraySize: 1,
         maxRows: 1,
-      }
+      },
     );
 
     const user = result.rows[0];
@@ -118,7 +123,10 @@ async function changeMyPassword(userId, body, req) {
       throw missingTokenError();
     }
 
-    const passwordMatches = await bcrypt.compare(currentPassword, user.password);
+    const passwordMatches = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
 
     if (!passwordMatches) {
       writeAuditEvent(req, {
@@ -143,10 +151,11 @@ async function changeMyPassword(userId, body, req) {
         id: userId,
         password: hashedPassword,
       },
-      { autoCommit: true }
+      { autoCommit: true },
     );
 
     authenticate.invalidateUser(userId);
+    revokeUserTokens(userId);
 
     writeAuditEvent(req, {
       category: "auth",

@@ -1,7 +1,9 @@
-const jwt = require("jsonwebtoken");
 const config = require("../config");
+const { getBearerToken, verifyAccessToken } = require("../authToken");
 const { TtlCache } = require("../cache");
 const db = require("../db");
+const { isTokenRevoked } = require("../tokenRevocation");
+const { logJourneyStage } = require("./requestLogger");
 
 const authUserCache = new TtlCache({
   name: "auth_user",
@@ -12,19 +14,9 @@ const authUserCache = new TtlCache({
 function unauthorized(message = "authentication required") {
   const error = new Error(message);
   error.statusCode = 401;
-  error.publicMessage = "Missing or invalid token";
+  error.publicMessage = "Missing or invalid bearer token";
   error.publicCode = "UNAUTHORIZED";
   return error;
-}
-
-function getBearerToken(req) {
-  const authorization = req.headers.authorization;
-
-  if (!authorization || !authorization.startsWith("Bearer ")) {
-    return null;
-  }
-
-  return authorization.slice("Bearer ".length).trim();
 }
 
 async function findActiveUser(userId) {
@@ -55,7 +47,7 @@ async function findActiveUser(userId) {
       {
         fetchArraySize: 1,
         maxRows: 1,
-      }
+      },
     );
 
     const user = result.rows[0];
@@ -83,10 +75,7 @@ module.exports = async (req, res, next) => {
     let payload;
 
     try {
-      payload = jwt.verify(token, config.auth.jwtSecret, {
-        audience: config.auth.jwtAudience,
-        issuer: config.auth.jwtIssuer,
-      });
+      payload = verifyAccessToken(token);
     } catch (error) {
       throw unauthorized("invalid or expired token");
     }
@@ -97,6 +86,10 @@ module.exports = async (req, res, next) => {
       throw unauthorized("invalid or expired token");
     }
 
+    if (isTokenRevoked(payload)) {
+      throw unauthorized("revoked token");
+    }
+
     const user = await findActiveUser(userId);
 
     if (!user) {
@@ -104,8 +97,13 @@ module.exports = async (req, res, next) => {
     }
 
     req.user = user;
+    req.auth = { payload, token };
+    logJourneyStage(req, "authentication", "success");
     next();
   } catch (error) {
+    logJourneyStage(req, "authentication", "failed", {
+      auth_error: error.publicCode || "UNAUTHORIZED",
+    });
     next(error);
   }
 };

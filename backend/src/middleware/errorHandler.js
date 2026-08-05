@@ -17,7 +17,10 @@ function getErrorSource(error) {
     return "oracle_driver";
   }
 
-  if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
+  if (
+    error.name === "JsonWebTokenError" ||
+    error.name === "TokenExpiredError"
+  ) {
     return "auth";
   }
 
@@ -61,6 +64,10 @@ function getPublicCode(error, statusCode) {
     return "PAYLOAD_TOO_LARGE";
   }
 
+  if (statusCode === 415) {
+    return "UNSUPPORTED_MEDIA_TYPE";
+  }
+
   if (statusCode === 429) {
     return "RATE_LIMITED";
   }
@@ -101,6 +108,9 @@ function buildErrorLogPayload(error, req, statusCode, traceId) {
     error_source: getErrorSource(error),
     error_code: getErrorCode(error, statusCode),
     error_message: error.message,
+    journey: true,
+    journey_stage: "request_failed",
+    journey_outcome: "failed",
   };
 
   if (error.errorNum !== undefined) {
@@ -126,7 +136,10 @@ module.exports = (error, req, res, next) => {
   const statusCode = error.statusCode || error.status || 500;
   const traceId = req.trace_id || req.id;
   const logTarget = req.log || logger.child({ trace_id: traceId });
-  const log = statusCode >= 500 ? logTarget.error.bind(logTarget) : logTarget.warn.bind(logTarget);
+  const log =
+    statusCode >= 500
+      ? logTarget.error.bind(logTarget)
+      : logTarget.warn.bind(logTarget);
 
   log(buildErrorLogPayload(error, req, statusCode, traceId), "request_error");
 

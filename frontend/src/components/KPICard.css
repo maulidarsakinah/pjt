@@ -1,19 +1,25 @@
-.kpi-card { 
+.kpi-card {
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.96)),
-    var(--bg-panel); 
-  border: 1px solid rgba(58, 75, 207, 0.08); 
-  border-top: 4px solid var(--kpi-accent, #3A4BCF);
-  border-radius: 18px; 
-  padding: 18px; 
-  display: flex; 
-  flex-direction: column; 
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(248, 251, 255, 0.96)
+    ),
+    var(--bg-panel);
+  border: 1px solid rgba(58, 75, 207, 0.08);
+  border-top: 4px solid var(--kpi-accent, #3a4bcf);
+  border-radius: 18px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   justify-content: space-between;
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
-  transition: transform 180ms ease, border-color 180ms ease;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease;
 }
 .kpi-card:hover {
   transform: translateY(-3px);
@@ -45,9 +51,38 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.kpi-title { font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
-.kpi-value { font-size: 30px; font-weight: 800; color: var(--text-primary); line-height: 1.1; }
-.kpi-unit { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-left: 2px; }
-.kpi-desc { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
-.kpi-desc.success-text { color: var(--success-color); font-weight: 600; }
-.trend-up { color: var(--success-color); display: inline-flex; align-items: center; }
+.kpi-title {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.kpi-value {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+.kpi-unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-left: 2px;
+}
+.kpi-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kpi-desc.success-text {
+  color: var(--success-color);
+  font-weight: 600;
+}
+.trend-up {
+  color: var(--success-color);
+  display: inline-flex;
+  align-items: center;
+}

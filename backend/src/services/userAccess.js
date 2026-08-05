@@ -35,7 +35,9 @@ function parseIds(value, field) {
     throw badRequest(`${field} must be an array`);
   }
 
-  return [...new Set(value.map((id) => parsePositiveInteger(id, field.slice(0, -1))))];
+  return [
+    ...new Set(value.map((id) => parsePositiveInteger(id, field.slice(0, -1)))),
+  ];
 }
 
 async function userExists(connection, userId) {
@@ -48,7 +50,7 @@ async function userExists(connection, userId) {
     {
       fetchArraySize: 1,
       maxRows: 1,
-    }
+    },
   );
 
   return result.rows.length > 0;
@@ -71,7 +73,7 @@ async function assertIdsExist(connection, tableName, ids, field) {
     `SELECT "id" AS "id"
      FROM "${tableName}"
      WHERE "id" IN (${placeholders.join(", ")})`,
-    binds
+    binds,
   );
   const foundIds = new Set(result.rows.map((row) => row.id));
   const missingIds = ids.filter((id) => !foundIds.has(id));
@@ -96,7 +98,7 @@ async function getAssignedRoles(connection, userId) {
     {
       user_id: userId,
       model_type: USER_MODEL_TYPE,
-    }
+    },
   );
 
   return result.rows;
@@ -117,7 +119,7 @@ async function getAssignedDirectPermissions(connection, userId) {
     {
       user_id: userId,
       model_type: USER_MODEL_TYPE,
-    }
+    },
   );
 
   return result.rows;
@@ -160,7 +162,7 @@ async function listUserAccesses(pagination) {
       {
         fetchArraySize: Math.min(pagination.limit + 1, 100),
         maxRows: pagination.limit + 1,
-      }
+      },
     );
 
     return result.rows;
@@ -174,7 +176,10 @@ async function getUserAccessDetails(userId) {
     }
 
     const roles = await getAssignedRoles(connection, userId);
-    const direct_permissions = await getAssignedDirectPermissions(connection, userId);
+    const direct_permissions = await getAssignedDirectPermissions(
+      connection,
+      userId,
+    );
     const access = await getUserAccess(userId);
 
     return {
@@ -204,7 +209,7 @@ async function assignUserRole(actorUserId, userId, roleId, req) {
         user_id: userId,
         model_type: USER_MODEL_TYPE,
         role_id: roleId,
-      }
+      },
     );
     await connection.execute(
       `INSERT INTO "model_has_roles" (
@@ -220,7 +225,7 @@ async function assignUserRole(actorUserId, userId, roleId, req) {
         role_id: roleId,
         model_type: USER_MODEL_TYPE,
         user_id: userId,
-      }
+      },
     );
 
     return getAssignedRoles(connection, userId);
@@ -244,7 +249,7 @@ async function removeUserRole(actorUserId, userId, roleId, req) {
         user_id: userId,
         model_type: USER_MODEL_TYPE,
         role_id: roleId,
-      }
+      },
     );
 
     if (result.rowsAffected === 0) {
@@ -274,7 +279,7 @@ async function replaceUserRoles(actorUserId, userId, roleIdsValue, req) {
       {
         user_id: userId,
         model_type: USER_MODEL_TYPE,
-      }
+      },
     );
 
     for (const roleId of roleIds) {
@@ -292,7 +297,7 @@ async function replaceUserRoles(actorUserId, userId, roleIdsValue, req) {
           role_id: roleId,
           model_type: USER_MODEL_TYPE,
           user_id: userId,
-        }
+        },
       );
     }
 
@@ -311,7 +316,12 @@ async function assignUserPermission(actorUserId, userId, permissionId, req) {
       throw notFound("user not found");
     }
 
-    await assertIdsExist(connection, "permissions", [permissionId], "permission_id");
+    await assertIdsExist(
+      connection,
+      "permissions",
+      [permissionId],
+      "permission_id",
+    );
 
     await connection.execute(
       `DELETE FROM "model_has_permissions"
@@ -322,7 +332,7 @@ async function assignUserPermission(actorUserId, userId, permissionId, req) {
         user_id: userId,
         model_type: USER_MODEL_TYPE,
         permission_id: permissionId,
-      }
+      },
     );
     await connection.execute(
       `INSERT INTO "model_has_permissions" (
@@ -338,14 +348,16 @@ async function assignUserPermission(actorUserId, userId, permissionId, req) {
         permission_id: permissionId,
         model_type: USER_MODEL_TYPE,
         user_id: userId,
-      }
+      },
     );
 
     return getAssignedDirectPermissions(connection, userId);
   });
 
   invalidateUserAccess(userId);
-  logAccessAudit(req, "assign_user_permission", userId, { permission_id: permissionId });
+  logAccessAudit(req, "assign_user_permission", userId, {
+    permission_id: permissionId,
+  });
   return permissions;
 }
 
@@ -362,7 +374,7 @@ async function removeUserPermission(actorUserId, userId, permissionId, req) {
         user_id: userId,
         model_type: USER_MODEL_TYPE,
         permission_id: permissionId,
-      }
+      },
     );
 
     if (result.rowsAffected === 0) {
@@ -371,10 +383,17 @@ async function removeUserPermission(actorUserId, userId, permissionId, req) {
   });
 
   invalidateUserAccess(userId);
-  logAccessAudit(req, "remove_user_permission", userId, { permission_id: permissionId });
+  logAccessAudit(req, "remove_user_permission", userId, {
+    permission_id: permissionId,
+  });
 }
 
-async function replaceUserPermissions(actorUserId, userId, permissionIdsValue, req) {
+async function replaceUserPermissions(
+  actorUserId,
+  userId,
+  permissionIdsValue,
+  req,
+) {
   assertNotSelfAccessChange(actorUserId, userId);
 
   const permissionIds = parseIds(permissionIdsValue, "permission_ids");
@@ -383,7 +402,12 @@ async function replaceUserPermissions(actorUserId, userId, permissionIdsValue, r
       throw notFound("user not found");
     }
 
-    await assertIdsExist(connection, "permissions", permissionIds, "permission_ids");
+    await assertIdsExist(
+      connection,
+      "permissions",
+      permissionIds,
+      "permission_ids",
+    );
 
     await connection.execute(
       `DELETE FROM "model_has_permissions"
@@ -392,7 +416,7 @@ async function replaceUserPermissions(actorUserId, userId, permissionIdsValue, r
       {
         user_id: userId,
         model_type: USER_MODEL_TYPE,
-      }
+      },
     );
 
     for (const permissionId of permissionIds) {
@@ -410,7 +434,7 @@ async function replaceUserPermissions(actorUserId, userId, permissionIdsValue, r
           permission_id: permissionId,
           model_type: USER_MODEL_TYPE,
           user_id: userId,
-        }
+        },
       );
     }
 

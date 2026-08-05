@@ -41,7 +41,9 @@ function parseMode(value) {
   const mode = value || "latest";
 
   if (!DATA_MODES.has(mode)) {
-    const error = new Error("mode must be one of latest, last_hour, today, date, or range");
+    const error = new Error(
+      "mode must be one of latest, last_hour, today, date, or range",
+    );
 
     error.statusCode = 400;
     throw error;
@@ -146,6 +148,7 @@ function buildFlowStationDataResponse(station, response, mode) {
     station,
     data: response.data,
     count: response.count,
+    total: response.total ?? response.count,
     limit: response.limit,
     offset: response.offset,
     has_more: mode === "latest" ? false : response.has_more,
@@ -177,7 +180,7 @@ async function findFlowStationById(connection, stationId) {
     {
       fetchArraySize: 1,
       maxRows: 1,
-    }
+    },
   );
 
   const station = stationResult.rows[0];
@@ -223,7 +226,7 @@ async function listFlowStations(query) {
       {
         fetchArraySize: Math.min(pagination.limit + 1, 100),
         maxRows: pagination.limit + 1,
-      }
+      },
     );
 
     return buildListResponse(result.rows, pagination);
@@ -233,6 +236,7 @@ async function listFlowStations(query) {
 async function getFlowStationData(stationIdValue, query) {
   const stationId = parseStationId(stationIdValue);
   const dataFilter = buildDataFilter(query);
+  const includeTotal = dataFilter.mode !== "latest";
 
   return withConnection(async (connection) => {
     const station = await findFlowStationById(connection, stationId);
@@ -246,50 +250,73 @@ async function getFlowStationData(stationIdValue, query) {
 
     assertSafeTableName(station.table_data);
 
-    const dataResult = await connection.execute(
-      `SELECT
-         "id",
-         "nama_station",
-         "datetime",
-         "flow_1",
-         "flow_2",
-         "totalizer_1",
-         "totalizer_2",
-         "vcc",
-         "logger_temp",
-         "logger_humid"
-       FROM (
-         SELECT page_query.*, ROWNUM AS "rn"
+    // Run count and data queries in parallel when total is needed.
+    // Separating them ensures total is always accurate even when offset
+    // exceeds the number of available rows (which would make rows empty).
+    const [dataResult, total] = await Promise.all([
+      connection.execute(
+        `SELECT
+           "id",
+           "nama_station",
+           "datetime",
+           "flow_1",
+           "flow_2",
+           "totalizer_1",
+           "totalizer_2",
+           "vcc",
+           "logger_temp",
+           "logger_humid"
          FROM (
-           SELECT
-             "id" AS "id",
-             "nama_station" AS "nama_station",
-             "datetime" AS "datetime",
-             "flow_1" AS "flow_1",
-             "flow_2" AS "flow_2",
-             "totalizer_1" AS "totalizer_1",
-             "totalizer_2" AS "totalizer_2",
-             "vcc" AS "vcc",
-             "logger_temp" AS "logger_temp",
-             "logger_humid" AS "logger_humid"
-           FROM "${station.table_data}"
-           ${dataFilter.whereSql}
-           ORDER BY "datetime" DESC, "id" DESC
-         ) page_query
-         WHERE ROWNUM <= :page_end
-       )
-       WHERE "rn" > :offset`,
-      {
-        ...dataFilter.binds,
-        page_end: dataFilter.pagination.pageEnd,
-        offset: dataFilter.pagination.offset,
-      },
-      {
-        fetchArraySize: Math.min(dataFilter.pagination.limit + 1, 100),
-        maxRows: dataFilter.pagination.limit + 1,
-      }
-    );
-    const response = buildListResponse(dataResult.rows, dataFilter.pagination);
+           SELECT page_query.*, ROWNUM AS "rn"
+           FROM (
+             SELECT
+               "id" AS "id",
+               "nama_station" AS "nama_station",
+               "datetime" AS "datetime",
+               "flow_1" AS "flow_1",
+               "flow_2" AS "flow_2",
+               "totalizer_1" AS "totalizer_1",
+               "totalizer_2" AS "totalizer_2",
+               "vcc" AS "vcc",
+               "logger_temp" AS "logger_temp",
+               "logger_humid" AS "logger_humid"
+             FROM "${station.table_data}"
+             ${dataFilter.whereSql}
+             ORDER BY "datetime" DESC, "id" DESC
+           ) page_query
+           WHERE ROWNUM <= :page_end
+         )
+         WHERE "rn" > :offset`,
+        {
+          ...dataFilter.binds,
+          page_end: dataFilter.pagination.pageEnd,
+          offset: dataFilter.pagination.offset,
+        },
+        {
+          fetchArraySize: Math.min(dataFilter.pagination.limit + 1, 100),
+          maxRows: dataFilter.pagination.limit + 1,
+        },
+      ),
+      includeTotal
+        ? connection
+            .execute(
+              `SELECT COUNT(*) AS "total"
+               FROM "${station.table_data}"
+               ${dataFilter.whereSql}`,
+              dataFilter.binds,
+              { fetchArraySize: 1, maxRows: 1 },
+            )
+            .then((r) => Number(r.rows[0]?.total ?? 0))
+        : Promise.resolve(null),
+    ]);
+
+    const resolved_total = includeTotal
+      ? total
+      : Math.min(dataResult.rows.length, dataFilter.pagination.limit);
+    const response = {
+      ...buildListResponse(dataResult.rows, dataFilter.pagination),
+      total: resolved_total,
+    };
 
     return buildFlowStationDataResponse(station, response, dataFilter.mode);
   });

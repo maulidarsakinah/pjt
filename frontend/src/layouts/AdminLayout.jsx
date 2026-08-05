@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import LogoutModal from '../components/LogoutModal';
 import Topbar from '../components/Topbar';
@@ -14,21 +14,34 @@ const AdminLayout = () => {
 
   const openLogoutModal = () => setIsLogoutModalOpen(true);
   const closeLogoutModal = () => setIsLogoutModalOpen(false);
-  const confirmLogout = () => {
-    logout();
+  const confirmLogout = async () => {
+    await logout();
     closeLogoutModal();
-    navigate('/login', { replace: true });
+    navigate("/login", { replace: true });
   };
+
+  const location = useLocation();
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [location.pathname]);
 
   return (
     <div className="main-layout-container">
-      <div className={`sidebar-wrapper ${isSidebarOpen ? 'open' : ''}`}>
+      <div className={`sidebar-wrapper ${isSidebarOpen ? "open" : ""}`}>
         <AdminSidebar openLogoutModal={openLogoutModal} />
       </div>
-      {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>}
+      {isSidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
 
       <main className="main-content">
-        <Topbar toggleSidebar={() => setIsSidebarOpen((value) => !value)} openLogoutModal={openLogoutModal} />
+        <Topbar
+          toggleSidebar={() => setIsSidebarOpen((value) => !value)}
+          openLogoutModal={openLogoutModal}
+        />
         <Outlet />
       </main>
 

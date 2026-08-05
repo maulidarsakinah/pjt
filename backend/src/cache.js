@@ -18,7 +18,10 @@ class TtlCache {
 
     if (entry.expiresAt <= Date.now()) {
       this.items.delete(key);
-      logger.debug({ cache: this.name, key, status: "expired" }, "cache_expired");
+      logger.debug(
+        { cache: this.name, key, status: "expired" },
+        "cache_expired",
+      );
       return undefined;
     }
 
@@ -55,7 +58,7 @@ class TtlCache {
       this.items.delete(oldestKey);
       logger.debug(
         { cache: this.name, key: oldestKey, status: "evicted" },
-        "cache_evicted"
+        "cache_evicted",
       );
     }
   }

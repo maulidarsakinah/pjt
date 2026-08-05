@@ -2,7 +2,7 @@ export function formatNumber(value, digits = 2) {
   const number = Number(value);
 
   if (!Number.isFinite(number)) {
-    return '-';
+    return "-";
   }
 
   return number.toFixed(digits);
@@ -10,7 +10,7 @@ export function formatNumber(value, digits = 2) {
 
 export function formatDateTime(value) {
   if (!value) {
-    return '-';
+    return "-";
   }
 
   const date = new Date(value);
@@ -19,15 +19,15 @@ export function formatDateTime(value) {
     return String(value);
   }
 
-  return new Intl.DateTimeFormat('id-ID', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(date);
 }
 
 export function formatTime(value) {
   if (!value) {
-    return '-';
+    return "-";
   }
 
   const date = new Date(value);
@@ -36,22 +36,28 @@ export function formatTime(value) {
     return String(value);
   }
 
-  return new Intl.DateTimeFormat('id-ID', {
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 
 export function stationSlug(station) {
-  return String(station?.id || station?.kode_station || station?.station_name || '').trim();
+  return String(
+    station?.id || station?.kode_station || station?.station_name || "",
+  ).trim();
 }
 
 export function readingToRow(station, reading) {
   return {
     id: reading?.id,
     stationId: station?.id,
-    stationName: station?.station_name || reading?.nama_station || station?.kode_station || '-',
-    stationCode: station?.kode_station || '-',
+    stationName:
+      station?.station_name ||
+      reading?.nama_station ||
+      station?.kode_station ||
+      "-",
+    stationCode: station?.kode_station || "-",
     flow1: Number(reading?.flow_1 || 0),
     flow2: Number(reading?.flow_2 || 0),
     totalizer1: Number(reading?.totalizer_1 || 0),

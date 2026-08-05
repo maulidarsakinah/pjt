@@ -1,0 +1,222 @@
+.page-skeleton-view {
+  min-height: 100%;
+}
+
+.page-skeleton-view .page-skeleton-filter {
+  min-height: 112px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  padding: 20px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-panel);
+}
+
+.page-skeleton-view .monitoring-layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.page-skeleton-view .map-monitoring-container {
+  width: 100%;
+  height: 400px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.page-skeleton-view .station-list {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-panel);
+}
+
+.page-skeleton-view .station-list-header {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.page-skeleton-view .station-items {
+  padding: 15px 20px;
+}
+
+.page-skeleton-view .detail-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.page-skeleton-line,
+.page-skeleton-button,
+.page-skeleton-input,
+.map-skeleton,
+.chart-skeleton-bars span {
+  background: linear-gradient(90deg, #e8edf4 25%, #f5f7fa 50%, #e8edf4 75%);
+  background-size: 200% 100%;
+  animation: page-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.page-skeleton-line {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.page-skeleton-line--short {
+  width: 38%;
+}
+
+.page-skeleton-line--title {
+  width: 62%;
+}
+
+.page-skeleton-line--heading {
+  width: min(300px, 58%);
+  height: 22px;
+}
+
+.page-skeleton-line--subtitle {
+  width: min(420px, 75%);
+}
+
+.page-skeleton-heading,
+.page-skeleton-filter-field,
+.station-skeleton-card,
+.chart-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.page-skeleton-filter-field {
+  min-width: 180px;
+  flex: 1;
+}
+
+.page-skeleton-input,
+.page-skeleton-button {
+  height: 38px;
+  border-radius: 7px;
+}
+
+.station-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.station-skeleton-card {
+  min-height: 154px;
+}
+
+.table-skeleton {
+  margin-top: 20px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.table-skeleton-row {
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: repeat(var(--skeleton-columns), minmax(70px, 1fr));
+  align-items: center;
+  gap: 22px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table-skeleton-row:last-child {
+  border-bottom: 0;
+}
+
+.map-skeleton {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.map-skeleton-pin {
+  width: 22px;
+  height: 22px;
+  border: 6px solid #aeb8ca;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+
+.page-skeleton-line--map-label {
+  position: absolute;
+  width: 120px;
+  bottom: 28px;
+}
+
+.chart-skeleton {
+  min-height: 200px;
+}
+
+.page-skeleton-line--chart-title {
+  width: 48%;
+}
+
+.chart-skeleton-bars {
+  height: 160px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8%;
+  padding: 16px 12px 0;
+}
+
+.chart-skeleton-bars span {
+  width: 7%;
+  border-radius: 6px 6px 0 0;
+}
+
+@keyframes page-skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-skeleton-line,
+  .page-skeleton-button,
+  .page-skeleton-input,
+  .map-skeleton,
+  .chart-skeleton-bars span {
+    animation: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .page-skeleton-view .page-skeleton-filter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-skeleton-view .monitoring-layout,
+  .page-skeleton-view .detail-charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-skeleton-view .map-monitoring-container {
+    height: 300px;
+  }
+
+  .table-skeleton-row {
+    min-height: 100px;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .table-skeleton-row .page-skeleton-line:nth-child(n + 5) {
+    display: none;
+  }
+}

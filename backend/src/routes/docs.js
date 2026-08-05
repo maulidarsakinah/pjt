@@ -11,7 +11,7 @@ router.use(
   swaggerUi.serve,
   swaggerUi.setup(openapiSpec, {
     customSiteTitle: "PKL API Docs",
-  })
+  }),
 );
 
 module.exports = router;

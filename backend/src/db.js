@@ -22,7 +22,7 @@ oracledb.fetchArraySize = 100;
 function validateDbConfig() {
   if (oracleClientInitError) {
     const error = new Error(
-      `Oracle Thick mode failed to initialize: ${oracleClientInitError.message}`
+      `Oracle Thick mode failed to initialize: ${oracleClientInitError.message}`,
     );
     error.statusCode = 500;
     error.publicMessage =
@@ -31,7 +31,9 @@ function validateDbConfig() {
   }
 
   if (!config.db.user || !config.db.password || !config.db.connectString) {
-    const error = new Error("DB_USER, DB_PASSWORD, and DB_CONNECT_STRING environment variables are required");
+    const error = new Error(
+      "DB_USER, DB_PASSWORD, and DB_CONNECT_STRING environment variables are required",
+    );
     error.statusCode = 500;
     error.publicMessage = "Database configuration is incomplete";
     throw error;

@@ -54,7 +54,10 @@
   place-items: center;
   font-size: 11px;
   box-shadow: none;
-  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .audit-kpi-info:hover,
@@ -102,7 +105,9 @@
 
 .audit-filter-grid {
   display: grid;
-  grid-template-columns: minmax(150px, 0.9fr) minmax(150px, 1fr) minmax(150px, 1fr) minmax(150px, 1fr) auto;
+  grid-template-columns:
+    minmax(150px, 0.9fr) minmax(150px, 1fr) minmax(150px, 1fr)
+    minmax(150px, 1fr) auto;
   gap: 16px;
   align-items: end;
 }
@@ -113,7 +118,11 @@
   border: 1px solid rgba(226, 232, 240, 0.92);
   border-radius: 16px;
   background:
-    radial-gradient(circle at top left, rgba(177, 207, 246, 0.18), transparent 34%),
+    radial-gradient(
+      circle at top left,
+      rgba(177, 207, 246, 0.18),
+      transparent 34%
+    ),
     linear-gradient(180deg, #fbfdff, #ffffff);
 }
 
@@ -406,8 +415,8 @@
 }
 
 .audit-icon-button:hover {
-  border-color: #3A4BCF;
-  color: #3A4BCF;
+  border-color: #3a4bcf;
+  color: #3a4bcf;
   background: #f7fbff;
   transform: translateY(-1px);
 }
@@ -434,7 +443,11 @@
   overflow-y: auto;
   padding: 24px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 251, 255, 0.98)),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.98),
+      rgba(248, 251, 255, 0.98)
+    ),
     #fff;
   border: 1px solid var(--border-color);
   animation: auditModalIn 0.24s ease both;
@@ -548,6 +561,31 @@
   overflow-wrap: anywhere;
 }
 
+.audit-mutation-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audit-mutation-summary small {
+  color: var(--text-secondary);
+}
+
+.audit-mutation-change {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.35fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  font-size: 13px;
+}
+
+.audit-mutation-change b,
+.audit-mutation-change span {
+  overflow-wrap: anywhere;
+}
+
 .audit-detail-error {
   padding: 14px;
   border: 1px solid #fecaca;
@@ -556,12 +594,120 @@
   background: #fff7f7;
 }
 
+.audit-detail-error-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audit-detail-error-content pre {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.audit-detail-error-content a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  color: #b91c1c;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .audit-trace-button {
   width: 100%;
   margin-top: 20px;
   border-radius: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.audit-journey {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.audit-journey-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 12px;
+  padding-bottom: 18px;
+}
+
+.audit-journey-step:last-child {
+  padding-bottom: 0;
+}
+
+.audit-journey-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 27px;
+  bottom: 0;
+  left: 13px;
+  width: 1px;
+  background: #cbd5e1;
+}
+
+.audit-journey-marker {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.audit-journey-marker.is-failed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.audit-journey-step-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.audit-journey-step-heading strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  text-transform: capitalize;
+}
+
+.audit-journey-step-heading time,
+.audit-journey-step > div > span,
+.audit-journey-step small {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.audit-journey-step > div > span,
+.audit-journey-step small {
+  display: block;
+  margin-top: 4px;
+}
+
+.audit-journey-step small {
+  color: #b91c1c;
+  overflow-wrap: anywhere;
 }
 
 @keyframes auditModalIn {
@@ -809,8 +955,10 @@
     width: 100%;
     min-width: 0;
     gap: 4px;
-    justify-content: flex-start;
-    overflow: hidden;
+    flex-wrap: nowrap;
+    justify-content: center;
+    overflow-x: auto;
+    overflow-y: hidden;
   }
 
   .audit-table-panel .page-btn,
