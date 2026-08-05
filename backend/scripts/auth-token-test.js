@@ -1,10 +1,7 @@
 const assert = require("node:assert/strict");
 const jwt = require("jsonwebtoken");
 const config = require("../src/config");
-const {
-  getBearerToken,
-  verifyAccessToken,
-} = require("../src/authToken");
+const { getBearerToken, verifyAccessToken } = require("../src/authToken");
 const {
   createRefreshToken,
   clearRefreshCookie,
@@ -35,10 +32,7 @@ assert.equal(
   getBearerToken({ headers: { authorization: "Bearer token extra" } }),
   null,
 );
-assert.equal(
-  getBearerToken({ headers: { authorization: "Bearer" } }),
-  null,
-);
+assert.equal(getBearerToken({ headers: { authorization: "Bearer" } }), null);
 
 const signedToken = createToken({
   id: 1,
@@ -92,10 +86,7 @@ assert.equal(cookieCalls[0].value, refreshToken);
 assert.equal(cookieCalls[0].options.httpOnly, true);
 assert.equal(cookieCalls[0].options.sameSite, "strict");
 assert.equal(cookieCalls[0].options.path, "/api");
-assert.equal(
-  cookieCalls[0].options.secure,
-  config.auth.refreshCookieSecure,
-);
+assert.equal(cookieCalls[0].options.secure, config.auth.refreshCookieSecure);
 assert.equal(cookieCalls[1].action, "clear");
 assert.equal(cookieCalls[1].options.maxAge, undefined);
 

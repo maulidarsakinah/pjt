@@ -10,7 +10,14 @@ function notFound(message = "resource not found") {
   return error;
 }
 
+function conflict(message = "resource already exists") {
+  const error = new Error(message);
+  error.statusCode = 409;
+  return error;
+}
+
 module.exports = {
   badRequest,
+  conflict,
   notFound,
 };

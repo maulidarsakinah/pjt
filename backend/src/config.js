@@ -39,10 +39,7 @@ if (
   );
 }
 
-if (
-  !Number.isInteger(refreshTokenTtlSeconds) ||
-  refreshTokenTtlSeconds <= 0
-) {
+if (!Number.isInteger(refreshTokenTtlSeconds) || refreshTokenTtlSeconds <= 0) {
   throw new Error("REFRESH_TOKEN_TTL_SECONDS must be a positive integer");
 }
 
@@ -82,8 +79,7 @@ const config = {
       process.env.REFRESH_TOKEN_AUDIENCE || "pkl-api-refresh",
     refreshCookieName,
     refreshCookieSecure:
-      nodeEnv === "production" ||
-      process.env.REFRESH_COOKIE_SECURE === "true",
+      nodeEnv === "production" || process.env.REFRESH_COOKIE_SECURE === "true",
     revocationMaxItems,
   },
   security: {

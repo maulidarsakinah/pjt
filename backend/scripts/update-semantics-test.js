@@ -3,6 +3,7 @@ const { validateCompanyPayload } = require("../src/services/companies");
 const { validatePermissionPayload } = require("../src/services/permissions");
 const { validateRolePayload } = require("../src/services/roles");
 const { buildFlowStationDataResponse } = require("../src/services/stations");
+const { buildUserListQuery } = require("../src/services/users");
 
 function testPutAndPatchValidation() {
   assert.deepEqual(validateCompanyPayload({ name: "Acme" }), {
@@ -71,12 +72,35 @@ function testLatestHasMore() {
     buildFlowStationDataResponse(station, page, "today").has_more,
     true,
   );
-  assert.equal(
-    buildFlowStationDataResponse(station, page, "today").total,
-    25,
-  );
+  assert.equal(buildFlowStationDataResponse(station, page, "today").total, 25);
+}
+
+function testUserListBinds() {
+  const query = buildUserListQuery({
+    limit: 25,
+    offset: 50,
+    search: " Admin ",
+    roleId: 3,
+    status: "Aktif",
+  });
+
+  assert.deepEqual(query.filterBinds, {
+    search: "%admin%",
+    role_id: 3,
+    status: "1",
+  });
+  assert.deepEqual(query.pageBinds, {
+    search: "%admin%",
+    role_id: 3,
+    status: "1",
+    offset: 50,
+    page_end: 76,
+  });
+  assert.equal(Object.hasOwn(query.filterBinds, "offset"), false);
+  assert.equal(Object.hasOwn(query.filterBinds, "page_end"), false);
 }
 
 testPutAndPatchValidation();
 testLatestHasMore();
+testUserListBinds();
 console.log("Update semantics tests passed");
