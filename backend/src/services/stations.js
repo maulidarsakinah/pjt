@@ -340,7 +340,7 @@ async function getFlowStationData(stationIdValue, query) {
                "logger_humid"  AS "logger_humid"`;
 
     const order_by = is_new_schema
-      ? `ORDER BY "inserted_at" DESC, "id" DESC`
+      ? `ORDER BY "window_end_time" DESC, "id" DESC`
       : `ORDER BY "datetime" DESC, "id" DESC`;
 
     // Run count and data queries in parallel when total is needed.
