@@ -33,12 +33,19 @@ const STATIC_ADMIN_SESSION = {
 };
 
 function isAdminUser(user) {
-  const roleText = [user?.role, user?.roles?.join(" "), user?.role_name]
+  const roles = [
+    ...(Array.isArray(user?.roles) ? user.roles : []),
+    user?.role,
+    user?.role_name,
+  ]
     .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+    .map((role) => String(role).toLowerCase());
 
-  return roleText.includes("admin") || roleText.includes("administrator");
+  return (
+    roles.includes("admin") ||
+    roles.includes("administrator") ||
+    roles.includes("super-admin")
+  );
 }
 
 const Login = () => {

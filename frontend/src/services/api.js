@@ -303,6 +303,14 @@ export function getFlowStations(query, options) {
   return cachedGet("/api/stations/flow", query, options);
 }
 
+export function getMasterStations(query, options) {
+  return cachedGet("/api/stations/master", query, options);
+}
+
+export function createMasterStation(body) {
+  return apiRequest("/api/stations/master", { method: "POST", body });
+}
+
 export function getFlowStationData(id, query, options) {
   return cachedGet(`/api/stations/flow/${id}/data`, query, options);
 }
@@ -362,6 +370,18 @@ export function getPermissions(query) {
 
 export function createRole(body) {
   return apiRequest("/api/roles", { method: "POST", body });
+}
+
+export function updateRole(id, body) {
+  return apiRequest(`/api/roles/${id}`, { method: "PATCH", body });
+}
+
+export function deleteRole(id) {
+  return apiRequest(`/api/roles/${id}`, { method: "DELETE" });
+}
+
+export function getRolePermissions(id) {
+  return apiRequest(`/api/roles/${id}/permissions`);
 }
 
 export function updateRolePermissions(id, permissionIds) {
