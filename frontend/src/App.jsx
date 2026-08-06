@@ -115,12 +115,7 @@ function App() {
                   <AdminPlaceholder title="Master Alat" icon="fa-microchip" />
                 }
               />
-              <Route
-                path="reports"
-                element={
-                  <AdminPlaceholder title="Laporan" icon="fa-file-lines" />
-                }
-              />
+
               <Route path="audit-log" element={<AuditLog />} />
             </Route>
           </Routes>
