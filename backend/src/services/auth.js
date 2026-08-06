@@ -44,6 +44,10 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function isValidPhone(phone) {
+  return /^\+?[\d\s\-.()]{7,20}$/.test(phone);
+}
+
 function validateString(value, field, maxLength = 255) {
   if (typeof value !== "string" || value.trim().length === 0) {
     throw badRequest(`${field} is required`);
@@ -105,6 +109,10 @@ async function registerUser(body, req) {
 
   const safeName = validateString(name, "name");
   const safePhone = validateString(phone, "phone");
+
+  if (!isValidPhone(safePhone)) {
+    throw badRequest("phone must be a valid phone number (7–20 digits)");
+  }
   const safePassword = validateString(String(password), "password");
   const safeCompanyId = Number(company_id);
 

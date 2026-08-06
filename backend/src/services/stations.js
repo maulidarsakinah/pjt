@@ -154,6 +154,15 @@ function buildDataFilter(query) {
     throw error;
   }
 
+  const MAX_RANGE_MS = 31 * 24 * 60 * 60 * 1000;
+
+  if (binds.end_date - binds.start_date > MAX_RANGE_MS) {
+    const error = new Error("date range must not exceed 31 days");
+
+    error.statusCode = 400;
+    throw error;
+  }
+
   return {
     mode,
     whereSql: `WHERE "datetime" >= :start_date AND "datetime" < :end_date`,
@@ -225,6 +234,8 @@ async function detectTableSchema(connection, tableName) {
 
   // Querying the table directly with ROWNUM = 1 is safer than ALL_TAB_COLUMNS
   // because it completely avoids issues with case sensitivity and quoted identifiers.
+  // Re-assert the safe name guard immediately before interpolation.
+  assertSafeTableName(tableName);
   const result = await connection.execute(
     `SELECT * FROM "${tableName}" WHERE ROWNUM = 1`
   );
@@ -459,17 +470,46 @@ async function createMasterStation(data) {
     "id_api", "template_api", "GSMINSTR", "GSMFLOW", "resolution"
   ];
 
-  if (data.TableData != null && data.TableData !== "" && !SAFE_TABLE_NAME.test(data.TableData)) {
+  if (data.TableData != null && !SAFE_TABLE_NAME.test(data.TableData)) {
     throw badRequest("TableData must match the pattern tb_[a-z0-9_]+");
   }
 
-  if (data.TableDataForecast != null && data.TableDataForecast !== "" && !SAFE_TABLE_NAME.test(data.TableDataForecast)) {
+  if (data.TableDataForecast != null && !SAFE_TABLE_NAME.test(data.TableDataForecast)) {
     throw badRequest("TableDataForecast must match the pattern tb_[a-z0-9_]+");
+  }
+
+  // Numeric columns — must be a finite number or null.
+  const NUMERIC_COLUMNS = new Set([
+    "x", "y", "z", "id_desa", "WaterLevel", "Rainfall", "Repeater", "Master",
+    "Sub", "Branch", "GSMRainfall", "GSMWaterlevel", "indexhuluhilir",
+    "nostation", "clock", "validpos", "objecttype", "SIAGAWaterlevel",
+    "SIAGADisch", "ws", "wl_decimal_num", "visible", "enabled", "GSMWQMS",
+    "hasForecast", "hasWLOffset", "WLOffset", "history_nomor",
+    "sigab_enabled", "GSMINSTR", "GSMFLOW", "resolution",
+  ]);
+
+  for (const col of NUMERIC_COLUMNS) {
+    const raw = data[col];
+
+    if (raw === undefined || raw === null || raw === "") {
+      continue;
+    }
+
+    const num = Number(raw);
+
+    if (!Number.isFinite(num)) {
+      throw badRequest(`${col} must be a number`);
+    }
   }
 
   const binds = {};
   columns.forEach(col => {
-    binds[col] = data[col] !== undefined && data[col] !== "" ? data[col] : null;
+    if (NUMERIC_COLUMNS.has(col)) {
+      const raw = data[col];
+      binds[col] = (raw !== undefined && raw !== null && raw !== "") ? Number(raw) : null;
+    } else {
+      binds[col] = data[col] !== undefined && data[col] !== "" ? data[col] : null;
+    }
   });
 
   for (const col of columns) {

@@ -11,6 +11,8 @@ const {
   requiredString,
 } = require("../utils/validation");
 
+const PHONE_REGEX = /^\+?[\d\s\-.()]{7,20}$/;
+
 function normalizeStatus(value, field = "status") {
   if (value === undefined) return undefined;
   const normalized = String(value).trim().toLowerCase();
@@ -35,8 +37,12 @@ function validateUserPayload(body, { partial = false } = {}) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email))
       throw badRequest("email must be a valid email address");
   }
-  if (body.phone !== undefined)
+  if (body.phone !== undefined) {
     payload.phone = optionalString(body.phone, "phone");
+    if (payload.phone !== null && payload.phone !== undefined && !PHONE_REGEX.test(payload.phone)) {
+      throw badRequest("phone must be a valid phone number (7–20 digits)");
+    }
+  }
   if (body.status !== undefined) payload.status = normalizeStatus(body.status);
   if (body.company_id !== undefined)
     payload.company_id = parsePositiveInteger(body.company_id, "company_id");
@@ -289,7 +295,10 @@ async function updateUser(id, body, req) {
       if (duplicate.rows.length) throw conflict("email is already registered");
     }
     if (payload.company_id) await assertCompany(connection, payload.company_id);
-    const fields = Object.keys(payload);
+    const ALLOWED_UPDATE_FIELDS = ["name", "email", "phone", "status", "company_id"];
+    const fields = Object.keys(payload).filter((f) =>
+      ALLOWED_UPDATE_FIELDS.includes(f),
+    );
     if (fields.length)
       await connection.execute(
         `UPDATE "users" SET ${fields.map((field) => `"${field}" = :${field}`).join(", ")}, "updated_at" = SYSTIMESTAMP WHERE "id" = :id`,

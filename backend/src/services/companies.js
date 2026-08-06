@@ -190,9 +190,10 @@ async function updateCompany(id, payload) {
   let shouldRollback = false;
 
   try {
-    const setClauses = Object.keys(payload).map(
-      (field) => `"${field}" = :${field}`,
-    );
+    const ALLOWED_UPDATE_FIELDS = ["name", "address", "contact"];
+    const setClauses = Object.keys(payload)
+      .filter((field) => ALLOWED_UPDATE_FIELDS.includes(field))
+      .map((field) => `"${field}" = :${field}`);
 
     setClauses.push(`"updated_at" = SYSTIMESTAMP`);
 

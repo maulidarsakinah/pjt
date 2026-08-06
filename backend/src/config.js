@@ -57,6 +57,26 @@ if (!Number.isInteger(revocationMaxItems) || revocationMaxItems <= 0) {
   throw new Error("TOKEN_REVOCATION_MAX_ITEMS must be a positive integer");
 }
 
+const corsOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+if (nodeEnv === "production" && corsOrigins.length === 0) {
+  throw new Error(
+    "CORS_ORIGINS must be set to at least one allowed origin in production",
+  );
+}
+
+const refreshCookieSecure =
+  nodeEnv === "production" || process.env.REFRESH_COOKIE_SECURE === "true";
+
+if (nodeEnv === "production" && !refreshCookieSecure) {
+  throw new Error(
+    "REFRESH_COOKIE_SECURE must be true in production",
+  );
+}
+
 const config = {
   nodeEnv,
   port: Number(process.env.PORT) || 3000,
@@ -82,16 +102,12 @@ const config = {
     refreshTokenAudience:
       process.env.REFRESH_TOKEN_AUDIENCE || "pkl-api-refresh",
     refreshCookieName,
-    refreshCookieSecure:
-      nodeEnv === "production" || process.env.REFRESH_COOKIE_SECURE === "true",
+    refreshCookieSecure,
     revocationMaxItems,
   },
   security: {
     bodyLimit: process.env.BODY_LIMIT || "100kb",
-    corsOrigins: (process.env.CORS_ORIGINS || "")
-      .split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean),
+    corsOrigins,
     docsEnabled:
       process.env.ENABLE_DOCS === "true" ||
       (process.env.ENABLE_DOCS !== "false" && nodeEnv !== "production"),
