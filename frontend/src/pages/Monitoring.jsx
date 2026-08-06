@@ -221,7 +221,7 @@ const StationCard = memo(
           <span className="station-time">{latestTime}</span>
         </div>
         <button
-          className="btn btn-outline btn-block"
+          className="btn btn-primary btn-block"
           onClick={() => onShowDetail(station)}
           onFocus={() => onPrefetch(station)}
           onMouseEnter={() => onPrefetch(station)}
@@ -503,59 +503,6 @@ const Monitoring = () => {
         <p>Status jaringan sensor hidrologi real-time</p>
       </div>
 
-      <div className="filter-section">
-        <div className="filter-group">
-          <label>Lokasi Pemasangan</label>
-          <select
-            value={locationFilter}
-            onChange={(event) => setLocationFilter(event.target.value)}
-          >
-            <option value={DEFAULT_LOCATION}>Semua Lokasi</option>
-            {availableStations.map((station) => (
-              <option key={station.id} value={String(station.id)}>
-                {station.station_name || station.kode_station}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <label>Status Perangkat</label>
-          <select defaultValue="Semua Status">
-            <option>Semua Status</option>
-            <option>Online (Active)</option>
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <label>Rentang Waktu</label>
-          <select
-            value={timeRange}
-            onChange={(event) => setTimeRange(event.target.value)}
-          >
-            <option value="24h">24 Jam Terakhir</option>
-            <option value="7d">7 Hari Terakhir</option>
-          </select>
-        </div>
-
-        <div className="filter-actions">
-          <button
-            className="btn btn-dark"
-            onClick={handleApplyFilter}
-            disabled={isLoading}
-          >
-            Apply Filter
-          </button>
-          <button
-            className="btn btn-outline"
-            style={{ marginLeft: "10px" }}
-            onClick={handleResetFilter}
-            disabled={isLoading}
-          >
-            Reset
-          </button>
-        </div>
-      </div>
 
       <div className="monitoring-layout">
         <div className="map-monitoring-container">
@@ -591,15 +538,74 @@ const Monitoring = () => {
       </div>
 
       <div className="panel" style={{ marginTop: "8px" }}>
-        <div className="panel-header" style={{ marginBottom: "10px" }}>
-          <div className="panel-title">Data Monitoring Historis</div>
+        <div className="panel-header" style={{ marginBottom: "20px", flexDirection: "column", alignItems: "flex-start", gap: "5px" }}>
+          <div className="panel-title">Historical Monitoring Data</div>
+          <div className="panel-subtitle">Menampilkan riwayat data hasil pemantauan sistem HydroTrack secara berkala.</div>
+        </div>
+
+        <div className="filter-section">
+          <div className="filter-group">
+            <label>Lokasi Pemasangan</label>
+            <select
+              value={locationFilter}
+              onChange={(event) => setLocationFilter(event.target.value)}
+            >
+              <option value={DEFAULT_LOCATION}>Semua Lokasi</option>
+              {availableStations.map((station) => (
+                <option key={station.id} value={String(station.id)}>
+                  {station.station_name || station.kode_station}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Status Perangkat</label>
+            <select defaultValue="Semua Status">
+              <option>Semua Status</option>
+              <option>Online (Active)</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Rentang Waktu</label>
+            <select
+              value={timeRange}
+              onChange={(event) => setTimeRange(event.target.value)}
+            >
+              <option value="24h">24 Jam Terakhir</option>
+              <option value="7d">7 Hari Terakhir</option>
+            </select>
+          </div>
+
+          <div className="filter-actions">
+            <button
+              className="btn btn-primary"
+              onClick={handleApplyFilter}
+              disabled={isLoading}
+            >
+              FILTER
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={handleResetFilter}
+              disabled={isLoading}
+            >
+              RESET
+            </button>
+          </div>
+        </div>
+
+        <hr className="monitoring-divider" />
+
+        <div style={{ marginBottom: "15px" }}>
           <button
             className="btn btn-outline"
             style={{ fontSize: "12px", padding: "8px 14px" }}
             onClick={handleExportCsv}
             disabled={visibleHistoryData.length === 0}
           >
-            <i className="fa-solid fa-download"></i> Export CSV
+            <i className="fa-solid fa-download"></i> EXPORT
           </button>
         </div>
         <div className="table-container">

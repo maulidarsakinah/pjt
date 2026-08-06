@@ -20,6 +20,7 @@ const Detail = lazy(() => import("./pages/Detail"));
 const Settings = lazy(() => import("./pages/Settings"));
 const MasterAccount = lazy(() => import("./pages/MasterAccount"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
+const MasterData = lazy(() => import("./pages/MasterData"));
 const AdminPlaceholder = lazy(() => import("./pages/AdminPlaceholder"));
 
 const PageFallback = () => {
@@ -100,12 +101,7 @@ function App() {
               <Route path="detail/:stationKey" element={<Detail />} />
               <Route path="master-account" element={<MasterAccount />} />
               <Route path="settings" element={<Settings />} />
-              <Route
-                path="master-data"
-                element={
-                  <AdminPlaceholder title="Master Data" icon="fa-database" />
-                }
-              />
+              <Route path="master-data" element={<MasterData />} />
               <Route
                 path="master-alat"
                 element={
