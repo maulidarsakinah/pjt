@@ -121,18 +121,29 @@ function buildDetailRangeQuery() {
 
 function mapHistoryRow(station, reading, index) {
   const row = readingToRow(station, reading);
-
-  return {
+  const base = {
     id: `${station.id}-${reading.id ?? index}`,
     stationId: String(station.id),
     station: row.stationName,
-    debit: row.flow1,
-    totalizer: row.totalizer1,
-    vcc: row.vcc,
-    temp: row.temp,
     status: "Active",
     time: formatDateTime(row.datetime),
     timestamp: row.datetime,
+  };
+
+  if (row.schema === "new") {
+    return {
+      ...base,
+      debit: row.flow_avg,
+      totalizer: row.totalizer_end,
+      vcc: row.vcc_last,
+    };
+  }
+
+  return {
+    ...base,
+    debit: row.flow1,
+    totalizer: row.totalizer1,
+    vcc: row.vcc,
   };
 }
 
@@ -187,9 +198,6 @@ const MonitoringMobileRow = memo(({ row }) => (
         <span className="monitoring-mobile-log-meta">
           <span>Debit: {formatNumber(row.debit)} m³/s</span>
           <span>VCC: {formatNumber(row.vcc)} V</span>
-          <span className="monitoring-mobile-latency">
-            Suhu: {formatNumber(row.temp, 1)} °C
-          </span>
         </span>
       </span>
     </div>
@@ -462,7 +470,6 @@ const Monitoring = () => {
       "Debit (m3/s)",
       "Totalizer (L)",
       "VCC (V)",
-      "Suhu (C)",
       "Status",
       "Last Update",
     ];
@@ -471,7 +478,6 @@ const Monitoring = () => {
       formatNumber(row.debit),
       formatNumber(row.totalizer, 0),
       formatNumber(row.vcc),
-      formatNumber(row.temp, 1),
       row.status,
       row.time,
     ]);
@@ -633,7 +639,6 @@ const Monitoring = () => {
                   <th>DEBIT (m³/s)</th>
                   <th>TOTALIZER (L)</th>
                   <th>VCC (V)</th>
-                  <th>SUHU (°C)</th>
                   <th>STATUS</th>
                   <th>LAST UPDATE</th>
                 </tr>
@@ -648,7 +653,6 @@ const Monitoring = () => {
                       <td>{formatNumber(row.debit)}</td>
                       <td>{formatNumber(row.totalizer, 0)}</td>
                       <td>{formatNumber(row.vcc)}</td>
-                      <td>{formatNumber(row.temp, 1)}</td>
                       <td>
                         <span className="badge-dot"></span>
                         {row.status}

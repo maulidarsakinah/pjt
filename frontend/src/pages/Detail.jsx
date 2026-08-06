@@ -16,16 +16,16 @@ import {
 import "./Detail.css";
 
 const DEMO_CHART_DATA = [
-  { time: "01:00", debit: 138.1, totalizer: 450420, vcc: 12.45, suhu: 28.5 },
-  { time: "02:00", debit: 137.0, totalizer: 450605, vcc: 12.48, suhu: 28.2 },
-  { time: "03:00", debit: 136.2, totalizer: 450780, vcc: 12.49, suhu: 27.9 },
-  { time: "04:00", debit: 135.5, totalizer: 450950, vcc: 12.49, suhu: 27.8 },
-  { time: "05:00", debit: 136.0, totalizer: 451125, vcc: 12.48, suhu: 28.0 },
-  { time: "06:00", debit: 137.1, totalizer: 451320, vcc: 12.48, suhu: 28.5 },
-  { time: "07:00", debit: 138.5, totalizer: 451510, vcc: 12.45, suhu: 29.0 },
-  { time: "08:00", debit: 139.8, totalizer: 451705, vcc: 12.43, suhu: 29.2 },
-  { time: "09:00", debit: 141.2, totalizer: 451900, vcc: 12.4, suhu: 29.4 },
-  { time: "10:00", debit: 142.5, totalizer: 452109, vcc: 12.42, suhu: 29.5 },
+  { time: "01:00", debit: 138.1, totalizer: 450420, vcc: 12.45 },
+  { time: "02:00", debit: 137.0, totalizer: 450605, vcc: 12.48 },
+  { time: "03:00", debit: 136.2, totalizer: 450780, vcc: 12.49 },
+  { time: "04:00", debit: 135.5, totalizer: 450950, vcc: 12.49 },
+  { time: "05:00", debit: 136.0, totalizer: 451125, vcc: 12.48 },
+  { time: "06:00", debit: 137.1, totalizer: 451320, vcc: 12.48 },
+  { time: "07:00", debit: 138.5, totalizer: 451510, vcc: 12.45 },
+  { time: "08:00", debit: 139.8, totalizer: 451705, vcc: 12.43 },
+  { time: "09:00", debit: 141.2, totalizer: 451900, vcc: 12.4 },
+  { time: "10:00", debit: 142.5, totalizer: 452109, vcc: 12.42 },
 ];
 
 const DEMO_TABLE_DATA = [...DEMO_CHART_DATA].reverse().map((row) => ({
@@ -33,13 +33,13 @@ const DEMO_TABLE_DATA = [...DEMO_CHART_DATA].reverse().map((row) => ({
   id: row.time,
   datetimeLabel: `2026-07-06 ${row.time}`,
   timestamp: Date.parse(`2026-07-06T${row.time}:00+07:00`),
+  schema: "old",
 }));
 const DETAIL_PAGE_SIZE = 10;
 const LIVE_STATION_IDS = new Set(["697", "740"]);
 const FLOW_DOMAIN = [130, 150];
 const TOTALIZER_DOMAIN = [450000, 453000];
 const VCC_DOMAIN = [12.2, 12.6];
-const TEMPERATURE_DOMAIN = [25, 32];
 const FLOW_SERIES = [
   { dataKey: "debit", name: "Debit", color: "#3A4BCF", unit: "m³/s" },
 ];
@@ -48,9 +48,6 @@ const TOTALIZER_SERIES = [
 ];
 const VCC_SERIES = [
   { dataKey: "vcc", name: "VCC", color: "#f59e0b", unit: "V" },
-];
-const TEMPERATURE_SERIES = [
-  { dataKey: "suhu", name: "Suhu", color: "#ef4444", unit: "°C" },
 ];
 
 function buildHistoryRange() {
@@ -83,17 +80,33 @@ function stationMatchesKey(station, stationKey) {
 
 function mapLiveReading(station, reading, index) {
   const row = readingToRow(station, reading);
+  const base = {
+    id:           `${station.id}-${reading.id ?? index}`,
+    stationId:    String(station.id),
+    time:         formatTime(row.datetime),
+    datetimeLabel: formatDateTime(row.datetime),
+    timestamp:    Date.parse(row.datetime || 0),
+    schema:       row.schema,
+  };
+
+  if (row.schema === "new") {
+    return {
+      ...base,
+      debit:           row.flow_avg,
+      velocity:        row.velocity_avg,
+      totalizer:       row.totalizer_end,
+      vcc:             row.vcc_last,
+      battery:         row.battery_last,
+      vout_solar:      row.vout_solar_last,
+      unit_total:      row.unit_total,
+    };
+  }
 
   return {
-    id: `${station.id}-${reading.id ?? index}`,
-    stationId: String(station.id),
-    debit: row.flow1,
+    ...base,
+    debit:     row.flow1,
     totalizer: row.totalizer1,
-    vcc: row.vcc,
-    suhu: row.temp,
-    time: formatTime(row.datetime),
-    datetimeLabel: formatDateTime(row.datetime),
-    timestamp: Date.parse(row.datetime || 0),
+    vcc:       row.vcc,
   };
 }
 
@@ -146,11 +159,18 @@ const DetailMobileRow = memo(({ row, locationName }) => (
         </span>
         <strong>{locationName}</strong>
         <span className="detail-mobile-log-meta">
-          <span>Debit: {formatNumber(row.debit)} m³/s</span>
-          <span>VCC: {formatNumber(row.vcc)} V</span>
-          <span className="detail-mobile-latency">
-            Suhu: {formatNumber(row.suhu, 1)} °C
-          </span>
+          {row.schema === "new" ? (
+            <>
+              <span>Debit: {formatNumber(row.debit)} m³/s</span>
+              <span>Velocity: {formatNumber(row.velocity)} m/s</span>
+              <span>VCC: {formatNumber(row.vcc)} V</span>
+            </>
+          ) : (
+            <>
+              <span>Debit: {formatNumber(row.debit)} m³/s</span>
+              <span>VCC: {formatNumber(row.vcc)} V</span>
+            </>
+          )}
         </span>
       </span>
     </div>
@@ -336,10 +356,9 @@ const Detail = () => {
       (item) =>
         !searchString ||
         locationName.toLowerCase().includes(searchString) ||
-        item.debit.toString().includes(searchString) ||
-        item.totalizer.toString().includes(searchString) ||
-        item.vcc.toString().includes(searchString) ||
-        item.suhu.toString().includes(searchString) ||
+        String(item.debit ?? "").includes(searchString) ||
+        String(item.totalizer ?? "").includes(searchString) ||
+        String(item.vcc ?? "").includes(searchString) ||
         item.datetimeLabel.toLowerCase().includes(searchString) ||
         "active".includes(searchString),
     );
@@ -437,24 +456,15 @@ const Detail = () => {
   };
 
   const handleExportCsv = () => {
-    const headers = [
-      "Lokasi Stasiun",
-      "Debit (m3/s)",
-      "Totalizer (L)",
-      "VCC (V)",
-      "Suhu (C)",
-      "Status",
-      "Waktu",
-    ];
-    const rows = filteredAndSortedData.map((row) => [
-      locationName,
-      formatNumber(row.debit),
-      formatNumber(row.totalizer, 0),
-      formatNumber(row.vcc),
-      formatNumber(row.suhu, 1),
-      "Active",
-      row.datetimeLabel,
-    ]);
+    const is_new = filteredAndSortedData[0]?.schema === "new";
+    const headers = is_new
+      ? ["Lokasi Stasiun", "Debit (m3/s)", "Velocity (m/s)", "Totalizer", "VCC (V)", "Battery (V)", "Vout Solar (V)", "Unit Total", "Status", "Waktu"]
+      : ["Lokasi Stasiun", "Debit (m3/s)", "Totalizer (L)", "VCC (V)", "Status", "Waktu"];
+    const rows = filteredAndSortedData.map((row) =>
+      is_new
+        ? [locationName, formatNumber(row.debit), formatNumber(row.velocity), formatNumber(row.totalizer, 0), formatNumber(row.vcc), formatNumber(row.battery), formatNumber(row.vout_solar), row.unit_total ?? "-", "Active", row.datetimeLabel]
+        : [locationName, formatNumber(row.debit), formatNumber(row.totalizer, 0), formatNumber(row.vcc), "Active", row.datetimeLabel],
+    );
     const csv = [headers, ...rows]
       .map((row) => row.map(escapeCsvCell).join(","))
       .join("\r\n");
@@ -577,76 +587,61 @@ const Detail = () => {
             <table>
               <thead>
                 <tr>
-                  <th
-                    onClick={() => handleSort("location")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    LOKASI STASIUN {getSortIcon("location")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("debit")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    DEBIT (m³/s) {getSortIcon("debit")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("totalizer")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    TOTALIZER (L) {getSortIcon("totalizer")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("vcc")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    VCC (V) {getSortIcon("vcc")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("suhu")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    SUHU (°C) {getSortIcon("suhu")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("status")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    STATUS {getSortIcon("status")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("time")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    WAKTU {getSortIcon("time")}
-                  </th>
+                  <th onClick={() => handleSort("location")} style={{ cursor: "pointer" }}>LOKASI STASIUN {getSortIcon("location")}</th>
+                  {pagedTableData[0]?.schema === "new" ? (
+                    <>
+                      <th onClick={() => handleSort("debit")} style={{ cursor: "pointer" }}>DEBIT (m³/s) {getSortIcon("debit")}</th>
+                      <th onClick={() => handleSort("velocity")} style={{ cursor: "pointer" }}>VELOCITY (m/s) {getSortIcon("velocity")}</th>
+                      <th onClick={() => handleSort("totalizer")} style={{ cursor: "pointer" }}>TOTALIZER {getSortIcon("totalizer")}</th>
+                      <th onClick={() => handleSort("vcc")} style={{ cursor: "pointer" }}>VCC (V) {getSortIcon("vcc")}</th>
+                      <th onClick={() => handleSort("battery")} style={{ cursor: "pointer" }}>BATTERY (V) {getSortIcon("battery")}</th>
+                      <th onClick={() => handleSort("vout_solar")} style={{ cursor: "pointer" }}>VOUT SOLAR (V) {getSortIcon("vout_solar")}</th>
+                      <th onClick={() => handleSort("unit_total")} style={{ cursor: "pointer" }}>UNIT TOTAL {getSortIcon("unit_total")}</th>
+                    </>
+                  ) : (
+                    <>
+                      <th onClick={() => handleSort("debit")} style={{ cursor: "pointer" }}>DEBIT (m³/s) {getSortIcon("debit")}</th>
+                      <th onClick={() => handleSort("totalizer")} style={{ cursor: "pointer" }}>TOTALIZER (L) {getSortIcon("totalizer")}</th>
+                      <th onClick={() => handleSort("vcc")} style={{ cursor: "pointer" }}>VCC (V) {getSortIcon("vcc")}</th>
+                    </>
+                  )}
+                  <th onClick={() => handleSort("status")} style={{ cursor: "pointer" }}>STATUS {getSortIcon("status")}</th>
+                  <th onClick={() => handleSort("time")} style={{ cursor: "pointer" }}>WAKTU {getSortIcon("time")}</th>
                 </tr>
               </thead>
               <tbody>
                 {pagedTableData.length > 0 ? (
                   pagedTableData.map((row) => (
                     <tr key={row.id}>
-                      <td>
-                        <b>{locationName}</b>
-                      </td>
-                      <td>{formatNumber(row.debit)}</td>
-                      <td>{formatNumber(row.totalizer, 0)}</td>
-                      <td>{formatNumber(row.vcc)}</td>
-                      <td>{formatNumber(row.suhu, 1)}</td>
-                      <td>
-                        <span className="badge-dot"></span>Active
-                      </td>
+                      <td><b>{locationName}</b></td>
+                      {row.schema === "new" ? (
+                        <>
+                          <td>{formatNumber(row.debit)}</td>
+                          <td>{formatNumber(row.velocity)}</td>
+                          <td>{formatNumber(row.totalizer, 0)}</td>
+                          <td>{formatNumber(row.vcc)}</td>
+                          <td>{formatNumber(row.battery)}</td>
+                          <td>{formatNumber(row.vout_solar)}</td>
+                          <td>{row.unit_total ?? "-"}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td>{formatNumber(row.debit)}</td>
+                          <td>{formatNumber(row.totalizer, 0)}</td>
+                          <td>{formatNumber(row.vcc)}</td>
+                        </>
+                      )}
+                      <td><span className="badge-dot"></span>Active</td>
                       <td>{row.datetimeLabel}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan={pagedTableData[0]?.schema === "new" ? "10" : "6"}
                       style={{ textAlign: "center", padding: "30px" }}
                     >
-                      {isLoading
-                        ? "Memuat detail stasiun..."
-                        : "Tidak ada data yang cocok."}
+                      {isLoading ? "Memuat detail stasiun..." : "Tidak ada data yang cocok."}
                     </td>
                   </tr>
                 )}
@@ -716,7 +711,7 @@ const Detail = () => {
         <div className="panel">
           <div className="panel-header" style={{ marginBottom: "10px" }}>
             <div className="panel-title" style={{ fontSize: "14px" }}>
-              Grafik Debit Air (m³/s)
+              Grafik Debit (m³/s)
             </div>
           </div>
           <div className="chart-canvas-container" style={{ height: "200px" }}>
@@ -735,7 +730,7 @@ const Detail = () => {
         <div className="panel">
           <div className="panel-header" style={{ marginBottom: "10px" }}>
             <div className="panel-title" style={{ fontSize: "14px" }}>
-              Grafik Totalizer (L)
+              Grafik Totalizer
             </div>
           </div>
           <div className="chart-canvas-container" style={{ height: "200px" }}>
@@ -766,25 +761,6 @@ const Detail = () => {
               showLegend={false}
               compact
               series={VCC_SERIES}
-            />
-          </div>
-        </div>
-
-        <div className="panel">
-          <div className="panel-header" style={{ marginBottom: "10px" }}>
-            <div className="panel-title" style={{ fontSize: "14px" }}>
-              Grafik Suhu (°C)
-            </div>
-          </div>
-          <div className="chart-canvas-container" style={{ height: "200px" }}>
-            <DeferredFlowChart
-              data={chartData}
-              xKey="time"
-              yDomain={isDemoUser ? TEMPERATURE_DOMAIN : undefined}
-              height={180}
-              showLegend={false}
-              compact
-              series={TEMPERATURE_SERIES}
             />
           </div>
         </div>
