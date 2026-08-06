@@ -8,8 +8,12 @@ const refreshTokenTtlSeconds =
   process.env.REFRESH_TOKEN_TTL_SECONDS === undefined
     ? 7 * 24 * 60 * 60
     : Number(process.env.REFRESH_TOKEN_TTL_SECONDS);
-const refreshCookieName =
+const refreshCookieNameBase =
   process.env.REFRESH_COOKIE_NAME || "hydrotrack_refresh";
+const refreshCookieName =
+  nodeEnv === "production"
+    ? `__Host-${refreshCookieNameBase}`
+    : refreshCookieNameBase;
 const insecureRefreshTokenSecrets = new Set([
   "change-this-refresh-secret",
   "change-this-to-a-different-long-random-secret",
@@ -43,7 +47,7 @@ if (!Number.isInteger(refreshTokenTtlSeconds) || refreshTokenTtlSeconds <= 0) {
   throw new Error("REFRESH_TOKEN_TTL_SECONDS must be a positive integer");
 }
 
-if (!/^[A-Za-z0-9_-]+$/.test(refreshCookieName)) {
+if (!/^(__Host-)?[A-Za-z0-9_-]+$/.test(refreshCookieName)) {
   throw new Error(
     "REFRESH_COOKIE_NAME may contain only letters, numbers, underscores, and hyphens",
   );

@@ -73,10 +73,11 @@ function logJourneyStage(req, stage, outcome = "success", fields = {}) {
 }
 
 module.exports = (req, res, next) => {
-  const traceId =
-    req.headers["x-trace-id"] ||
-    req.headers["x-request-id"] ||
-    `tx-${crypto.randomUUID()}`;
+  const SAFE_TRACE_PATTERN = /^[A-Za-z0-9._:-]{1,200}$/;
+  const rawTraceId = req.headers["x-trace-id"] || req.headers["x-request-id"];
+  const traceId = rawTraceId && SAFE_TRACE_PATTERN.test(rawTraceId)
+    ? rawTraceId
+    : `tx-${crypto.randomUUID()}`;
   const startedAt = performance.now();
   let terminalLogged = false;
 

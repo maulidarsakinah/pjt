@@ -49,7 +49,16 @@ function corsAllowlist(req, res, next) {
 }
 
 const securityHeaders = helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
   crossOriginResourcePolicy: {
     policy: "same-origin",
   },

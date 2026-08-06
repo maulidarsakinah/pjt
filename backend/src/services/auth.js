@@ -60,8 +60,6 @@ function createToken(user) {
   return jwt.sign(
     {
       sub: String(user.id),
-      email: user.email,
-      company_id: user.company_id,
       token_type: "access",
       issued_at_ms: Date.now(),
     },

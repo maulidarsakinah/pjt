@@ -92,6 +92,10 @@ function getPublicMessage(error, statusCode) {
     return "Internal server error";
   }
 
+  if (getErrorSource(error) === "oracle" || getErrorSource(error) === "oracle_driver") {
+    return "Internal server error";
+  }
+
   return error.message;
 }
 
