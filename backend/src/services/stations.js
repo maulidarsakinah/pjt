@@ -311,16 +311,16 @@ async function getFlowStationData(stationIdValue, query) {
 
     const is_new_schema = await detectTableSchema(connection, station.table_data);
 
-    // New schema uses inserted_at instead of datetime — rewrite WHERE clause.
+    // New schema uses window_end_time instead of datetime — rewrite WHERE clause.
     const where_sql = is_new_schema
-      ? dataFilter.whereSql.replace(/\"datetime\"/g, '"inserted_at"')
+      ? dataFilter.whereSql.replace(/\"datetime\"/g, '"window_end_time"')
       : dataFilter.whereSql;
 
     // Build schema-specific SELECT and ORDER BY clauses.
     const select_cols = is_new_schema
       ? `"id"            AS "id",
                "id_station"    AS "nama_station",
-               "inserted_at"   AS "datetime",
+               "window_end_time"   AS "datetime",
                "flow_avg"      AS "flow_avg",
                "velocity_avg"  AS "velocity_avg",
                "totalizer_end" AS "totalizer_end",
