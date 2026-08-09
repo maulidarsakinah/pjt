@@ -128,6 +128,16 @@ const config = {
     stationTtlMs: (Number(process.env.STATION_CACHE_TTL_SECONDS) || 300) * 1000,
     stationMaxItems: Number(process.env.STATION_CACHE_MAX_ITEMS) || 1000,
   },
+  idempotency: {
+    ttlMs: (() => {
+      const v = Number(process.env.IDEMPOTENCY_TTL_SECONDS);
+      return (Number.isFinite(v) && v > 0 ? v : 24 * 60 * 60) * 1000;
+    })(),
+    maxItems: (() => {
+      const v = Number(process.env.IDEMPOTENCY_MAX_ITEMS);
+      return Number.isInteger(v) && v > 0 ? v : 5000;
+    })(),
+  },
 };
 
 module.exports = config;
