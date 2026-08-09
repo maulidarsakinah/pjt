@@ -169,6 +169,15 @@ function cachedGet(path, query, { signal, ttlMs = READ_CACHE_TTL_MS } = {}) {
   return subscribeToCachedRequest(entry, signal);
 }
 
+function newIdempotencyKey() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {}
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 async function requestRefreshToken() {
   if (!refreshRequest) {
     refreshRequest = (async () => {
@@ -176,6 +185,7 @@ async function requestRefreshToken() {
         method: "POST",
         headers: {
           Accept: "application/json",
+          "Idempotency-Key": newIdempotencyKey(),
         },
         credentials: "include",
       });
@@ -204,7 +214,7 @@ async function requestRefreshToken() {
 
 export async function apiRequest(
   path,
-  { method = "GET", body, query, signal } = {},
+  { method = "GET", body, query, signal, idempotencyKey } = {},
   allowRefresh = true,
 ) {
   const requestHadAccessToken = Boolean(accessToken);
@@ -218,6 +228,16 @@ export async function apiRequest(
 
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const upperMethod = String(method || "GET").toUpperCase();
+  const isMutating = !["GET", "HEAD", "OPTIONS"].includes(upperMethod);
+  let effectiveIdempotencyKey = idempotencyKey;
+  if (isMutating) {
+    if (!effectiveIdempotencyKey) effectiveIdempotencyKey = newIdempotencyKey();
+    headers["Idempotency-Key"] = effectiveIdempotencyKey;
+  } else if (effectiveIdempotencyKey) {
+    headers["Idempotency-Key"] = effectiveIdempotencyKey;
   }
 
   const response = await fetch(buildUrl(path, query), {
@@ -238,7 +258,11 @@ export async function apiRequest(
     ) {
       try {
         await requestRefreshToken();
-        return apiRequest(path, { method, body, query, signal }, false);
+        return apiRequest(
+          path,
+          { method, body, query, signal, idempotencyKey: effectiveIdempotencyKey },
+          false,
+        );
       } catch {
         setAccessToken(null);
         unauthorizedHandler?.();
@@ -307,8 +331,40 @@ export function getMasterStations(query, options) {
   return cachedGet("/api/stations/master", query, options);
 }
 
+export function getMasterStation(id, options) {
+  return apiRequest(`/api/stations/master/${id}`, options);
+}
+
 export function createMasterStation(body) {
-  return apiRequest("/api/stations/master", { method: "POST", body });
+  return apiRequest("/api/stations/master", { method: "POST", body }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function updateMasterStation(id, body) {
+  return apiRequest(`/api/stations/master/${id}`, { method: "PATCH", body }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function putMasterStation(id, body) {
+  return apiRequest(`/api/stations/master/${id}`, { method: "PUT", body }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function deleteMasterStation(id) {
+  return apiRequest(`/api/stations/master/${id}`, { method: "DELETE" }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function invalidateMasterStationsCache() {
+  clearReadRequestCache();
 }
 
 export function getFlowStationData(id, query, options) {

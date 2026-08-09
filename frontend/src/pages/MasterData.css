@@ -206,7 +206,7 @@
   .master-data-page .master-kpi-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .master-data-page .master-detail-content {
     grid-template-columns: 1fr;
   }
@@ -236,4 +236,150 @@
     flex: 1;
     padding: 0 10px;
   }
+}
+
+/* =========================================================
+   Additive — frontend-design layer (hydro/telemetry)
+   Tokens: ink #0F172A / river #3A4BCF / teal #0E7490
+           wash #E0E7FF / silt #F8FAFC / amber #F59E0B
+   Type: Inter display (700) + ui-monospace for kode
+   Note: header section is kept plain to match Master Akun
+   ========================================================= */
+
+/* make search input match selects (additive — only for this page) */
+.master-data-page .master-filter-group input {
+  height: 38px;
+  box-sizing: border-box;
+  padding: 0 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-body, #fff);
+  outline: none;
+  min-width: 160px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.master-data-page .master-filter-group input:focus {
+  border-color: #3A4BCF;
+  box-shadow: 0 0 0 3px rgba(58,75,207,0.15);
+}
+.master-data-page .master-filter-group input::placeholder {
+  color: #94A3B8;
+}
+
+/* panel accent — subtle river top edge */
+.master-data-page .md-panel-accent {
+  border-top: 3px solid rgba(58,75,207,0.18);
+}
+
+/* feedback banners — error / info (additive) */
+.master-data-page .md-feedback {
+  margin: 0 20px;
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  border: 1px solid var(--border-color);
+}
+.master-data-page .md-feedback.is-error {
+  background: #FEF2F2;
+  border-color: #FECACA;
+  color: #991B1B;
+}
+.master-data-page .md-feedback.is-info {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1E40AF;
+}
+
+/* row actions — telemetry instrument buttons */
+.master-data-page .md-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.master-data-page .md-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: #fff;
+  color: #64748B;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+.master-data-page .md-icon-btn:hover {
+  border-color: #3A4BCF;
+  color: #3A4BCF;
+  background: #F0F4FF;
+  transform: translateY(-1px);
+}
+.master-data-page .md-icon-btn:active { transform: translateY(0); }
+.master-data-page .md-icon-btn.is-danger:hover {
+  border-color: #EF4444;
+  color: #EF4444;
+  background: #FEF2F2;
+}
+.master-data-page .md-icon-btn:focus-visible {
+  outline: 2px solid #3A4BCF;
+  outline-offset: 2px;
+}
+
+/* kode_station as instrument reading */
+.master-data-page .table-container td:first-child b {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #0F172A;
+}
+
+/* modal accent — thin river stripe */
+.master-data-page .md-modal-accent {
+  border-top: 3px solid #3A4BCF;
+}
+.master-data-page .md-modal-accent .master-detail-header {
+  background: linear-gradient(180deg, #F8FAFF 0%, var(--bg-panel) 100%);
+}
+.master-data-page .md-modal-footer {
+  padding: 16px 25px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #F8FAFC;
+}
+
+/* toast — bottom-right, hydro wash */
+.master-data-page .md-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1100;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  max-width: min(420px, calc(100vw - 32px));
+  box-shadow: 0 12px 32px rgba(15,23,42,0.16);
+  border: 1px solid var(--border-color);
+  animation: md-toast-in 0.28s ease;
+}
+.master-data-page .md-toast.is-success { background: #ECFDF5; border-color: #A7F3D0; color: #065F46; }
+.master-data-page .md-toast.is-error { background: #FEF2F2; border-color: #FECACA; color: #991B1B; }
+.master-data-page .md-toast.is-info { background: #EFF6FF; border-color: #BFDBFE; color: #1E40AF; }
+@keyframes md-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .master-data-page .md-toast { animation: none; }
 }
