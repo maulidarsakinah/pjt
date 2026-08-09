@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const authenticate = require("../middleware/authenticate");
 const requirePermission = require("../middleware/requirePermission");
+const { idempotency } = require("../middleware/idempotency");
 const {
   createCompany,
   deleteCompany,
@@ -58,6 +59,7 @@ router.get(
 router.post(
   "/",
   requirePermission("create companies"),
+  idempotency(),
   async (req, res, next) => {
     try {
       const payload = validateCompanyPayload(req.body);
@@ -106,17 +108,20 @@ function createUpdateCompanyHandler({ partial }) {
 router.put(
   "/:id",
   requirePermission("update companies"),
+  idempotency(),
   createUpdateCompanyHandler({ partial: false }),
 );
 router.patch(
   "/:id",
   requirePermission("update companies"),
+  idempotency(),
   createUpdateCompanyHandler({ partial: true }),
 );
 
 router.delete(
   "/:id",
   requirePermission("delete companies"),
+  idempotency(),
   async (req, res, next) => {
     try {
       const id = parseId(req.params.id);

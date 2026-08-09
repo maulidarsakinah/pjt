@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const authenticate = require("../middleware/authenticate");
+const { idempotency } = require("../middleware/idempotency");
 const { getUserAccess } = require("../services/access");
 const { changeMyPassword, getMyProfile } = require("../services/me");
 
@@ -23,7 +24,7 @@ router.get("/access", async (req, res, next) => {
   }
 });
 
-router.patch("/password", async (req, res, next) => {
+router.patch("/password", idempotency(), async (req, res, next) => {
   try {
     await changeMyPassword(req.user.id, req.body, req);
 

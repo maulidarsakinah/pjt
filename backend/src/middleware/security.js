@@ -33,7 +33,11 @@ function corsAllowlist(req, res, next) {
   res.setHeader("Vary", "Origin");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Authorization, Content-Type, X-Request-Id, X-Trace-Id",
+    "Authorization, Content-Type, X-Request-Id, X-Trace-Id, Idempotency-Key",
+  );
+  res.setHeader(
+    "Access-Control-Expose-Headers",
+    "Idempotent-Replayed",
   );
   res.setHeader(
     "Access-Control-Allow-Methods",

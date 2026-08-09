@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const authenticate = require("../middleware/authenticate");
 const requirePermission = require("../middleware/requirePermission");
+const { idempotency } = require("../middleware/idempotency");
 const {
   createPermission,
   deletePermission,
@@ -51,6 +52,7 @@ router.get(
 router.post(
   "/",
   requirePermission("create permissions"),
+  idempotency(),
   async (req, res, next) => {
     try {
       res.status(201).json({ data: await createPermission(req.body, req) });
@@ -77,17 +79,20 @@ function createUpdatePermissionHandler({ partial }) {
 router.put(
   "/:id",
   requirePermission("update permissions"),
+  idempotency(),
   createUpdatePermissionHandler({ partial: false }),
 );
 router.patch(
   "/:id",
   requirePermission("update permissions"),
+  idempotency(),
   createUpdatePermissionHandler({ partial: true }),
 );
 
 router.delete(
   "/:id",
   requirePermission("delete permissions"),
+  idempotency(),
   async (req, res, next) => {
     try {
       const id = parsePositiveInteger(req.params.id);

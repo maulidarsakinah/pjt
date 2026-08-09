@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const { getBearerToken, verifyAccessToken } = require("../authToken");
 const { authRateLimit } = require("../middleware/security");
+const { idempotency } = require("../middleware/idempotency");
 const {
   loginUser,
   refreshUserSession,
@@ -31,7 +32,7 @@ function sendSession(res, result, statusCode = 200) {
   res.status(statusCode).json(response);
 }
 
-router.post("/register", authRateLimit, async (req, res, next) => {
+router.post("/register", authRateLimit, idempotency(), async (req, res, next) => {
   try {
     const result = await registerUser(req.body, req);
 
@@ -41,7 +42,7 @@ router.post("/register", authRateLimit, async (req, res, next) => {
   }
 });
 
-router.post("/login", authRateLimit, async (req, res, next) => {
+router.post("/login", authRateLimit, idempotency(), async (req, res, next) => {
   try {
     const result = await loginUser(req.body, req);
 
@@ -51,7 +52,7 @@ router.post("/login", authRateLimit, async (req, res, next) => {
   }
 });
 
-router.post("/refresh", authRateLimit, async (req, res, next) => {
+router.post("/refresh", authRateLimit, idempotency(), async (req, res, next) => {
   try {
     const token = getRefreshToken(req);
 
@@ -66,7 +67,7 @@ router.post("/refresh", authRateLimit, async (req, res, next) => {
   }
 });
 
-router.post("/logout", (req, res) => {
+router.post("/logout", idempotency(), (req, res) => {
   const accessToken = getBearerToken(req);
   const refreshToken = getRefreshToken(req);
 
