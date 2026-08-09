@@ -85,7 +85,10 @@ assert.equal(cookieCalls[0].name, config.auth.refreshCookieName);
 assert.equal(cookieCalls[0].value, refreshToken);
 assert.equal(cookieCalls[0].options.httpOnly, true);
 assert.equal(cookieCalls[0].options.sameSite, "strict");
-assert.equal(cookieCalls[0].options.path, "/api");
+assert.equal(
+  cookieCalls[0].options.path,
+  config.auth.refreshCookieSecure ? "/" : "/api",
+);
 assert.equal(cookieCalls[0].options.secure, config.auth.refreshCookieSecure);
 assert.equal(cookieCalls[1].action, "clear");
 assert.equal(cookieCalls[1].options.maxAge, undefined);

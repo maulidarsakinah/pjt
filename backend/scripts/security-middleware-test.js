@@ -46,7 +46,7 @@ corsAllowlist(
 assert.equal(corsContinued, true);
 assert.equal(
   corsResponse.headers.get("access-control-allow-headers"),
-  "Authorization, Content-Type, X-Request-Id, X-Trace-Id",
+  "Authorization, Content-Type, X-Request-Id, X-Trace-Id, Idempotency-Key",
 );
 assert.equal(
   corsResponse.headers.get("access-control-allow-credentials"),
