@@ -1,7 +1,7 @@
 const config = require("../config");
 const { TtlCache } = require("../cache");
 const { buildListResponse, parsePagination } = require("../utils/pagination");
-const { badRequest } = require("../utils/httpErrors");
+const { badRequest, notFound } = require("../utils/httpErrors");
 const { withConnection } = require("./database");
 
 const stationCache = new TtlCache({
@@ -412,8 +412,131 @@ function clearCache() {
   stationCache.clear();
 }
 
+const MASTER_COLUMNS = [
+  "kode_station", "nama", "x", "y", "z", "id_desa", "WaterLevel", "Rainfall",
+  "Repeater", "Master", "Sub", "Branch", "GSMRainfall", "GSMWaterlevel",
+  "TableData", "indexhuluhilir", "nostation", "clock", "validpos", "objecttype",
+  "SIAGAWaterlevel", "SIAGADisch", "ws", "wl_decimal_num", "visible", "enabled",
+  "GSMWQMS", "TableDataForecast", "hasForecast", "hasWLOffset", "WLOffset",
+  "history_nomor", "provider", "sigab_enabled", "stastion_type", "aq_location_identifier",
+  "id_api", "template_api", "GSMINSTR", "GSMFLOW", "resolution"
+];
+
+const MASTER_NUMERIC_COLUMNS = new Set([
+  "x", "y", "z", "id_desa", "WaterLevel", "Rainfall", "Repeater", "Master",
+  "Sub", "Branch", "GSMRainfall", "GSMWaterlevel", "indexhuluhilir",
+  "ws", "wl_decimal_num", "enabled", "GSMWQMS",
+  "hasForecast", "hasWLOffset", "WLOffset",
+  "sigab_enabled", "GSMINSTR", "GSMFLOW", "aq_location_identifier",
+]);
+
+const MASTER_REQUIRED_ON_CREATE = ["kode_station", "nama"];
+
+function validateMasterStationPayload(body, { partial = false } = {}) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw badRequest("request body must be an object");
+  }
+
+  const unknown = Object.keys(body).filter((k) => !MASTER_COLUMNS.includes(k));
+  if (unknown.length && !partial) {
+    // silently ignore unknowns on PATCH leniency but still surface typos on create
+  }
+
+  if (!partial) {
+    for (const field of MASTER_REQUIRED_ON_CREATE) {
+      const v = body[field];
+      if (typeof v !== "string" || v.trim().length === 0) {
+        throw badRequest(`${field} is required`);
+      }
+    }
+  } else if (Object.keys(body).length === 0) {
+    throw badRequest("at least one field is required");
+  }
+
+  const payload = {};
+  for (const col of MASTER_COLUMNS) {
+    if (body[col] === undefined) continue;
+
+    const raw = body[col];
+    // empty string => null (clear field)
+    if (raw === "" || raw === null) {
+      payload[col] = null;
+      continue;
+    }
+
+    if (MASTER_NUMERIC_COLUMNS.has(col)) {
+      const num = Number(raw);
+      if (!Number.isFinite(num)) throw badRequest(`${col} must be a number`);
+      payload[col] = num;
+      continue;
+    }
+
+    if (typeof raw !== "string" && typeof raw !== "number") {
+      throw badRequest(`${col} must be a string or number`);
+    }
+    const str = String(raw).trim();
+    if (str.length > 500) throw badRequest(`${col} must be 500 characters or less`);
+    payload[col] = str;
+  }
+
+  if (!partial) {
+    for (const f of MASTER_REQUIRED_ON_CREATE) {
+      if (payload[f] == null || String(payload[f]).trim() === "") {
+        throw badRequest(`${f} is required`);
+      }
+    }
+  }
+
+  if (payload.TableData != null && !SAFE_TABLE_NAME.test(payload.TableData)) {
+    throw badRequest("TableData must match the pattern tb_[a-z0-9_]+");
+  }
+  if (payload.TableDataForecast != null && !SAFE_TABLE_NAME.test(payload.TableDataForecast)) {
+    throw badRequest("TableDataForecast must match the pattern tb_[a-z0-9_]+");
+  }
+
+  return payload;
+}
+
+async function getMasterStationById(connection, id) {
+  const result = await connection.execute(
+    `SELECT * FROM "tb_master_station_position" WHERE "id" = :id AND ROWNUM = 1`,
+    { id },
+    { fetchArraySize: 1, maxRows: 1 }
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  const { rn, ...rest } = row;
+  return rest;
+}
+
 async function listMasterStations(query) {
   const pagination = parsePagination(query);
+  const binds = {
+    page_end: pagination.pageEnd,
+    offset: pagination.offset,
+  };
+  const conditions = [`"kode_station" LIKE 'FLOW!_%' ESCAPE '!'`];
+
+  if (query.search && String(query.search).trim()) {
+    const s = `%${String(query.search).trim().toLowerCase()}%`;
+    binds.search = s;
+    conditions.push(`(LOWER("kode_station") LIKE :search OR LOWER("nama") LIKE :search)`);
+  }
+
+  if (query.enabled !== undefined && query.enabled !== "") {
+    const v = String(query.enabled);
+    if (v === "0" || v === "1") {
+      binds.enabled = Number(v);
+      conditions.push(`"enabled" = :enabled`);
+    }
+  }
+
+  if (query.station_type && String(query.station_type).trim()) {
+    binds.station_type = String(query.station_type).trim();
+    conditions.push(`"stastion_type" = :station_type`);
+  }
+
+  const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
   return withConnection(async (connection) => {
     const [dataResult, totalResult] = await Promise.all([
@@ -424,16 +547,13 @@ async function listMasterStations(query) {
            FROM (
              SELECT *
              FROM "tb_master_station_position"
-             WHERE "kode_station" LIKE 'FLOW!_%' ESCAPE '!'
+             ${whereSql}
              ORDER BY "nama" ASC
            ) page_query
            WHERE ROWNUM <= :page_end
          )
          WHERE "rn" > :offset`,
-        {
-          page_end: pagination.pageEnd,
-          offset: pagination.offset,
-        },
+        binds,
         {
           fetchArraySize: Math.min(pagination.limit + 1, 100),
           maxRows: pagination.limit + 1,
@@ -442,8 +562,8 @@ async function listMasterStations(query) {
       connection.execute(
         `SELECT COUNT(*) AS "total"
          FROM "tb_master_station_position"
-         WHERE "kode_station" LIKE 'FLOW!_%' ESCAPE '!'`,
-        {},
+         ${whereSql}`,
+        Object.fromEntries(Object.entries(binds).filter(([k]) => !["page_end", "offset"].includes(k))),
         { fetchArraySize: 1, maxRows: 1 }
       ),
     ]);
@@ -459,84 +579,122 @@ async function listMasterStations(query) {
   });
 }
 
-async function createMasterStation(data) {
-  const columns = [
-    "kode_station", "nama", "x", "y", "z", "id_desa", "WaterLevel", "Rainfall",
-    "Repeater", "Master", "Sub", "Branch", "GSMRainfall", "GSMWaterlevel",
-    "TableData", "indexhuluhilir", "nostation", "clock", "validpos", "objecttype",
-    "SIAGAWaterlevel", "SIAGADisch", "ws", "wl_decimal_num", "visible", "enabled",
-    "GSMWQMS", "TableDataForecast", "hasForecast", "hasWLOffset", "WLOffset",
-    "history_nomor", "provider", "sigab_enabled", "stastion_type", "aq_location_identifier",
-    "id_api", "template_api", "GSMINSTR", "GSMFLOW", "resolution"
-  ];
-
-  if (data.TableData != null && !SAFE_TABLE_NAME.test(data.TableData)) {
-    throw badRequest("TableData must match the pattern tb_[a-z0-9_]+");
-  }
-
-  if (data.TableDataForecast != null && !SAFE_TABLE_NAME.test(data.TableDataForecast)) {
-    throw badRequest("TableDataForecast must match the pattern tb_[a-z0-9_]+");
-  }
-
-  // Numeric columns — must be a finite number or null.
-  const NUMERIC_COLUMNS = new Set([
-    "x", "y", "z", "id_desa", "WaterLevel", "Rainfall", "Repeater", "Master",
-    "Sub", "Branch", "GSMRainfall", "GSMWaterlevel", "indexhuluhilir",
-    "nostation", "clock", "validpos", "objecttype", "SIAGAWaterlevel",
-    "SIAGADisch", "ws", "wl_decimal_num", "visible", "enabled", "GSMWQMS",
-    "hasForecast", "hasWLOffset", "WLOffset", "history_nomor",
-    "sigab_enabled", "GSMINSTR", "GSMFLOW", "resolution",
-  ]);
-
-  for (const col of NUMERIC_COLUMNS) {
-    const raw = data[col];
-
-    if (raw === undefined || raw === null || raw === "") {
-      continue;
-    }
-
-    const num = Number(raw);
-
-    if (!Number.isFinite(num)) {
-      throw badRequest(`${col} must be a number`);
-    }
-  }
-
-  const binds = {};
-  columns.forEach(col => {
-    if (NUMERIC_COLUMNS.has(col)) {
-      const raw = data[col];
-      binds[col] = (raw !== undefined && raw !== null && raw !== "") ? Number(raw) : null;
-    } else {
-      binds[col] = data[col] !== undefined && data[col] !== "" ? data[col] : null;
-    }
+async function findMasterStation(idValue) {
+  const id = parseStationId(idValue);
+  return withConnection(async (connection) => {
+    const row = await getMasterStationById(connection, id);
+    if (!row) throw notFound("master station not found");
+    return row;
   });
+}
 
-  for (const col of columns) {
-    if (typeof binds[col] === "string" && binds[col].length > 255) {
-      throw badRequest(`${col} must be 255 characters or less`);
-    }
+async function createMasterStation(data) {
+  const payload = validateMasterStationPayload(data, { partial: false });
+
+  for (const col of MASTER_COLUMNS) {
+    if (payload[col] === undefined) payload[col] = null;
   }
 
-  const placeholders = columns.map(c => `:${c}`).join(", ");
-  const colNames = columns.map(c => `"${c}"`).join(", ");
+  const placeholders = MASTER_COLUMNS.map(c => `:${c}`).join(", ");
+  const colNames = MASTER_COLUMNS.map(c => `"${c}"`).join(", ");
 
   return withConnection(async (connection) => {
-    await connection.execute(
-      `INSERT INTO "tb_master_station_position" (${colNames}) VALUES (${placeholders})`,
-      binds,
-      { autoCommit: true }
-    );
-    return { success: true };
+    // generate id explicitly to avoid trigger dependency and to return it
+    let shouldRollback = false;
+    try {
+      await connection.execute(`LOCK TABLE "tb_master_station_position" IN EXCLUSIVE MODE`);
+      shouldRollback = true;
+      const idResult = await connection.execute(`SELECT NVL(MAX("id"),0)+1 AS "next_id" FROM "tb_master_station_position"`);
+      const nextId = Number(idResult.rows[0].next_id);
+      await connection.execute(
+        `INSERT INTO "tb_master_station_position" ("id", ${colNames}) VALUES (:id, ${placeholders})`,
+        { id: nextId, ...payload },
+      );
+      await connection.commit();
+      shouldRollback = false;
+      const created = await getMasterStationById(connection, nextId);
+      return { data: created };
+    } catch (error) {
+      if (shouldRollback) try { await connection.rollback(); } catch {}
+      if (error.code === "ORA-00001" || String(error.message).includes("ORA-00001")) {
+        const e = new Error("kode_station already exists");
+        e.statusCode = 409;
+        throw e;
+      }
+      throw error;
+    }
+  });
+}
+
+async function updateMasterStation(idValue, data, { partial = true } = {}) {
+  const id = parseStationId(idValue);
+  const payload = validateMasterStationPayload(data, { partial });
+
+  if (Object.keys(payload).length === 0) {
+    throw badRequest("no updatable fields provided");
+  }
+
+  return withConnection(async (connection) => {
+    let shouldRollback = false;
+    try {
+      const before = await getMasterStationById(connection, id);
+      if (!before) throw notFound("master station not found");
+
+      const setClauses = Object.keys(payload).map((field) => `"${field}" = :${field}`);
+      const binds = { ...payload, id };
+      shouldRollback = true;
+      const result = await connection.execute(
+        `UPDATE "tb_master_station_position" SET ${setClauses.join(", ")} WHERE "id" = :id`,
+        binds,
+      );
+      if (result.rowsAffected === 0) throw notFound("master station not found");
+      await connection.commit();
+      shouldRollback = false;
+      const after = await getMasterStationById(connection, id);
+      return { data: after, before };
+    } catch (error) {
+      if (shouldRollback) try { await connection.rollback(); } catch {}
+      if (error.statusCode) throw error;
+      if (error.code === "ORA-00001" || String(error.message).includes("ORA-00001")) {
+        const e = new Error("kode_station already exists");
+        e.statusCode = 409;
+        throw e;
+      }
+      throw error;
+    }
+  });
+}
+
+async function deleteMasterStation(idValue) {
+  const id = parseStationId(idValue);
+  return withConnection(async (connection) => {
+    const existing = await getMasterStationById(connection, id);
+    if (!existing) throw notFound("master station not found");
+    let shouldRollback = false;
+    try {
+      shouldRollback = true;
+      const result = await connection.execute(`DELETE FROM "tb_master_station_position" WHERE "id" = :id`, { id });
+      if (result.rowsAffected === 0) throw notFound("master station not found");
+      await connection.commit();
+      shouldRollback = false;
+    } catch (error) {
+      if (shouldRollback) try { await connection.rollback(); } catch {}
+      throw error;
+    }
   });
 }
 
 module.exports = {
+  MASTER_COLUMNS,
   buildFlowStationDataResponse,
   clearCache,
   createMasterStation,
+  deleteMasterStation,
+  findMasterStation,
   getFlowStationData,
   invalidateStation,
   listFlowStations,
   listMasterStations,
+  updateMasterStation,
+  validateMasterStationPayload,
 };
