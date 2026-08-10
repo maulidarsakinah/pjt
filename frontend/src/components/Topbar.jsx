@@ -190,6 +190,10 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
         </div>
       </div>
       <div className="topbar-right">
+        <button className="topbar-notification-btn" title="Notifikasi" type="button">
+          <i className="fa-regular fa-bell"></i>
+          <span className="topbar-notification-badge"></span>
+        </button>
         <div className="account-menu" ref={accountRef}>
           <button
             className={`user-dropdown ${isAccountOpen ? "active" : ""}`}
