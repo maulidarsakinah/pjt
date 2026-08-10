@@ -8,8 +8,12 @@ const refreshTokenTtlSeconds =
   process.env.REFRESH_TOKEN_TTL_SECONDS === undefined
     ? 7 * 24 * 60 * 60
     : Number(process.env.REFRESH_TOKEN_TTL_SECONDS);
-const refreshCookieName =
+const refreshCookieNameBase =
   process.env.REFRESH_COOKIE_NAME || "hydrotrack_refresh";
+const refreshCookieName =
+  nodeEnv === "production"
+    ? `__Host-${refreshCookieNameBase}`
+    : refreshCookieNameBase;
 const insecureRefreshTokenSecrets = new Set([
   "change-this-refresh-secret",
   "change-this-to-a-different-long-random-secret",
@@ -43,7 +47,7 @@ if (!Number.isInteger(refreshTokenTtlSeconds) || refreshTokenTtlSeconds <= 0) {
   throw new Error("REFRESH_TOKEN_TTL_SECONDS must be a positive integer");
 }
 
-if (!/^[A-Za-z0-9_-]+$/.test(refreshCookieName)) {
+if (!/^(__Host-)?[A-Za-z0-9_-]+$/.test(refreshCookieName)) {
   throw new Error(
     "REFRESH_COOKIE_NAME may contain only letters, numbers, underscores, and hyphens",
   );
@@ -51,6 +55,26 @@ if (!/^[A-Za-z0-9_-]+$/.test(refreshCookieName)) {
 
 if (!Number.isInteger(revocationMaxItems) || revocationMaxItems <= 0) {
   throw new Error("TOKEN_REVOCATION_MAX_ITEMS must be a positive integer");
+}
+
+const corsOrigins = (process.env.CORS_ORIGINS || "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+if (nodeEnv === "production" && corsOrigins.length === 0) {
+  throw new Error(
+    "CORS_ORIGINS must be set to at least one allowed origin in production",
+  );
+}
+
+const refreshCookieSecure =
+  nodeEnv === "production" || process.env.REFRESH_COOKIE_SECURE === "true";
+
+if (nodeEnv === "production" && !refreshCookieSecure) {
+  throw new Error(
+    "REFRESH_COOKIE_SECURE must be true in production",
+  );
 }
 
 const config = {
@@ -78,16 +102,12 @@ const config = {
     refreshTokenAudience:
       process.env.REFRESH_TOKEN_AUDIENCE || "pkl-api-refresh",
     refreshCookieName,
-    refreshCookieSecure:
-      nodeEnv === "production" || process.env.REFRESH_COOKIE_SECURE === "true",
+    refreshCookieSecure,
     revocationMaxItems,
   },
   security: {
     bodyLimit: process.env.BODY_LIMIT || "100kb",
-    corsOrigins: (process.env.CORS_ORIGINS || "")
-      .split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean),
+    corsOrigins,
     docsEnabled:
       process.env.ENABLE_DOCS === "true" ||
       (process.env.ENABLE_DOCS !== "false" && nodeEnv !== "production"),
@@ -107,6 +127,16 @@ const config = {
     authMaxItems: Number(process.env.AUTH_CACHE_MAX_ITEMS) || 5000,
     stationTtlMs: (Number(process.env.STATION_CACHE_TTL_SECONDS) || 300) * 1000,
     stationMaxItems: Number(process.env.STATION_CACHE_MAX_ITEMS) || 1000,
+  },
+  idempotency: {
+    ttlMs: (() => {
+      const v = Number(process.env.IDEMPOTENCY_TTL_SECONDS);
+      return (Number.isFinite(v) && v > 0 ? v : 24 * 60 * 60) * 1000;
+    })(),
+    maxItems: (() => {
+      const v = Number(process.env.IDEMPOTENCY_MAX_ITEMS);
+      return Number.isInteger(v) && v > 0 ? v : 5000;
+    })(),
   },
 };
 

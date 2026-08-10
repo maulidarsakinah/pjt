@@ -74,7 +74,6 @@ const STATIC_LATEST_READINGS = [
     flow: "142.50",
     totalizer: "452109",
     vcc: "12.42",
-    temp: "29.5",
     time: "2026-07-13 10:45",
   },
 ];
@@ -126,7 +125,6 @@ const DashboardMobileRow = ({ row }) => (
         <span className="dashboard-mobile-log-meta">
           <span>Debit: {row.flow} m³/s</span>
           <span>VCC: {row.vcc} V</span>
-          <span className="dashboard-mobile-latency">Suhu: {row.temp} °C</span>
         </span>
       </span>
     </div>
@@ -213,10 +211,9 @@ const Dashboard = () => {
       liveReadings.length
         ? liveReadings.map((row) => ({
             station: row.stationName,
-            flow: formatNumber(row.flow1),
-            totalizer: formatNumber(row.totalizer1, 0),
-            vcc: formatNumber(row.vcc),
-            temp: formatNumber(row.temp, 1),
+            flow:      row.schema === "new" ? formatNumber(row.flow_avg) : formatNumber(row.flow1),
+            totalizer: row.schema === "new" ? formatNumber(row.totalizer_end, 0) : formatNumber(row.totalizer1, 0),
+            vcc:       row.schema === "new" ? formatNumber(row.vcc_last) : formatNumber(row.vcc),
             time: formatDateTime(row.datetime),
           }))
         : STATIC_LATEST_READINGS,
@@ -227,7 +224,7 @@ const Dashboard = () => {
       liveReadings.length
         ? liveReadings.map((row) => ({
             time: formatTime(row.datetime),
-            ploso: row.flow1,
+            ploso: row.schema === "new" ? row.flow_avg : row.flow1,
           }))
         : STATIC_FLOW_CHART_DATA,
     [liveReadings],
@@ -237,7 +234,7 @@ const Dashboard = () => {
       liveReadings.length
         ? liveReadings.map((row) => ({
             time: formatTime(row.datetime),
-            vcc: row.vcc,
+            vcc: row.schema === "new" ? row.vcc_last : row.vcc,
           }))
         : STATIC_VOLTAGE_CHART_DATA,
     [liveReadings],
@@ -462,7 +459,6 @@ const Dashboard = () => {
                   <th>DEBIT (m3/s)</th>
                   <th>TOTALIZER (L)</th>
                   <th>VCC (V)</th>
-                  <th>SUHU (C)</th>
                   <th>STATUS</th>
                   <th>TERAKHIR DIPERBARUI</th>
                 </tr>
@@ -476,7 +472,6 @@ const Dashboard = () => {
                     <td>{row.flow}</td>
                     <td>{row.totalizer}</td>
                     <td>{row.vcc}</td>
-                    <td>{row.temp}</td>
                     <td>
                       <span className="badge-dot"></span>Active
                     </td>

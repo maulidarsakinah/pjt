@@ -20,6 +20,7 @@ const Detail = lazy(() => import("./pages/Detail"));
 const Settings = lazy(() => import("./pages/Settings"));
 const MasterAccount = lazy(() => import("./pages/MasterAccount"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
+const MasterData = lazy(() => import("./pages/MasterData"));
 const AdminPlaceholder = lazy(() => import("./pages/AdminPlaceholder"));
 
 const PageFallback = () => {
@@ -37,12 +38,19 @@ const PageFallback = () => {
 };
 
 function isAdminUser(user) {
-  const roleText = [user?.role, user?.roles?.join(" "), user?.role_name]
+  const roles = [
+    ...(Array.isArray(user?.roles) ? user.roles : []),
+    user?.role,
+    user?.role_name,
+  ]
     .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+    .map((role) => String(role).toLowerCase());
 
-  return roleText.includes("admin") || roleText.includes("administrator");
+  return (
+    roles.includes("admin") ||
+    roles.includes("administrator") ||
+    roles.includes("super-admin")
+  );
 }
 
 const ProtectedRoute = ({ layout, requireAdmin = false }) => {
@@ -100,24 +108,14 @@ function App() {
               <Route path="detail/:stationKey" element={<Detail />} />
               <Route path="master-account" element={<MasterAccount />} />
               <Route path="settings" element={<Settings />} />
-              <Route
-                path="master-data"
-                element={
-                  <AdminPlaceholder title="Master Data" icon="fa-database" />
-                }
-              />
+              <Route path="master-data" element={<MasterData />} />
               <Route
                 path="master-alat"
                 element={
                   <AdminPlaceholder title="Master Alat" icon="fa-microchip" />
                 }
               />
-              <Route
-                path="reports"
-                element={
-                  <AdminPlaceholder title="Laporan" icon="fa-file-lines" />
-                }
-              />
+
               <Route path="audit-log" element={<AuditLog />} />
             </Route>
           </Routes>

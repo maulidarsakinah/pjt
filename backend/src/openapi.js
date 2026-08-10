@@ -1599,6 +1599,179 @@ module.exports = {
         },
       },
     },
+    "/api/stations/master": {
+      get: {
+        tags: ["Stations"],
+        summary: "List master stations",
+        description:
+          "Requires a valid bearer token. Optional filters: search (kode_station/nama), station_type, enabled. The existing GET already used by the Master Data page; now documented with its query filters.",
+        operationId: "listMasterStations",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { $ref: "#/components/parameters/LimitQuery" },
+          { $ref: "#/components/parameters/OffsetQuery" },
+          {
+            name: "search",
+            in: "query",
+            required: false,
+            schema: { type: "string", maxLength: 200 },
+            description: "Case-insensitive search over kode_station and nama",
+          },
+          {
+            name: "station_type",
+            in: "query",
+            required: false,
+            schema: { type: "string", maxLength: 50 },
+            description: "Exact match on stastion_type, e.g. FLOW_MQTT",
+          },
+          {
+            name: "enabled",
+            in: "query",
+            required: false,
+            schema: { type: "string", enum: ["0", "1"] },
+          },
+        ],
+        responses: {
+          200: {
+            description: "Master stations returned successfully",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/MasterStationsResponse" },
+              },
+            },
+          },
+          400: { description: "Invalid query parameter" },
+          401: { description: "Missing or invalid bearer token" },
+        },
+      },
+      post: {
+        tags: ["Stations"],
+        summary: "Create a master station",
+        description: "Requires the `create stations` permission.",
+        operationId: "createMasterStation",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/MasterStationCreateRequest" },
+            },
+          },
+        },
+        responses: {
+          201: {
+            description: "Master station created successfully",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/MasterStationResponse" },
+              },
+            },
+          },
+          400: { description: "Validation error" },
+          401: { description: "Missing or invalid bearer token" },
+          403: { description: "Missing required permission" },
+          409: { description: "kode_station already exists" },
+        },
+      },
+    },
+    "/api/stations/master/{id}": {
+      get: {
+        tags: ["Stations"],
+        summary: "Get a master station by id",
+        description: "Requires a valid bearer token.",
+        operationId: "getMasterStation",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdPath" }],
+        responses: {
+          200: {
+            description: "Master station returned successfully",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/MasterStationResponse" },
+              },
+            },
+          },
+          401: { description: "Missing or invalid bearer token" },
+          404: { description: "Master station not found" },
+        },
+      },
+      put: {
+        tags: ["Stations"],
+        summary: "Replace a master station",
+        description: "Requires the `update stations` permission. kode_station and nama are required.",
+        operationId: "putMasterStation",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdPath" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/MasterStationCreateRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Master station updated successfully",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/MasterStationResponse" },
+              },
+            },
+          },
+          400: { description: "Validation error" },
+          401: { description: "Missing or invalid bearer token" },
+          403: { description: "Missing required permission" },
+          404: { description: "Master station not found" },
+          409: { description: "kode_station already exists" },
+        },
+      },
+      patch: {
+        tags: ["Stations"],
+        summary: "Update a master station",
+        description: "Requires the `update stations` permission. Partial update — at least one field required.",
+        operationId: "patchMasterStation",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdPath" }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/MasterStationUpdateRequest" },
+            },
+          },
+        },
+        responses: {
+          200: {
+            description: "Master station updated successfully",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/MasterStationResponse" },
+              },
+            },
+          },
+          400: { description: "Validation error" },
+          401: { description: "Missing or invalid bearer token" },
+          403: { description: "Missing required permission" },
+          404: { description: "Master station not found" },
+          409: { description: "kode_station already exists" },
+        },
+      },
+      delete: {
+        tags: ["Stations"],
+        summary: "Delete a master station",
+        description: "Requires the `delete stations` permission.",
+        operationId: "deleteMasterStation",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdPath" }],
+        responses: {
+          204: { description: "Master station deleted successfully" },
+          401: { description: "Missing or invalid bearer token" },
+          403: { description: "Missing required permission" },
+          404: { description: "Master station not found" },
+        },
+      },
+    },
     "/api/stations/flow": {
       get: {
         tags: ["Stations"],
@@ -2830,6 +3003,91 @@ module.exports = {
             maxLength: 100,
             example: "tb_flow_lamongan",
           },
+        },
+      },
+      MasterStationCommon: {
+        type: "object",
+        required: ["kode_station", "nama"],
+        properties: {
+          kode_station: { type: "string", maxLength: 500, example: "FLOW_BENGAWAN_01" },
+          nama: { type: "string", maxLength: 500, example: "Bengawan Solo — Cepu" },
+          x: { type: "number", nullable: true },
+          y: { type: "number", nullable: true },
+          z: { type: "number", nullable: true },
+          id_desa: { type: "integer", nullable: true },
+          WaterLevel: { type: "number", nullable: true },
+          Rainfall: { type: "number", nullable: true },
+          Repeater: { type: "number", nullable: true },
+          Master: { type: "number", nullable: true },
+          Sub: { type: "number", nullable: true },
+          Branch: { type: "number", nullable: true },
+          GSMRainfall: { type: "number", nullable: true },
+          GSMWaterlevel: { type: "number", nullable: true },
+          TableData: { type: "string", nullable: true, pattern: "^tb_[a-z0-9_]+$", example: "tb_flow_bengawan_01" },
+          indexhuluhilir: { type: "number", nullable: true },
+          nostation: { type: "string", nullable: true },
+          clock: { type: "number", nullable: true },
+          validpos: { type: "string", nullable: true },
+          objecttype: { type: "string", nullable: true },
+          SIAGAWaterlevel: { type: "string", nullable: true },
+          SIAGADisch: { type: "string", nullable: true },
+          ws: { type: "number", nullable: true },
+          wl_decimal_num: { type: "number", nullable: true },
+          visible: { type: "string", nullable: true },
+          enabled: { type: "number", nullable: true, enum: [0, 1] },
+          GSMWQMS: { type: "number", nullable: true },
+          TableDataForecast: { type: "string", nullable: true, pattern: "^tb_[a-z0-9_]+$" },
+          hasForecast: { type: "number", nullable: true },
+          hasWLOffset: { type: "number", nullable: true },
+          WLOffset: { type: "number", nullable: true },
+          history_nomor: { type: "string", nullable: true },
+          provider: { type: "string", nullable: true },
+          sigab_enabled: { type: "number", nullable: true },
+          stastion_type: { type: "string", nullable: true, example: "FLOW_MQTT" },
+          aq_location_identifier: { type: "integer", nullable: true },
+          id_api: { type: "string", nullable: true },
+          template_api: { type: "string", nullable: true },
+          GSMINSTR: { type: "number", nullable: true },
+          GSMFLOW: { type: "number", nullable: true },
+          resolution: { type: "string", nullable: true },
+        },
+      },
+      MasterStationCreateRequest: {
+        type: "object",
+        required: ["kode_station", "nama"],
+        allOf: [{ $ref: "#/components/schemas/MasterStationCommon" }],
+      },
+      MasterStationUpdateRequest: {
+        type: "object",
+        minProperties: 1,
+        properties: {
+          kode_station: { type: "string", maxLength: 500 },
+          nama: { type: "string", maxLength: 500 },
+          x: { type: "number", nullable: true },
+          y: { type: "number", nullable: true },
+          z: { type: "number", nullable: true },
+          id_desa: { type: "integer", nullable: true },
+          TableData: { type: "string", nullable: true, pattern: "^tb_[a-z0-9_]+$" },
+          enabled: { type: "number", nullable: true },
+          stastion_type: { type: "string", nullable: true },
+        },
+        additionalProperties: true,
+      },
+      MasterStationResponse: {
+        type: "object",
+        required: ["data"],
+        properties: { data: { type: "object" } },
+      },
+      MasterStationsResponse: {
+        type: "object",
+        required: ["data", "count", "total", "limit", "offset", "has_more"],
+        properties: {
+          data: { type: "array", items: { type: "object" } },
+          count: { type: "integer", example: 3 },
+          total: { type: "integer", example: 42 },
+          limit: { type: "integer", example: 10 },
+          offset: { type: "integer", example: 0 },
+          has_more: { type: "boolean", example: true },
         },
       },
       StationsResponse: {

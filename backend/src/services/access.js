@@ -3,6 +3,7 @@ const { TtlCache } = require("../cache");
 const db = require("../db");
 
 const USER_MODEL_TYPE = "App\\Models\\User";
+const SUPER_ADMIN_ROLE = "super-admin";
 
 const accessCache = new TtlCache({
   name: "user_access",
@@ -27,6 +28,16 @@ async function getUserRoles(connection, userId) {
   );
 
   return result.rows.map((role) => role.name);
+}
+
+async function getAllPermissions(connection) {
+  const result = await connection.execute(
+    `SELECT "name" AS "name"
+     FROM "permissions"
+     ORDER BY "name" ASC`,
+  );
+
+  return result.rows.map((permission) => permission.name);
 }
 
 async function getUserPermissions(connection, userId) {
@@ -72,7 +83,12 @@ async function getUserAccess(userId) {
   try {
     connection = await db.getConnection();
     const roles = await getUserRoles(connection, userId);
-    const permissions = await getUserPermissions(connection, userId);
+
+    // Super-admin gets every permission in the system automatically
+    const permissions = roles.includes(SUPER_ADMIN_ROLE)
+      ? await getAllPermissions(connection)
+      : await getUserPermissions(connection, userId);
+
     const access = { roles, permissions };
 
     accessCache.set(cacheKey, access);

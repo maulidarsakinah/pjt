@@ -8,7 +8,7 @@ const adminNavItems = [
   { to: "/admin/master-data", icon: "fa-database", label: "Master Data" },
   { to: "/admin/master-alat", icon: "fa-microchip", label: "Master Alat" },
   { to: "/admin/master-account", icon: "fa-users-gear", label: "Master Akun" },
-  { to: "/admin/reports", icon: "fa-file-lines", label: "Laporan" },
+
   { to: "/admin/audit-log", icon: "fa-clock-rotate-left", label: "Audit Log" },
   { to: "/admin/settings", icon: "fa-gear", label: "Pengaturan" },
 ];

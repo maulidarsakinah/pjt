@@ -1,6 +1,6 @@
 const { badRequest } = require("./httpErrors");
 
-function parsePositiveInteger(value, field = "id") {
+function parsePositiveInteger(value, field = "value") {
   const number = Number(value);
 
   if (!Number.isInteger(number) || number <= 0) {

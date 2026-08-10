@@ -66,12 +66,14 @@ function getRefreshToken(req) {
 }
 
 function refreshCookieOptions() {
+  const is_secure = config.auth.refreshCookieSecure;
+
   return {
     httpOnly: true,
     maxAge: config.auth.refreshTokenTtlSeconds * 1000,
-    path: "/api",
+    path: is_secure ? "/" : "/api",
     sameSite: "strict",
-    secure: config.auth.refreshCookieSecure,
+    secure: is_secure,
   };
 }
 

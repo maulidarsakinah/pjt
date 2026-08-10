@@ -33,7 +33,11 @@ function corsAllowlist(req, res, next) {
   res.setHeader("Vary", "Origin");
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Authorization, Content-Type, X-Request-Id, X-Trace-Id",
+    "Authorization, Content-Type, X-Request-Id, X-Trace-Id, Idempotency-Key",
+  );
+  res.setHeader(
+    "Access-Control-Expose-Headers",
+    "Idempotent-Replayed",
   );
   res.setHeader(
     "Access-Control-Allow-Methods",
@@ -49,7 +53,16 @@ function corsAllowlist(req, res, next) {
 }
 
 const securityHeaders = helmet({
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
   crossOriginResourcePolicy: {
     policy: "same-origin",
   },

@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
+import useAuth from "../contexts/useAuth";
 import KPICard from "../components/KPICard";
 import {
   createRole,
   createUser,
   getPermissions,
+  getRolePermissions,
   getRoles,
   getUserSummary,
   getUsers,
   resetUserPassword,
+  updateRole,
   updateRolePermissions,
   updateUser,
 } from "../services/api";
@@ -33,6 +36,58 @@ const masterKpiDescriptions = {
   active:
     "Jumlah akun aktif yang saat ini dapat digunakan untuk mengakses aplikasi.",
 };
+
+const STATIC_ROLES = [
+  { id: 1, name: "Administrator" },
+  { id: 2, name: "Operator" },
+  { id: 3, name: "Viewer" },
+];
+
+const STATIC_PERMISSIONS = [
+  { id: 1, action: "View Dashboard" },
+  { id: 2, action: "Manage Users" },
+  { id: 3, action: "Manage Stations" },
+];
+
+const STATIC_SUMMARY = {
+  total: 3,
+  admin: 1,
+  operator: 1,
+  active: 3,
+};
+
+const STATIC_USERS = [
+  {
+    id: 1,
+    name: "Admin User",
+    email: "admin@gmail.com",
+    phone: "08123456789",
+    roles: ["Administrator"],
+    role_id: 1,
+    status: "1",
+    last_login_at: new Date().toISOString(),
+  },
+  {
+    id: 2,
+    name: "PJT User",
+    email: "pjt@gmail.com",
+    phone: "08123456780",
+    roles: ["Operator"],
+    role_id: 2,
+    status: "1",
+    last_login_at: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 3,
+    name: "Viewer User",
+    email: "viewer@gmail.com",
+    phone: "08123456781",
+    roles: ["Viewer"],
+    role_id: 3,
+    status: "1",
+    last_login_at: new Date(Date.now() - 172800000).toISOString(),
+  },
+];
 
 function getInitials(name = "") {
   return name
@@ -141,6 +196,8 @@ const MasterMobileRow = ({ user, openDetail, openForm, openDelete }) => (
 );
 
 const MasterAccount = () => {
+  const { user } = useAuth();
+  const isDemoUser = Boolean(user?.is_demo);
   const isMobile = useMediaQuery("(max-width: 760px)");
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -167,6 +224,7 @@ const MasterAccount = () => {
   const [formData, setFormData] = useState(initialForm);
   const [roleName, setRoleName] = useState("");
   const [selectedPermissionIds, setSelectedPermissionIds] = useState([]);
+  const [selectedRole, setSelectedRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -180,6 +238,13 @@ const MasterAccount = () => {
 
   useEffect(() => {
     let active = true;
+
+    if (isDemoUser) {
+      setSummary(STATIC_SUMMARY);
+      setRoles(STATIC_ROLES);
+      setPermissionCatalog(STATIC_PERMISSIONS);
+      return;
+    }
 
     Promise.all([
       getUserSummary(),
@@ -197,7 +262,7 @@ const MasterAccount = () => {
     return () => {
       active = false;
     };
-  }, [reloadKey]);
+  }, [reloadKey, isDemoUser]);
 
   useEffect(() => {
     let active = true;
@@ -209,6 +274,29 @@ const MasterAccount = () => {
     if (appliedFilters.search) query.search = appliedFilters.search;
     if (appliedFilters.roleId) query.role_id = appliedFilters.roleId;
     if (appliedFilters.status) query.status = appliedFilters.status;
+
+    if (isDemoUser) {
+      let filteredUsers = [...STATIC_USERS];
+      if (query.search) {
+        const searchLower = query.search.toLowerCase();
+        filteredUsers = filteredUsers.filter(u =>
+          u.name.toLowerCase().includes(searchLower) ||
+          u.email.toLowerCase().includes(searchLower) ||
+          u.roles.join(", ").toLowerCase().includes(searchLower)
+        );
+      }
+      if (query.role_id) {
+        filteredUsers = filteredUsers.filter(u => String(u.role_id) === String(query.role_id));
+      }
+      if (query.status) {
+        filteredUsers = filteredUsers.filter(u => String(u.status) === String(query.status));
+      }
+
+      setUsers(filteredUsers.slice(query.offset, query.offset + query.limit).map(normalizeUser));
+      setTotalUsers(filteredUsers.length);
+      setLoading(false);
+      return;
+    }
 
     getUsers(query)
       .then((response) => {
@@ -222,11 +310,12 @@ const MasterAccount = () => {
     return () => {
       active = false;
     };
-  }, [appliedFilters, page, reloadKey]);
+  }, [appliedFilters, page, reloadKey, isDemoUser]);
 
   const closeModal = () => {
     setActiveModal(null);
     setSaving(false);
+    setSelectedRole(null);
   };
 
   const openDetail = (user) => {
@@ -253,6 +342,27 @@ const MasterAccount = () => {
     );
     setErrorMessage("");
     setActiveModal("form");
+  };
+
+  const openRoleForm = async (role = null) => {
+    setSelectedRole(role);
+    if (role) {
+      setRoleName(role.name);
+      try {
+        const res = await getRolePermissions(role.id);
+        setSelectedPermissionIds((res.data || []).map(p => p.id));
+      } catch (err) {
+        setErrorMessage(err.message);
+      }
+    } else {
+      setRoleName("");
+      setSelectedPermissionIds([]);
+    }
+    setActiveModal("role");
+  };
+
+  const openRoleList = () => {
+    setActiveModal("role-list");
   };
 
   const openDelete = (user) => {
@@ -295,6 +405,11 @@ const MasterAccount = () => {
   };
 
   const saveUser = async () => {
+    if (isDemoUser) {
+      alert("Aksi ini dinonaktifkan untuk akun demo.");
+      closeModal();
+      return;
+    }
     setSaving(true);
     setErrorMessage("");
     const body = {
@@ -323,6 +438,11 @@ const MasterAccount = () => {
   };
 
   const deactivateUser = async () => {
+    if (isDemoUser) {
+      alert("Aksi ini dinonaktifkan untuk akun demo.");
+      closeModal();
+      return;
+    }
     if (!selectedUser) return;
     setSaving(true);
     try {
@@ -344,13 +464,24 @@ const MasterAccount = () => {
   };
 
   const saveRole = async () => {
+    if (isDemoUser) {
+      alert("Aksi ini dinonaktifkan untuk akun demo.");
+      closeModal();
+      return;
+    }
     setSaving(true);
     setErrorMessage("");
     try {
-      const response = await createRole({ name: roleName, guard_name: "web" });
-      await updateRolePermissions(response.data.id, selectedPermissionIds);
+      if (selectedRole) {
+        await updateRole(selectedRole.id, { name: roleName, guard_name: "web" });
+        await updateRolePermissions(selectedRole.id, selectedPermissionIds);
+      } else {
+        const response = await createRole({ name: roleName, guard_name: "web" });
+        await updateRolePermissions(response.data.id, selectedPermissionIds);
+      }
       setRoleName("");
       setSelectedPermissionIds([]);
+      setSelectedRole(null);
       closeModal();
       refreshData();
     } catch (error) {
@@ -543,9 +674,9 @@ const MasterAccount = () => {
               <button
                 className="btn btn-outline"
                 type="button"
-                onClick={() => setActiveModal("role")}
+                onClick={openRoleList}
               >
-                <i className="fa-solid fa-shield-halved" /> Buat Role
+                <i className="fa-solid fa-list" /> Daftar Role
               </button>
             </div>
             <button
@@ -890,16 +1021,17 @@ const MasterAccount = () => {
             className="master-modal-card master-modal-card--wide"
             onMouseDown={(event) => event.stopPropagation()}
           >
-            <div className="master-modal-header">
-              <h3>Buat role baru</h3>
+            <div className="master-modal-header" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <button
-                className="master-close-button"
+                className="master-icon-button"
                 type="button"
-                onClick={closeModal}
-                aria-label="Tutup"
+                onClick={openRoleList}
+                aria-label="Kembali ke Daftar Role"
+                style={{ padding: '6px', margin: '-6px 0 -6px -6px' }}
               >
-                <i className="fa-solid fa-xmark" />
+                <i className="fa-solid fa-arrow-left" />
               </button>
+              <h3 style={{ margin: 0 }}>{selectedRole ? "Edit Role" : "Buat role baru"}</h3>
             </div>
             <div className="master-modal-body">
               <div className="filter-group">
@@ -940,9 +1072,9 @@ const MasterAccount = () => {
               <button
                 className="btn btn-outline"
                 type="button"
-                onClick={closeModal}
+                onClick={openRoleList}
               >
-                Batal
+                Kembali
               </button>
               <button
                 className="btn btn-primary"
@@ -951,6 +1083,87 @@ const MasterAccount = () => {
                 disabled={saving || !roleName.trim()}
               >
                 {saving ? "Menyimpan…" : "Simpan role"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === "role-list" && (
+        <div className="master-modal-overlay" onMouseDown={closeModal}>
+          <div
+            className="master-modal-card master-modal-card--wide"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="master-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <h3 style={{ margin: 0 }}>Daftar Role</h3>
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={() => openRoleForm()}
+                  style={{ padding: '6px 12px', fontSize: '13px' }}
+                >
+                  <i className="fa-solid fa-plus" style={{ marginRight: '6px' }} /> Buat Role
+                </button>
+              </div>
+              <button
+                className="master-close-button"
+                type="button"
+                onClick={closeModal}
+                aria-label="Tutup"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div className="master-modal-body">
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nama Role</th>
+                      <th className="master-actions-heading">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roles.length > 0 ? (
+                      roles.map((role) => (
+                        <tr key={role.id}>
+                          <td><b>{role.id}</b></td>
+                          <td><span className="master-role-badge">{role.name}</span></td>
+                          <td>
+                            <div className="master-table-actions">
+                              <button
+                                className="master-icon-button"
+                                type="button"
+                                title="Edit Role"
+                                onClick={() => openRoleForm(role)}
+                              >
+                                <i className="fa-solid fa-pen" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3">
+                          <div className="master-empty-state">Tidak ada role.</div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="master-modal-footer">
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={closeModal}
+              >
+                Tutup
               </button>
             </div>
           </div>

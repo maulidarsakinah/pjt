@@ -35,6 +35,10 @@ function parseIds(value, field) {
     throw badRequest(`${field} must be an array`);
   }
 
+  if (value.length > 50) {
+    throw badRequest(`${field} must not contain more than 50 items`);
+  }
+
   return [
     ...new Set(value.map((id) => parsePositiveInteger(id, field.slice(0, -1)))),
   ];

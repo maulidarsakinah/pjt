@@ -1,6 +1,7 @@
 const router = require("express").Router();
 const authenticate = require("../middleware/authenticate");
 const requirePermission = require("../middleware/requirePermission");
+const { idempotency } = require("../middleware/idempotency");
 const {
   assignUserPermission,
   assignUserRole,
@@ -61,7 +62,7 @@ router.get(
   },
 );
 
-router.post("/", requirePermission("create users"), async (req, res, next) => {
+router.post("/", requirePermission("create users"), idempotency(), async (req, res, next) => {
   try {
     res.status(201).json({ data: await createUser(req.body, req.user, req) });
   } catch (error) {
@@ -100,6 +101,7 @@ router.get("/:id", requirePermission("view users"), async (req, res, next) => {
 router.patch(
   "/:id",
   requirePermission("update users"),
+  idempotency(),
   async (req, res, next) => {
     try {
       res.json({
@@ -118,6 +120,7 @@ router.patch(
 router.post(
   "/:id/reset-password",
   requirePermission("update users"),
+  idempotency(),
   async (req, res, next) => {
     try {
       await resetUserPassword(
@@ -149,6 +152,7 @@ router.get(
 router.post(
   "/:id/roles/:roleId",
   requirePermission("create accesses"),
+  idempotency(),
   async (req, res, next) => {
     try {
       const userId = parsePositiveInteger(req.params.id);
@@ -168,6 +172,7 @@ router.post(
 router.delete(
   "/:id/roles/:roleId",
   requirePermission("delete accesses"),
+  idempotency(),
   async (req, res, next) => {
     try {
       const userId = parsePositiveInteger(req.params.id);
@@ -184,6 +189,7 @@ router.delete(
 router.put(
   "/:id/roles",
   requirePermission("update accesses"),
+  idempotency(),
   async (req, res, next) => {
     try {
       const userId = parsePositiveInteger(req.params.id);
@@ -207,6 +213,7 @@ router.put(
 router.post(
   "/:id/permissions/:permissionId",
   requirePermission("create accesses"),
+  idempotency(),
   async (req, res, next) => {
     try {
       const userId = parsePositiveInteger(req.params.id);
@@ -234,6 +241,7 @@ router.post(
 router.delete(
   "/:id/permissions/:permissionId",
   requirePermission("delete accesses"),
+  idempotency(),
   async (req, res, next) => {
     try {
       const userId = parsePositiveInteger(req.params.id);
@@ -253,6 +261,7 @@ router.delete(
 router.put(
   "/:id/permissions",
   requirePermission("update accesses"),
+  idempotency(),
   async (req, res, next) => {
     try {
       const userId = parsePositiveInteger(req.params.id);

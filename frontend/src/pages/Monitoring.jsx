@@ -105,15 +105,19 @@ function buildRangeQuery(timeRange) {
   };
 }
 
+function getTodayInWIB() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 function buildDetailRangeQuery() {
-  const end = new Date();
-
-  end.setSeconds(0, 0);
-
   return {
-    mode: "range",
-    start: new Date(end.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    end: end.toISOString(),
+    mode: "date",
+    date: getTodayInWIB(),
     limit: 10,
     offset: 0,
   };
@@ -121,18 +125,29 @@ function buildDetailRangeQuery() {
 
 function mapHistoryRow(station, reading, index) {
   const row = readingToRow(station, reading);
-
-  return {
+  const base = {
     id: `${station.id}-${reading.id ?? index}`,
     stationId: String(station.id),
     station: row.stationName,
-    debit: row.flow1,
-    totalizer: row.totalizer1,
-    vcc: row.vcc,
-    temp: row.temp,
     status: "Active",
     time: formatDateTime(row.datetime),
     timestamp: row.datetime,
+  };
+
+  if (row.schema === "new") {
+    return {
+      ...base,
+      debit: row.flow_avg,
+      totalizer: row.totalizer_end,
+      vcc: row.vcc_last,
+    };
+  }
+
+  return {
+    ...base,
+    debit: row.flow1,
+    totalizer: row.totalizer1,
+    vcc: row.vcc,
   };
 }
 
@@ -187,9 +202,6 @@ const MonitoringMobileRow = memo(({ row }) => (
         <span className="monitoring-mobile-log-meta">
           <span>Debit: {formatNumber(row.debit)} m³/s</span>
           <span>VCC: {formatNumber(row.vcc)} V</span>
-          <span className="monitoring-mobile-latency">
-            Suhu: {formatNumber(row.temp, 1)} °C
-          </span>
         </span>
       </span>
     </div>
@@ -221,7 +233,7 @@ const StationCard = memo(
           <span className="station-time">{latestTime}</span>
         </div>
         <button
-          className="btn btn-outline btn-block"
+          className="btn btn-primary btn-block"
           onClick={() => onShowDetail(station)}
           onFocus={() => onPrefetch(station)}
           onMouseEnter={() => onPrefetch(station)}
@@ -245,6 +257,7 @@ const Monitoring = () => {
     : "/dashboard/detail";
   const [stations, setStations] = useState([]);
   const [historyData, setHistoryData] = useState([]);
+  const [stationLatestMap, setStationLatestMap] = useState(new Map());
   const [locationFilter, setLocationFilter] = useState(DEFAULT_LOCATION);
   const [timeRange, setTimeRange] = useState(DEFAULT_TIME_RANGE);
   const [appliedLocation, setAppliedLocation] = useState(DEFAULT_LOCATION);
@@ -273,6 +286,22 @@ const Monitoring = () => {
         const stationRows = (stationResponse.data || []).filter((station) =>
           LIVE_STATION_IDS.has(String(station.id)),
         );
+
+        // Latest per station for the station cards — always has data even when
+        // the filtered history range (24h/7d) is empty (last point is 2026-08-06).
+        const latestResults = await Promise.allSettled(
+          stationRows.map(async (station) => {
+            const resp = await getFlowStationData(
+              station.id,
+              { mode: "latest" },
+              { signal: controller.signal },
+            );
+            const reading = resp.data?.[0];
+            if (!reading) return null;
+            return mapHistoryRow(station, reading, 0);
+          }),
+        );
+
         const results = await Promise.allSettled(
           stationRows.map(async (station) => {
             const response = await getFlowStationData(
@@ -301,6 +330,13 @@ const Monitoring = () => {
         if (isActive) {
           setStations(stationRows);
           setHistoryData(rows);
+          const latestMap = new Map();
+          latestResults.forEach((r) => {
+            if (r.status === "fulfilled" && r.value) {
+              latestMap.set(r.value.stationId, r.value);
+            }
+          });
+          setStationLatestMap(latestMap);
 
           if (failedRequestCount > 0) {
             setError(`Data dari ${failedRequestCount} stasiun gagal dimuat.`);
@@ -310,6 +346,7 @@ const Monitoring = () => {
         if (isActive && requestError.name !== "AbortError") {
           setStations([]);
           setHistoryData([]);
+          setStationLatestMap(new Map());
           setError(requestError.message || "Gagal memuat data monitoring.");
         }
       } finally {
@@ -377,36 +414,36 @@ const Monitoring = () => {
     visibleHistoryData.length,
   );
   const latestReadingByStation = useMemo(() => {
-    const readings = new Map();
-    const stationByName = new Map(
-      availableStations.map((station) => [
-        isDemoUser ? station.station_name : String(station.id),
-        station,
-      ]),
-    );
-
-    allHistoryData.forEach((row) => {
-      const station = stationByName.get(
-        isDemoUser ? row.station : row.stationId,
+    if (isDemoUser) {
+      const readings = new Map();
+      const stationByName = new Map(
+        availableStations.map((station) => [station.station_name, station]),
       );
-      const key = station ? String(station.id) : null;
-
-      if (key && !readings.has(key)) {
-        readings.set(key, row);
-      }
+      allHistoryData.forEach((row) => {
+        const station = stationByName.get(row.station);
+        const key = station ? String(station.id) : null;
+        if (key && !readings.has(key)) readings.set(key, row);
+      });
+      return readings;
+    }
+    // Station cards = latest (mode=latest), not the 24h/7d history range.
+    // Fallback to history head if latest fetch missed.
+    if (stationLatestMap.size > 0) return new Map(stationLatestMap);
+    const fallback = new Map();
+    const stationById = new Map(availableStations.map((s) => [String(s.id), s]));
+    allHistoryData.forEach((row) => {
+      const key = String(row.stationId);
+      if (stationById.has(key) && !fallback.has(key)) fallback.set(key, row);
     });
-
-    return readings;
-  }, [allHistoryData, availableStations, isDemoUser]);
+    return fallback;
+  }, [allHistoryData, availableStations, isDemoUser, stationLatestMap]);
 
   const getDetailQuery = useCallback((station) => {
-    const cacheKey = String(station.id);
-
-    if (!detailQueriesRef.current.has(cacheKey)) {
-      detailQueriesRef.current.set(cacheKey, buildDetailRangeQuery());
-    }
-
-    return detailQueriesRef.current.get(cacheKey);
+    // Always navigate with today's date in WIB — not a cached 24h range.
+    const today = getTodayInWIB();
+    const q = { mode: "date", date: today, limit: 10, offset: 0 };
+    detailQueriesRef.current.set(String(station.id), q);
+    return q;
   }, []);
 
   const handlePrefetchDetail = useCallback(
@@ -462,7 +499,6 @@ const Monitoring = () => {
       "Debit (m3/s)",
       "Totalizer (L)",
       "VCC (V)",
-      "Suhu (C)",
       "Status",
       "Last Update",
     ];
@@ -471,7 +507,6 @@ const Monitoring = () => {
       formatNumber(row.debit),
       formatNumber(row.totalizer, 0),
       formatNumber(row.vcc),
-      formatNumber(row.temp, 1),
       row.status,
       row.time,
     ]);
@@ -503,59 +538,6 @@ const Monitoring = () => {
         <p>Status jaringan sensor hidrologi real-time</p>
       </div>
 
-      <div className="filter-section">
-        <div className="filter-group">
-          <label>Lokasi Pemasangan</label>
-          <select
-            value={locationFilter}
-            onChange={(event) => setLocationFilter(event.target.value)}
-          >
-            <option value={DEFAULT_LOCATION}>Semua Lokasi</option>
-            {availableStations.map((station) => (
-              <option key={station.id} value={String(station.id)}>
-                {station.station_name || station.kode_station}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <label>Status Perangkat</label>
-          <select defaultValue="Semua Status">
-            <option>Semua Status</option>
-            <option>Online (Active)</option>
-          </select>
-        </div>
-
-        <div className="filter-group">
-          <label>Rentang Waktu</label>
-          <select
-            value={timeRange}
-            onChange={(event) => setTimeRange(event.target.value)}
-          >
-            <option value="24h">24 Jam Terakhir</option>
-            <option value="7d">7 Hari Terakhir</option>
-          </select>
-        </div>
-
-        <div className="filter-actions">
-          <button
-            className="btn btn-dark"
-            onClick={handleApplyFilter}
-            disabled={isLoading}
-          >
-            Apply Filter
-          </button>
-          <button
-            className="btn btn-outline"
-            style={{ marginLeft: "10px" }}
-            onClick={handleResetFilter}
-            disabled={isLoading}
-          >
-            Reset
-          </button>
-        </div>
-      </div>
 
       <div className="monitoring-layout">
         <div className="map-monitoring-container">
@@ -591,15 +573,74 @@ const Monitoring = () => {
       </div>
 
       <div className="panel" style={{ marginTop: "8px" }}>
-        <div className="panel-header" style={{ marginBottom: "10px" }}>
-          <div className="panel-title">Data Monitoring Historis</div>
+        <div className="panel-header" style={{ marginBottom: "20px", flexDirection: "column", alignItems: "flex-start", gap: "5px" }}>
+          <div className="panel-title">Historical Monitoring Data</div>
+          <div className="panel-subtitle">Menampilkan riwayat data hasil pemantauan sistem HydroTrack secara berkala.</div>
+        </div>
+
+        <div className="filter-section">
+          <div className="filter-group">
+            <label>Lokasi Pemasangan</label>
+            <select
+              value={locationFilter}
+              onChange={(event) => setLocationFilter(event.target.value)}
+            >
+              <option value={DEFAULT_LOCATION}>Semua Lokasi</option>
+              {availableStations.map((station) => (
+                <option key={station.id} value={String(station.id)}>
+                  {station.station_name || station.kode_station}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Status Perangkat</label>
+            <select defaultValue="Semua Status">
+              <option>Semua Status</option>
+              <option>Online (Active)</option>
+            </select>
+          </div>
+
+          <div className="filter-group">
+            <label>Rentang Waktu</label>
+            <select
+              value={timeRange}
+              onChange={(event) => setTimeRange(event.target.value)}
+            >
+              <option value="24h">24 Jam Terakhir</option>
+              <option value="7d">7 Hari Terakhir</option>
+            </select>
+          </div>
+
+          <div className="filter-actions">
+            <button
+              className="btn btn-primary"
+              onClick={handleApplyFilter}
+              disabled={isLoading}
+            >
+              FILTER
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={handleResetFilter}
+              disabled={isLoading}
+            >
+              RESET
+            </button>
+          </div>
+        </div>
+
+        <hr className="monitoring-divider" />
+
+        <div style={{ marginBottom: "15px" }}>
           <button
             className="btn btn-outline"
             style={{ fontSize: "12px", padding: "8px 14px" }}
             onClick={handleExportCsv}
             disabled={visibleHistoryData.length === 0}
           >
-            <i className="fa-solid fa-download"></i> Export CSV
+            <i className="fa-solid fa-download"></i> EXPORT
           </button>
         </div>
         <div className="table-container">
@@ -627,7 +668,6 @@ const Monitoring = () => {
                   <th>DEBIT (m³/s)</th>
                   <th>TOTALIZER (L)</th>
                   <th>VCC (V)</th>
-                  <th>SUHU (°C)</th>
                   <th>STATUS</th>
                   <th>LAST UPDATE</th>
                 </tr>
@@ -642,7 +682,6 @@ const Monitoring = () => {
                       <td>{formatNumber(row.debit)}</td>
                       <td>{formatNumber(row.totalizer, 0)}</td>
                       <td>{formatNumber(row.vcc)}</td>
-                      <td>{formatNumber(row.temp, 1)}</td>
                       <td>
                         <span className="badge-dot"></span>
                         {row.status}

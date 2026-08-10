@@ -13,19 +13,20 @@ import {
   formatTime,
   readingToRow,
 } from "../utils/flowData";
+import DetailExportModal from "../components/DetailExportModal";
 import "./Detail.css";
 
 const DEMO_CHART_DATA = [
-  { time: "01:00", debit: 138.1, totalizer: 450420, vcc: 12.45, suhu: 28.5 },
-  { time: "02:00", debit: 137.0, totalizer: 450605, vcc: 12.48, suhu: 28.2 },
-  { time: "03:00", debit: 136.2, totalizer: 450780, vcc: 12.49, suhu: 27.9 },
-  { time: "04:00", debit: 135.5, totalizer: 450950, vcc: 12.49, suhu: 27.8 },
-  { time: "05:00", debit: 136.0, totalizer: 451125, vcc: 12.48, suhu: 28.0 },
-  { time: "06:00", debit: 137.1, totalizer: 451320, vcc: 12.48, suhu: 28.5 },
-  { time: "07:00", debit: 138.5, totalizer: 451510, vcc: 12.45, suhu: 29.0 },
-  { time: "08:00", debit: 139.8, totalizer: 451705, vcc: 12.43, suhu: 29.2 },
-  { time: "09:00", debit: 141.2, totalizer: 451900, vcc: 12.4, suhu: 29.4 },
-  { time: "10:00", debit: 142.5, totalizer: 452109, vcc: 12.42, suhu: 29.5 },
+  { time: "01:00", debit: 138.1, totalizer: 450420, vcc: 12.45 },
+  { time: "02:00", debit: 137.0, totalizer: 450605, vcc: 12.48 },
+  { time: "03:00", debit: 136.2, totalizer: 450780, vcc: 12.49 },
+  { time: "04:00", debit: 135.5, totalizer: 450950, vcc: 12.49 },
+  { time: "05:00", debit: 136.0, totalizer: 451125, vcc: 12.48 },
+  { time: "06:00", debit: 137.1, totalizer: 451320, vcc: 12.48 },
+  { time: "07:00", debit: 138.5, totalizer: 451510, vcc: 12.45 },
+  { time: "08:00", debit: 139.8, totalizer: 451705, vcc: 12.43 },
+  { time: "09:00", debit: 141.2, totalizer: 451900, vcc: 12.4 },
+  { time: "10:00", debit: 142.5, totalizer: 452109, vcc: 12.42 },
 ];
 
 const DEMO_TABLE_DATA = [...DEMO_CHART_DATA].reverse().map((row) => ({
@@ -33,13 +34,13 @@ const DEMO_TABLE_DATA = [...DEMO_CHART_DATA].reverse().map((row) => ({
   id: row.time,
   datetimeLabel: `2026-07-06 ${row.time}`,
   timestamp: Date.parse(`2026-07-06T${row.time}:00+07:00`),
+  schema: "old",
 }));
 const DETAIL_PAGE_SIZE = 10;
 const LIVE_STATION_IDS = new Set(["697", "740"]);
 const FLOW_DOMAIN = [130, 150];
 const TOTALIZER_DOMAIN = [450000, 453000];
 const VCC_DOMAIN = [12.2, 12.6];
-const TEMPERATURE_DOMAIN = [25, 32];
 const FLOW_SERIES = [
   { dataKey: "debit", name: "Debit", color: "#3A4BCF", unit: "m³/s" },
 ];
@@ -49,22 +50,23 @@ const TOTALIZER_SERIES = [
 const VCC_SERIES = [
   { dataKey: "vcc", name: "VCC", color: "#f59e0b", unit: "V" },
 ];
-const TEMPERATURE_SERIES = [
-  { dataKey: "suhu", name: "Suhu", color: "#ef4444", unit: "°C" },
-];
 
-function buildHistoryRange() {
-  const end = new Date();
+function getTodayInWIB() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
 
-  end.setSeconds(0, 0);
-
-  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-
-  return {
-    mode: "range",
-    start: start.toISOString(),
-    end: end.toISOString(),
-  };
+function formatWIBFromDate(d) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 function normalizeStationKey(value) {
@@ -83,17 +85,33 @@ function stationMatchesKey(station, stationKey) {
 
 function mapLiveReading(station, reading, index) {
   const row = readingToRow(station, reading);
+  const base = {
+    id:           `${station.id}-${reading.id ?? index}`,
+    stationId:    String(station.id),
+    time:         formatTime(row.datetime),
+    datetimeLabel: formatDateTime(row.datetime),
+    timestamp:    Date.parse(row.datetime || 0),
+    schema:       row.schema,
+  };
+
+  if (row.schema === "new") {
+    return {
+      ...base,
+      debit:           row.flow_avg,
+      velocity:        row.velocity_avg,
+      totalizer:       row.totalizer_end,
+      vcc:             row.vcc_last,
+      battery:         row.battery_last,
+      vout_solar:      row.vout_solar_last,
+      unit_total:      row.unit_total,
+    };
+  }
 
   return {
-    id: `${station.id}-${reading.id ?? index}`,
-    stationId: String(station.id),
-    debit: row.flow1,
+    ...base,
+    debit:     row.flow1,
     totalizer: row.totalizer1,
-    vcc: row.vcc,
-    suhu: row.temp,
-    time: formatTime(row.datetime),
-    datetimeLabel: formatDateTime(row.datetime),
-    timestamp: Date.parse(row.datetime || 0),
+    vcc:       row.vcc,
   };
 }
 
@@ -111,13 +129,6 @@ function getPaginationItems(currentPage, pageCount) {
   }
 
   return [1, "ellipsis-start", currentPage, "ellipsis-end", pageCount];
-}
-
-function escapeCsvCell(value) {
-  const text = String(value ?? "");
-  const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
-
-  return `"${safeText.replaceAll('"', '""')}"`;
 }
 
 function useMediaQuery(query) {
@@ -146,11 +157,18 @@ const DetailMobileRow = memo(({ row, locationName }) => (
         </span>
         <strong>{locationName}</strong>
         <span className="detail-mobile-log-meta">
-          <span>Debit: {formatNumber(row.debit)} m³/s</span>
-          <span>VCC: {formatNumber(row.vcc)} V</span>
-          <span className="detail-mobile-latency">
-            Suhu: {formatNumber(row.suhu, 1)} °C
-          </span>
+          {row.schema === "new" ? (
+            <>
+              <span>Debit: {formatNumber(row.debit)} m³/s</span>
+              <span>Velocity: {formatNumber(row.velocity)} m/s</span>
+              <span>VCC: {formatNumber(row.vcc)} V</span>
+            </>
+          ) : (
+            <>
+              <span>Debit: {formatNumber(row.debit)} m³/s</span>
+              <span>VCC: {formatNumber(row.vcc)} V</span>
+            </>
+          )}
         </span>
       </span>
     </div>
@@ -168,23 +186,17 @@ const Detail = () => {
     ? "/admin/monitoring"
     : "/dashboard/monitoring";
   const navigationStation = location.state?.station;
-  const historyRange = useMemo(() => {
-    const navigationQuery = location.state?.historyQuery;
-
-    if (
-      navigationQuery?.mode === "range" &&
-      navigationQuery.start &&
-      navigationQuery.end
-    ) {
-      return {
-        mode: "range",
-        start: navigationQuery.start,
-        end: navigationQuery.end,
-      };
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const nav = location.state?.historyQuery;
+    if (nav?.mode === "date" && typeof nav.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(nav.date)) {
+      return nav.date;
     }
-
-    return buildHistoryRange();
-  }, [location.state]);
+    return getTodayInWIB();
+  });
+  const historyRange = useMemo(
+    () => ({ mode: "date", date: selectedDate }),
+    [selectedDate],
+  );
   const [station, setStation] = useState(() =>
     navigationStation && stationMatchesKey(navigationStation, stationKey)
       ? navigationStation
@@ -202,6 +214,7 @@ const Detail = () => {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     if (isDemoUser) {
@@ -336,10 +349,9 @@ const Detail = () => {
       (item) =>
         !searchString ||
         locationName.toLowerCase().includes(searchString) ||
-        item.debit.toString().includes(searchString) ||
-        item.totalizer.toString().includes(searchString) ||
-        item.vcc.toString().includes(searchString) ||
-        item.suhu.toString().includes(searchString) ||
+        String(item.debit ?? "").includes(searchString) ||
+        String(item.totalizer ?? "").includes(searchString) ||
+        String(item.vcc ?? "").includes(searchString) ||
         item.datetimeLabel.toLowerCase().includes(searchString) ||
         "active".includes(searchString),
     );
@@ -436,39 +448,6 @@ const Detail = () => {
     );
   };
 
-  const handleExportCsv = () => {
-    const headers = [
-      "Lokasi Stasiun",
-      "Debit (m3/s)",
-      "Totalizer (L)",
-      "VCC (V)",
-      "Suhu (C)",
-      "Status",
-      "Waktu",
-    ];
-    const rows = filteredAndSortedData.map((row) => [
-      locationName,
-      formatNumber(row.debit),
-      formatNumber(row.totalizer, 0),
-      formatNumber(row.vcc),
-      formatNumber(row.suhu, 1),
-      "Active",
-      row.datetimeLabel,
-    ]);
-    const csv = [headers, ...rows]
-      .map((row) => row.map(escapeCsvCell).join(","))
-      .join("\r\n");
-    const blob = new Blob([`\uFEFF${csv}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const downloadUrl = window.URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-
-    anchor.href = downloadUrl;
-    anchor.download = `${station?.kode_station || stationKey || "station"}-detail.csv`;
-    anchor.click();
-    window.URL.revokeObjectURL(downloadUrl);
-  };
 
   return (
     <div className="view-section">
@@ -504,7 +483,28 @@ const Detail = () => {
           }}
         >
           <div className="panel-title">Data Monitoring Historis (Detail)</div>
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            <label htmlFor="detail-date" style={{ fontSize: "13px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>Tanggal</label>
+            <input
+              id="detail-date"
+              type="date"
+              value={selectedDate}
+              onChange={(event) => {
+                const next = event.target.value;
+                if (/^\d{4}-\d{2}-\d{2}$/.test(next)) {
+                  setSelectedDate(next);
+                  setPage(1);
+                }
+              }}
+              max={getTodayInWIB()}
+              style={{
+                padding: "7px 10px",
+                border: "1px solid var(--border-color)",
+                borderRadius: "6px",
+                fontSize: "13px",
+                outline: "none",
+              }}
+            />
             <div style={{ position: "relative" }}>
               <i
                 className="fa-solid fa-search"
@@ -531,17 +531,16 @@ const Detail = () => {
                   borderRadius: "6px",
                   fontSize: "13px",
                   outline: "none",
-                  width: "200px",
+                  width: "180px",
                 }}
               />
             </div>
             <button
-              className="btn btn-outline"
-              style={{ fontSize: "12px", padding: "8px 14px" }}
-              disabled={filteredAndSortedData.length === 0}
-              onClick={handleExportCsv}
+              className="btn btn-primary detail-export-btn"
+              type="button"
+              onClick={() => setExportOpen(true)}
             >
-              <i className="fa-solid fa-download"></i> Export CSV
+              <i className="fa-solid fa-file-arrow-down"></i> Export
             </button>
           </div>
         </div>
@@ -577,76 +576,61 @@ const Detail = () => {
             <table>
               <thead>
                 <tr>
-                  <th
-                    onClick={() => handleSort("location")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    LOKASI STASIUN {getSortIcon("location")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("debit")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    DEBIT (m³/s) {getSortIcon("debit")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("totalizer")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    TOTALIZER (L) {getSortIcon("totalizer")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("vcc")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    VCC (V) {getSortIcon("vcc")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("suhu")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    SUHU (°C) {getSortIcon("suhu")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("status")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    STATUS {getSortIcon("status")}
-                  </th>
-                  <th
-                    onClick={() => handleSort("time")}
-                    style={{ cursor: "pointer" }}
-                  >
-                    WAKTU {getSortIcon("time")}
-                  </th>
+                  <th onClick={() => handleSort("location")} style={{ cursor: "pointer" }}>LOKASI STASIUN {getSortIcon("location")}</th>
+                  {pagedTableData[0]?.schema === "new" ? (
+                    <>
+                      <th onClick={() => handleSort("debit")} style={{ cursor: "pointer" }}>DEBIT (m³/s) {getSortIcon("debit")}</th>
+                      <th onClick={() => handleSort("velocity")} style={{ cursor: "pointer" }}>VELOCITY (m/s) {getSortIcon("velocity")}</th>
+                      <th onClick={() => handleSort("totalizer")} style={{ cursor: "pointer" }}>TOTALIZER {getSortIcon("totalizer")}</th>
+                      <th onClick={() => handleSort("vcc")} style={{ cursor: "pointer" }}>VCC (V) {getSortIcon("vcc")}</th>
+                      <th onClick={() => handleSort("battery")} style={{ cursor: "pointer" }}>BATTERY (V) {getSortIcon("battery")}</th>
+                      <th onClick={() => handleSort("vout_solar")} style={{ cursor: "pointer" }}>VOUT SOLAR (V) {getSortIcon("vout_solar")}</th>
+                      <th onClick={() => handleSort("unit_total")} style={{ cursor: "pointer" }}>UNIT TOTAL {getSortIcon("unit_total")}</th>
+                    </>
+                  ) : (
+                    <>
+                      <th onClick={() => handleSort("debit")} style={{ cursor: "pointer" }}>DEBIT (m³/s) {getSortIcon("debit")}</th>
+                      <th onClick={() => handleSort("totalizer")} style={{ cursor: "pointer" }}>TOTALIZER (L) {getSortIcon("totalizer")}</th>
+                      <th onClick={() => handleSort("vcc")} style={{ cursor: "pointer" }}>VCC (V) {getSortIcon("vcc")}</th>
+                    </>
+                  )}
+                  <th onClick={() => handleSort("status")} style={{ cursor: "pointer" }}>STATUS {getSortIcon("status")}</th>
+                  <th onClick={() => handleSort("time")} style={{ cursor: "pointer" }}>WAKTU {getSortIcon("time")}</th>
                 </tr>
               </thead>
               <tbody>
                 {pagedTableData.length > 0 ? (
                   pagedTableData.map((row) => (
                     <tr key={row.id}>
-                      <td>
-                        <b>{locationName}</b>
-                      </td>
-                      <td>{formatNumber(row.debit)}</td>
-                      <td>{formatNumber(row.totalizer, 0)}</td>
-                      <td>{formatNumber(row.vcc)}</td>
-                      <td>{formatNumber(row.suhu, 1)}</td>
-                      <td>
-                        <span className="badge-dot"></span>Active
-                      </td>
+                      <td><b>{locationName}</b></td>
+                      {row.schema === "new" ? (
+                        <>
+                          <td>{formatNumber(row.debit)}</td>
+                          <td>{formatNumber(row.velocity)}</td>
+                          <td>{formatNumber(row.totalizer, 0)}</td>
+                          <td>{formatNumber(row.vcc)}</td>
+                          <td>{formatNumber(row.battery)}</td>
+                          <td>{formatNumber(row.vout_solar)}</td>
+                          <td>{row.unit_total ?? "-"}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td>{formatNumber(row.debit)}</td>
+                          <td>{formatNumber(row.totalizer, 0)}</td>
+                          <td>{formatNumber(row.vcc)}</td>
+                        </>
+                      )}
+                      <td><span className="badge-dot"></span>Active</td>
                       <td>{row.datetimeLabel}</td>
                     </tr>
                   ))
                 ) : (
                   <tr>
                     <td
-                      colSpan="7"
+                      colSpan={pagedTableData[0]?.schema === "new" ? "10" : "6"}
                       style={{ textAlign: "center", padding: "30px" }}
                     >
-                      {isLoading
-                        ? "Memuat detail stasiun..."
-                        : "Tidak ada data yang cocok."}
+                      {isLoading ? "Memuat detail stasiun..." : "Tidak ada data yang cocok."}
                     </td>
                   </tr>
                 )}
@@ -716,7 +700,7 @@ const Detail = () => {
         <div className="panel">
           <div className="panel-header" style={{ marginBottom: "10px" }}>
             <div className="panel-title" style={{ fontSize: "14px" }}>
-              Grafik Debit Air (m³/s)
+              Grafik Debit (m³/s)
             </div>
           </div>
           <div className="chart-canvas-container" style={{ height: "200px" }}>
@@ -735,7 +719,7 @@ const Detail = () => {
         <div className="panel">
           <div className="panel-header" style={{ marginBottom: "10px" }}>
             <div className="panel-title" style={{ fontSize: "14px" }}>
-              Grafik Totalizer (L)
+              Grafik Totalizer
             </div>
           </div>
           <div className="chart-canvas-container" style={{ height: "200px" }}>
@@ -769,26 +753,17 @@ const Detail = () => {
             />
           </div>
         </div>
-
-        <div className="panel">
-          <div className="panel-header" style={{ marginBottom: "10px" }}>
-            <div className="panel-title" style={{ fontSize: "14px" }}>
-              Grafik Suhu (°C)
-            </div>
-          </div>
-          <div className="chart-canvas-container" style={{ height: "200px" }}>
-            <DeferredFlowChart
-              data={chartData}
-              xKey="time"
-              yDomain={isDemoUser ? TEMPERATURE_DOMAIN : undefined}
-              height={180}
-              showLegend={false}
-              compact
-              series={TEMPERATURE_SERIES}
-            />
-          </div>
-        </div>
       </div>
+
+      <DetailExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        station={station}
+        stationKey={stationKey}
+        locationName={locationName}
+        isDemoUser={isDemoUser}
+        DEMO_TABLE_DATA={DEMO_TABLE_DATA}
+      />
     </div>
   );
 };

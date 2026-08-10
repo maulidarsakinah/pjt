@@ -1,12 +1,14 @@
 .filter-section {
-  background-color: var(--bg-panel);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 20px;
   display: flex;
   gap: 20px;
   align-items: flex-end;
   flex-wrap: wrap;
+}
+
+.monitoring-divider {
+  border: 0;
+  border-top: 1px solid var(--border-color);
+  margin: 20px 0;
 }
 
 .monitoring-layout {
