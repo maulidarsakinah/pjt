@@ -13,6 +13,7 @@ import {
   formatTime,
   readingToRow,
 } from "../utils/flowData";
+import DetailExportModal from "../components/DetailExportModal";
 import "./Detail.css";
 
 const DEMO_CHART_DATA = [
@@ -50,18 +51,22 @@ const VCC_SERIES = [
   { dataKey: "vcc", name: "VCC", color: "#f59e0b", unit: "V" },
 ];
 
-function buildHistoryRange() {
-  const end = new Date();
+function getTodayInWIB() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
 
-  end.setSeconds(0, 0);
-
-  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-
-  return {
-    mode: "range",
-    start: start.toISOString(),
-    end: end.toISOString(),
-  };
+function formatWIBFromDate(d) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 function normalizeStationKey(value) {
@@ -126,13 +131,6 @@ function getPaginationItems(currentPage, pageCount) {
   return [1, "ellipsis-start", currentPage, "ellipsis-end", pageCount];
 }
 
-function escapeCsvCell(value) {
-  const text = String(value ?? "");
-  const safeText = /^[=+\-@]/.test(text) ? `'${text}` : text;
-
-  return `"${safeText.replaceAll('"', '""')}"`;
-}
-
 function useMediaQuery(query) {
   const [matches, setMatches] = useState(
     () => window.matchMedia(query).matches,
@@ -188,23 +186,17 @@ const Detail = () => {
     ? "/admin/monitoring"
     : "/dashboard/monitoring";
   const navigationStation = location.state?.station;
-  const historyRange = useMemo(() => {
-    const navigationQuery = location.state?.historyQuery;
-
-    if (
-      navigationQuery?.mode === "range" &&
-      navigationQuery.start &&
-      navigationQuery.end
-    ) {
-      return {
-        mode: "range",
-        start: navigationQuery.start,
-        end: navigationQuery.end,
-      };
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const nav = location.state?.historyQuery;
+    if (nav?.mode === "date" && typeof nav.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(nav.date)) {
+      return nav.date;
     }
-
-    return buildHistoryRange();
-  }, [location.state]);
+    return getTodayInWIB();
+  });
+  const historyRange = useMemo(
+    () => ({ mode: "date", date: selectedDate }),
+    [selectedDate],
+  );
   const [station, setStation] = useState(() =>
     navigationStation && stationMatchesKey(navigationStation, stationKey)
       ? navigationStation
@@ -222,6 +214,7 @@ const Detail = () => {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     if (isDemoUser) {
@@ -455,30 +448,6 @@ const Detail = () => {
     );
   };
 
-  const handleExportCsv = () => {
-    const is_new = filteredAndSortedData[0]?.schema === "new";
-    const headers = is_new
-      ? ["Lokasi Stasiun", "Debit (m3/s)", "Velocity (m/s)", "Totalizer", "VCC (V)", "Battery (V)", "Vout Solar (V)", "Unit Total", "Status", "Waktu"]
-      : ["Lokasi Stasiun", "Debit (m3/s)", "Totalizer (L)", "VCC (V)", "Status", "Waktu"];
-    const rows = filteredAndSortedData.map((row) =>
-      is_new
-        ? [locationName, formatNumber(row.debit), formatNumber(row.velocity), formatNumber(row.totalizer, 0), formatNumber(row.vcc), formatNumber(row.battery), formatNumber(row.vout_solar), row.unit_total ?? "-", "Active", row.datetimeLabel]
-        : [locationName, formatNumber(row.debit), formatNumber(row.totalizer, 0), formatNumber(row.vcc), "Active", row.datetimeLabel],
-    );
-    const csv = [headers, ...rows]
-      .map((row) => row.map(escapeCsvCell).join(","))
-      .join("\r\n");
-    const blob = new Blob([`\uFEFF${csv}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const downloadUrl = window.URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-
-    anchor.href = downloadUrl;
-    anchor.download = `${station?.kode_station || stationKey || "station"}-detail.csv`;
-    anchor.click();
-    window.URL.revokeObjectURL(downloadUrl);
-  };
 
   return (
     <div className="view-section">
@@ -514,7 +483,28 @@ const Detail = () => {
           }}
         >
           <div className="panel-title">Data Monitoring Historis (Detail)</div>
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+            <label htmlFor="detail-date" style={{ fontSize: "13px", color: "var(--text-secondary)", whiteSpace: "nowrap" }}>Tanggal</label>
+            <input
+              id="detail-date"
+              type="date"
+              value={selectedDate}
+              onChange={(event) => {
+                const next = event.target.value;
+                if (/^\d{4}-\d{2}-\d{2}$/.test(next)) {
+                  setSelectedDate(next);
+                  setPage(1);
+                }
+              }}
+              max={getTodayInWIB()}
+              style={{
+                padding: "7px 10px",
+                border: "1px solid var(--border-color)",
+                borderRadius: "6px",
+                fontSize: "13px",
+                outline: "none",
+              }}
+            />
             <div style={{ position: "relative" }}>
               <i
                 className="fa-solid fa-search"
@@ -541,17 +531,16 @@ const Detail = () => {
                   borderRadius: "6px",
                   fontSize: "13px",
                   outline: "none",
-                  width: "200px",
+                  width: "180px",
                 }}
               />
             </div>
             <button
-              className="btn btn-outline"
-              style={{ fontSize: "12px", padding: "8px 14px" }}
-              disabled={filteredAndSortedData.length === 0}
-              onClick={handleExportCsv}
+              className="btn btn-primary detail-export-btn"
+              type="button"
+              onClick={() => setExportOpen(true)}
             >
-              <i className="fa-solid fa-download"></i> Export CSV
+              <i className="fa-solid fa-file-arrow-down"></i> Export
             </button>
           </div>
         </div>
@@ -765,6 +754,16 @@ const Detail = () => {
           </div>
         </div>
       </div>
+
+      <DetailExportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        station={station}
+        stationKey={stationKey}
+        locationName={locationName}
+        isDemoUser={isDemoUser}
+        DEMO_TABLE_DATA={DEMO_TABLE_DATA}
+      />
     </div>
   );
 };

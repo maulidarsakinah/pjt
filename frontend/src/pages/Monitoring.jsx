@@ -105,15 +105,19 @@ function buildRangeQuery(timeRange) {
   };
 }
 
+function getTodayInWIB() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 function buildDetailRangeQuery() {
-  const end = new Date();
-
-  end.setSeconds(0, 0);
-
   return {
-    mode: "range",
-    start: new Date(end.getTime() - 24 * 60 * 60 * 1000).toISOString(),
-    end: end.toISOString(),
+    mode: "date",
+    date: getTodayInWIB(),
     limit: 10,
     offset: 0,
   };
@@ -253,6 +257,7 @@ const Monitoring = () => {
     : "/dashboard/detail";
   const [stations, setStations] = useState([]);
   const [historyData, setHistoryData] = useState([]);
+  const [stationLatestMap, setStationLatestMap] = useState(new Map());
   const [locationFilter, setLocationFilter] = useState(DEFAULT_LOCATION);
   const [timeRange, setTimeRange] = useState(DEFAULT_TIME_RANGE);
   const [appliedLocation, setAppliedLocation] = useState(DEFAULT_LOCATION);
@@ -281,6 +286,22 @@ const Monitoring = () => {
         const stationRows = (stationResponse.data || []).filter((station) =>
           LIVE_STATION_IDS.has(String(station.id)),
         );
+
+        // Latest per station for the station cards — always has data even when
+        // the filtered history range (24h/7d) is empty (last point is 2026-08-06).
+        const latestResults = await Promise.allSettled(
+          stationRows.map(async (station) => {
+            const resp = await getFlowStationData(
+              station.id,
+              { mode: "latest" },
+              { signal: controller.signal },
+            );
+            const reading = resp.data?.[0];
+            if (!reading) return null;
+            return mapHistoryRow(station, reading, 0);
+          }),
+        );
+
         const results = await Promise.allSettled(
           stationRows.map(async (station) => {
             const response = await getFlowStationData(
@@ -309,6 +330,13 @@ const Monitoring = () => {
         if (isActive) {
           setStations(stationRows);
           setHistoryData(rows);
+          const latestMap = new Map();
+          latestResults.forEach((r) => {
+            if (r.status === "fulfilled" && r.value) {
+              latestMap.set(r.value.stationId, r.value);
+            }
+          });
+          setStationLatestMap(latestMap);
 
           if (failedRequestCount > 0) {
             setError(`Data dari ${failedRequestCount} stasiun gagal dimuat.`);
@@ -318,6 +346,7 @@ const Monitoring = () => {
         if (isActive && requestError.name !== "AbortError") {
           setStations([]);
           setHistoryData([]);
+          setStationLatestMap(new Map());
           setError(requestError.message || "Gagal memuat data monitoring.");
         }
       } finally {
@@ -385,36 +414,36 @@ const Monitoring = () => {
     visibleHistoryData.length,
   );
   const latestReadingByStation = useMemo(() => {
-    const readings = new Map();
-    const stationByName = new Map(
-      availableStations.map((station) => [
-        isDemoUser ? station.station_name : String(station.id),
-        station,
-      ]),
-    );
-
-    allHistoryData.forEach((row) => {
-      const station = stationByName.get(
-        isDemoUser ? row.station : row.stationId,
+    if (isDemoUser) {
+      const readings = new Map();
+      const stationByName = new Map(
+        availableStations.map((station) => [station.station_name, station]),
       );
-      const key = station ? String(station.id) : null;
-
-      if (key && !readings.has(key)) {
-        readings.set(key, row);
-      }
+      allHistoryData.forEach((row) => {
+        const station = stationByName.get(row.station);
+        const key = station ? String(station.id) : null;
+        if (key && !readings.has(key)) readings.set(key, row);
+      });
+      return readings;
+    }
+    // Station cards = latest (mode=latest), not the 24h/7d history range.
+    // Fallback to history head if latest fetch missed.
+    if (stationLatestMap.size > 0) return new Map(stationLatestMap);
+    const fallback = new Map();
+    const stationById = new Map(availableStations.map((s) => [String(s.id), s]));
+    allHistoryData.forEach((row) => {
+      const key = String(row.stationId);
+      if (stationById.has(key) && !fallback.has(key)) fallback.set(key, row);
     });
-
-    return readings;
-  }, [allHistoryData, availableStations, isDemoUser]);
+    return fallback;
+  }, [allHistoryData, availableStations, isDemoUser, stationLatestMap]);
 
   const getDetailQuery = useCallback((station) => {
-    const cacheKey = String(station.id);
-
-    if (!detailQueriesRef.current.has(cacheKey)) {
-      detailQueriesRef.current.set(cacheKey, buildDetailRangeQuery());
-    }
-
-    return detailQueriesRef.current.get(cacheKey);
+    // Always navigate with today's date in WIB — not a cached 24h range.
+    const today = getTodayInWIB();
+    const q = { mode: "date", date: today, limit: 10, offset: 0 };
+    detailQueriesRef.current.set(String(station.id), q);
+    return q;
   }, []);
 
   const handlePrefetchDetail = useCallback(
