@@ -21,6 +21,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const MasterAccount = lazy(() => import("./pages/MasterAccount"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
 const MasterData = lazy(() => import("./pages/MasterData"));
+const MasterAlat = lazy(() => import("./pages/MasterAlat"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const AdminPlaceholder = lazy(() => import("./pages/AdminPlaceholder"));
 
@@ -112,12 +113,7 @@ function App() {
               <Route path="master-account" element={<MasterAccount />} />
               <Route path="settings" element={<Settings />} />
               <Route path="master-data" element={<MasterData />} />
-              <Route
-                path="master-alat"
-                element={
-                  <AdminPlaceholder title="Master Alat" icon="fa-microchip" />
-                }
-              />
+              <Route path="master-alat" element={<MasterAlat />} />
 
               <Route path="audit-log" element={<AuditLog />} />
             </Route>
