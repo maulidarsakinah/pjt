@@ -1,0 +1,22 @@
+# normalization_map.yaml
+# Mapping nama field -> tipe transformasi yang diterapkan mqtt_client.py
+# Menambah device/field baru cukup tambah baris di sini, TANPA mengubah kode Python.
+#
+# Tipe transformasi yang tersedia (lihat TRANSFORM_REGISTRY di mqtt_client.py):
+#   string_float_dot    -> string angka dengan titik desimal, mis. "24.00" -> 24.0
+#   string_float_comma  -> string angka dengan koma desimal,  mis. "21,22" -> 21.22
+#   float               -> sudah float asli dari JSON, pass-through aman
+#   int                 -> integer, pass-through aman
+#   passthrough         -> tidak dikonversi (string label, timestamp mentah, dst)
+
+fields:
+  _terminalTime: passthrough
+  _groupName: passthrough
+  idStation: passthrough
+  vcc: string_float_dot
+  battery: string_float_dot
+  vout_solar: string_float_comma
+  flow: float
+  velocity: float
+  totalizer: int
+  unitTotal: int
