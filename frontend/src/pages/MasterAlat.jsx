@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import KPICard from "../components/KPICard";
 import "./MasterAlat.css";
+import "./MasterAlatModals.css";
 
-const DUMMY_ALAT = [
+const INITIAL_DUMMY_ALAT = [
   {
     id: "ALT-001",
     nama: "Pos Pantau Brantas 01",
@@ -46,23 +47,68 @@ const DUMMY_ALAT = [
 ];
 
 const MasterAlat = () => {
+  const [dataAlat, setDataAlat] = useState(INITIAL_DUMMY_ALAT);
   const [filterJenis, setFilterJenis] = useState("");
   const [filterWilayah, setFilterWilayah] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [selectedAlat, setSelectedAlat] = useState(null);
+  
+  const initialForm = { id: "", nama: "", jenis: "Sensor Tinggi Muka Air", wilayah: "Sungai Brantas", status: "Active", lokasi: "" };
+  const [formData, setFormData] = useState(initialForm);
+
   const filteredData = useMemo(() => {
-    return DUMMY_ALAT.filter((item) => {
+    return dataAlat.filter((item) => {
       const matchJenis = filterJenis ? item.jenis === filterJenis : true;
       const matchWilayah = filterWilayah ? item.wilayah === filterWilayah : true;
       const matchStatus = filterStatus ? item.status === filterStatus : true;
       return matchJenis && matchWilayah && matchStatus;
     });
-  }, [filterJenis, filterWilayah, filterStatus]);
+  }, [dataAlat, filterJenis, filterWilayah, filterStatus]);
 
   const handleReset = () => {
     setFilterJenis("");
     setFilterWilayah("");
     setFilterStatus("");
+  };
+
+  const openAddModal = () => {
+    setFormData(initialForm);
+    setIsAddOpen(true);
+  };
+
+  const openEditModal = (item) => {
+    setFormData(item);
+    setSelectedAlat(item);
+    setIsEditOpen(true);
+  };
+
+  const openDeleteModal = (item) => {
+    setSelectedAlat(item);
+    setIsDeleteOpen(true);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddSubmit = () => {
+    setDataAlat(prev => [...prev, formData]);
+    setIsAddOpen(false);
+  };
+
+  const handleEditSubmit = () => {
+    setDataAlat(prev => prev.map(item => item.id === selectedAlat.id ? formData : item));
+    setIsEditOpen(false);
+  };
+
+  const handleDeleteSubmit = () => {
+    setDataAlat(prev => prev.filter(item => item.id !== selectedAlat.id));
+    setIsDeleteOpen(false);
   };
 
   const getStatusDisplay = (status) => {
@@ -188,7 +234,7 @@ const MasterAlat = () => {
         </div>
 
         <div className="action-bar">
-          <button className="btn btn-primary" type="button">
+          <button className="btn btn-primary" type="button" onClick={openAddModal}>
             <i className="fa-solid fa-plus"></i> TAMBAH ALAT
           </button>
           <button className="btn btn-outline" type="button">
@@ -222,10 +268,10 @@ const MasterAlat = () => {
                   <td>{getStatusDisplay(item.status)}</td>
                   <td>
                     <div className="action-buttons">
-                      <button className="action-btn" title="Edit Alat">
+                      <button className="action-btn" title="Edit Alat" onClick={() => openEditModal(item)}>
                         <i className="fa-solid fa-pen"></i>
                       </button>
-                      <button className="action-btn delete" title="Hapus Alat">
+                      <button className="action-btn delete" title="Hapus Alat" onClick={() => openDeleteModal(item)}>
                         <i className="fa-solid fa-trash-can"></i>
                       </button>
                     </div>
@@ -245,7 +291,7 @@ const MasterAlat = () => {
 
         <div className="pagination-footer">
           <div className="pagination-info">
-            Menampilkan 1-{filteredData.length} dari {DUMMY_ALAT.length} entri
+            Menampilkan {filteredData.length > 0 ? 1 : 0}-{filteredData.length} dari {dataAlat.length} entri
           </div>
           <div className="pagination-controls">
             <button className="page-btn" disabled>
@@ -258,6 +304,84 @@ const MasterAlat = () => {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {(isAddOpen || isEditOpen) && (
+        <div className="ma-modal-overlay" onClick={() => { setIsAddOpen(false); setIsEditOpen(false); }}>
+          <div className="ma-modal-content" onClick={e => e.stopPropagation()}>
+            <div className="ma-modal-header">
+              <h2 className="ma-modal-title">{isAddOpen ? "Form Tambah Alat" : "Form Edit Alat"}</h2>
+              <button className="ma-modal-close-btn" onClick={() => { setIsAddOpen(false); setIsEditOpen(false); }}>
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <div className="ma-modal-body">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Jenis Alat</label>
+                  <select name="jenis" className="form-select" value={formData.jenis} onChange={handleInputChange}>
+                    <option value="Sensor Tinggi Muka Air">Sensor Tinggi Muka Air</option>
+                    <option value="Sensor Curah Hujan">Sensor Curah Hujan</option>
+                    <option value="Sensor Debit Air">Sensor Debit Air</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Kode / ID Alat</label>
+                  <input type="text" name="id" className="form-input" placeholder="Contoh: ALT-001" value={formData.id} onChange={handleInputChange} disabled={isEditOpen} />
+                </div>
+                <div className="form-group full-width">
+                  <label>Nama Alat</label>
+                  <input type="text" name="nama" className="form-input" placeholder="Masukkan nama alat..." value={formData.nama} onChange={handleInputChange} />
+                </div>
+                <div className="form-group">
+                  <label>Wilayah Sungai</label>
+                  <select name="wilayah" className="form-select" value={formData.wilayah} onChange={handleInputChange}>
+                    <option value="Sungai Brantas">Sungai Brantas</option>
+                    <option value="Sungai Kadurus">Sungai Kadurus</option>
+                    <option value="Sungai Bengawan Solo">Sungai Bengawan Solo</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Status</label>
+                  <select name="status" className="form-select" value={formData.status} onChange={handleInputChange}>
+                    <option value="Active">Active</option>
+                    <option value="Maint.">Maintenance</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                <div className="form-group full-width">
+                  <label>Lokasi</label>
+                  <input type="text" name="lokasi" className="form-input" placeholder="Masukkan lokasi penempatan..." value={formData.lokasi} onChange={handleInputChange} />
+                </div>
+              </div>
+            </div>
+            <div className="ma-modal-footer">
+              <button className="btn btn-outline" onClick={() => { setIsAddOpen(false); setIsEditOpen(false); }}>Batal</button>
+              <button className="btn btn-primary" onClick={isAddOpen ? handleAddSubmit : handleEditSubmit}>Simpan</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteOpen && selectedAlat && (
+        <div className="ma-modal-overlay" onClick={() => setIsDeleteOpen(false)}>
+          <div className="ma-modal-content delete-modal" onClick={e => e.stopPropagation()}>
+            <div className="ma-modal-body">
+              <div className="delete-icon-wrapper">
+                <i className="fa-solid fa-triangle-exclamation"></i>
+              </div>
+              <h2 className="delete-title">Hapus Alat?</h2>
+              <p className="delete-message">
+                Apakah Anda yakin ingin menghapus alat <strong>{selectedAlat.nama}</strong> ({selectedAlat.id})? Tindakan ini tidak dapat dibatalkan.
+              </p>
+              <div className="delete-actions">
+                <button className="btn btn-outline" onClick={() => setIsDeleteOpen(false)}>Batal</button>
+                <button className="btn btn-danger" onClick={handleDeleteSubmit} style={{ background: "var(--danger-color)", color: "white", border: "none", padding: "8px 16px", borderRadius: "8px", cursor: "pointer", fontWeight: "600" }}>Ya, Hapus</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
