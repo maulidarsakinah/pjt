@@ -1,0 +1,7 @@
+**/__pycache__/
+*.pyc
+buffer/hydrotrack_buffer.db
+archive/
+venv/
+config.yaml
+.env
