@@ -19,7 +19,7 @@ mqtt:
 
 buffer:
   sqlite_path: "./buffer/hydrotrack_buffer.db"   # lokasi file SQLite, relatif terhadap working dir
-  archive_dir: "./archive"    # folder arsip mentah .jsonl, rotasi otomatis per hari (UTC)
+  archive_dir: "./archive"    # folder arsip mentah .jsonl, rotasi otomatis per hari menggunakan WIB (LOCAL_TZ)
 
 normalization:
   mapping_path: "./normalization_map.yaml"
