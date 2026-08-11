@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import KPICard from "../components/KPICard";
 import "./MasterAlat.css";
 import "./MasterAlatModals.css";
@@ -46,6 +46,61 @@ const INITIAL_DUMMY_ALAT = [
   },
 ];
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(
+    () => window.matchMedia(query).matches,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = (event) => setMatches(event.matches);
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [query]);
+
+  return matches;
+}
+
+const MasterAlatMobileRow = ({ item, openEditModal, openDeleteModal, getStatusDisplay }) => (
+  <li>
+    <div className="master-alat-mobile-log">
+      <span className="master-alat-mobile-log-main">
+        <span className="master-alat-mobile-log-topline">
+          <strong>{item.nama}</strong>
+          {getStatusDisplay(item.status)}
+        </span>
+        <span className="master-alat-mobile-log-meta">
+          <span className="master-alat-badge">{item.id}</span>
+          <span className="master-alat-badge">{item.jenis}</span>
+          <span>{item.wilayah}</span>
+        </span>
+        <div className="master-alat-mobile-actions">
+          <div className="master-alat-mobile-actions-left">
+            <button
+              className="action-btn"
+              type="button"
+              title="Edit"
+              onClick={() => openEditModal(item)}
+            >
+              <i className="fa-solid fa-pen" />
+            </button>
+            <button
+              className="action-btn delete"
+              type="button"
+              title="Hapus"
+              onClick={() => openDeleteModal(item)}
+            >
+              <i className="fa-solid fa-trash" />
+            </button>
+          </div>
+          <span className="master-alat-mobile-last-login">{item.lokasi}</span>
+        </div>
+      </span>
+    </div>
+  </li>
+);
+
 const MasterAlat = () => {
   const [dataAlat, setDataAlat] = useState(INITIAL_DUMMY_ALAT);
   const [filterJenis, setFilterJenis] = useState("");
@@ -56,6 +111,8 @@ const MasterAlat = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedAlat, setSelectedAlat] = useState(null);
+  
+  const isMobile = useMediaQuery("(max-width: 760px)");
   
   const initialForm = { id: "", nama: "", jenis: "Sensor Tinggi Muka Air", wilayah: "Sungai Brantas", status: "Active", lokasi: "" };
   const [formData, setFormData] = useState(initialForm);
@@ -243,50 +300,61 @@ const MasterAlat = () => {
         </div>
 
         <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID ALAT</th>
-                <th>NAMA ALAT</th>
-                <th>JENIS</th>
-                <th>LOKASI</th>
-                <th>WILAYAH</th>
-                <th>STATUS</th>
-                <th>AKSI</th>
-              </tr>
-            </thead>
-            <tbody>
+          {filteredData.length === 0 ? (
+            <div style={{ padding: "24px", textAlign: "center", color: "var(--text-secondary)" }}>
+              Tidak ada alat yang ditemukan.
+            </div>
+          ) : isMobile ? (
+            <ul className="master-alat-mobile-list">
               {filteredData.map((item) => (
-                <tr key={item.id}>
-                  <td>
-                    <strong>{item.id}</strong>
-                  </td>
-                  <td>{item.nama}</td>
-                  <td>{item.jenis}</td>
-                  <td>{item.lokasi}</td>
-                  <td>{item.wilayah}</td>
-                  <td>{getStatusDisplay(item.status)}</td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="action-btn" title="Edit Alat" onClick={() => openEditModal(item)}>
-                        <i className="fa-solid fa-pen"></i>
-                      </button>
-                      <button className="action-btn delete" title="Hapus Alat" onClick={() => openDeleteModal(item)}>
-                        <i className="fa-solid fa-trash-can"></i>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <MasterAlatMobileRow
+                  key={item.id}
+                  item={item}
+                  openEditModal={openEditModal}
+                  openDeleteModal={openDeleteModal}
+                  getStatusDisplay={getStatusDisplay}
+                />
               ))}
-              {filteredData.length === 0 && (
+            </ul>
+          ) : (
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <td colSpan="7" style={{ textAlign: "center", padding: "40px" }}>
-                    Tidak ada alat yang ditemukan.
-                  </td>
+                  <th>ID ALAT</th>
+                  <th>NAMA ALAT</th>
+                  <th>JENIS</th>
+                  <th>LOKASI</th>
+                  <th>WILAYAH</th>
+                  <th>STATUS</th>
+                  <th>AKSI</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredData.map((item) => (
+                  <tr key={item.id}>
+                    <td>
+                      <strong>{item.id}</strong>
+                    </td>
+                    <td>{item.nama}</td>
+                    <td>{item.jenis}</td>
+                    <td>{item.lokasi}</td>
+                    <td>{item.wilayah}</td>
+                    <td>{getStatusDisplay(item.status)}</td>
+                    <td>
+                      <div className="action-buttons">
+                        <button className="action-btn" title="Edit Alat" onClick={() => openEditModal(item)}>
+                          <i className="fa-solid fa-pen"></i>
+                        </button>
+                        <button className="action-btn delete" title="Hapus Alat" onClick={() => openDeleteModal(item)}>
+                          <i className="fa-solid fa-trash-can"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         <div className="pagination-footer">

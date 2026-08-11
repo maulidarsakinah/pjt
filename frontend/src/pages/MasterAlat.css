@@ -230,19 +230,35 @@
 
 @media (max-width: 768px) {
   .filter-section {
+    padding: 16px;
     flex-direction: column;
     align-items: stretch;
   }
   
   .filter-actions {
     margin-top: 8px;
+    display: flex;
+    gap: 12px;
   }
   
   .filter-actions button {
     flex: 1;
+    justify-content: center;
+  }
+
+  .action-bar {
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+  }
+
+  .action-bar button {
+    flex: 1;
+    justify-content: center;
   }
   
   .pagination-footer {
+    padding: 16px;
     flex-direction: column;
     gap: 16px;
   }
@@ -309,5 +325,98 @@
 
   .master-kpi-grid .kpi-desc {
     font-size: 8px;
+  }
+}
+
+.master-alat-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 760px) {
+  .master-alat-mobile-list {
+    display: block;
+    margin-top: 0;
+    overflow: hidden;
+    background: #fff;
+    list-style: none;
+    padding: 0;
+  }
+
+  .master-alat-mobile-list li:not(:last-child) {
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .master-alat-mobile-log {
+    width: 100%;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 14px;
+    background: #fff;
+    color: var(--text-primary);
+    text-align: left;
+  }
+
+  .master-alat-mobile-log-main {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .master-alat-mobile-log-topline,
+  .master-alat-mobile-log-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .master-alat-mobile-log-topline {
+    justify-content: space-between;
+  }
+
+  .master-alat-mobile-log-topline strong {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .master-alat-mobile-log-meta {
+    flex-wrap: wrap;
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  .master-alat-mobile-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+  }
+
+  .master-alat-mobile-actions-left {
+    display: flex;
+    gap: 10px;
+  }
+
+  .master-alat-mobile-last-login {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
   }
 }
