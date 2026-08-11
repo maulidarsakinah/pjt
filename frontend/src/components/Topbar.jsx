@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import useAuth from "../contexts/useAuth";
 import "./Topbar.css";
 
 const Topbar = ({ toggleSidebar, openLogoutModal }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const accountRef = useRef(null);
@@ -39,6 +40,14 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
     openLogoutModal?.();
   };
 
+  const handleNotificationClick = () => {
+    if (location.pathname.startsWith("/admin")) {
+      navigate("/admin/notifications");
+    } else {
+      navigate("/dashboard/notifications");
+    }
+  };
+
   const getBreadcrumb = () => {
     switch (location.pathname) {
       case "/dashboard":
@@ -52,6 +61,17 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
               style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
             ></i>{" "}
             <span>Monitoring</span>
+          </>
+        );
+      case "/dashboard/notifications":
+        return (
+          <>
+            Dashboard{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Notifikasi</span>
           </>
         );
       case "/dashboard/settings":
@@ -76,6 +96,17 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
               style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
             ></i>{" "}
             <span>Monitoring</span>
+          </>
+        );
+      case "/admin/notifications":
+        return (
+          <>
+            Admin{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Notifikasi</span>
           </>
         );
       case "/admin/master-account":
@@ -190,6 +221,15 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
         </div>
       </div>
       <div className="topbar-right">
+        <button 
+          className="topbar-notification-btn" 
+          title="Notifikasi" 
+          type="button"
+          onClick={handleNotificationClick}
+        >
+          <i className="fa-regular fa-bell"></i>
+          <span className="topbar-notification-badge"></span>
+        </button>
         <div className="account-menu" ref={accountRef}>
           <button
             className={`user-dropdown ${isAccountOpen ? "active" : ""}`}

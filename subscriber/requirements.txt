@@ -1,0 +1,14 @@
+# Install: pip install -r requirements.txt
+# (di Windows dengan PATH pip bermasalah, gunakan: python -m pip install -r requirements.txt)
+
+# MQTT ingestion (inputs/mqtt_client.py)
+paho-mqtt==2.1.0
+
+# Konfigurasi (main.py, semua modul yang baca config.yaml / normalization_map.yaml)
+PyYAML==6.0.2
+
+# Oracle DB (outputs/oracle_client.py, thick mode) 
+# Catatan: python-oracledb thick mode WAJIB Oracle Instant Client terpasang
+# terpisah di sistem (bukan lewat pip) -- lihat instant_client_lib_dir di
+# config.yaml. Tanpa itu, oracledb.init_oracle_client() akan gagal.
+oracledb==2.5.1

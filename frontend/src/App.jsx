@@ -21,6 +21,8 @@ const Settings = lazy(() => import("./pages/Settings"));
 const MasterAccount = lazy(() => import("./pages/MasterAccount"));
 const AuditLog = lazy(() => import("./pages/AuditLog"));
 const MasterData = lazy(() => import("./pages/MasterData"));
+const MasterAlat = lazy(() => import("./pages/MasterAlat"));
+const Notifications = lazy(() => import("./pages/Notifications"));
 const AdminPlaceholder = lazy(() => import("./pages/AdminPlaceholder"));
 
 const PageFallback = () => {
@@ -96,6 +98,7 @@ function App() {
             <Route path="/dashboard" element={<ProtectedRoute />}>
               <Route index element={<Dashboard />} />
               <Route path="monitoring" element={<Monitoring />} />
+              <Route path="notifications" element={<Notifications />} />
               <Route path="detail/:stationKey" element={<Detail />} />
               <Route path="settings" element={<Settings />} />
             </Route>
@@ -105,16 +108,12 @@ function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="monitoring" element={<Monitoring />} />
+              <Route path="notifications" element={<Notifications />} />
               <Route path="detail/:stationKey" element={<Detail />} />
               <Route path="master-account" element={<MasterAccount />} />
               <Route path="settings" element={<Settings />} />
               <Route path="master-data" element={<MasterData />} />
-              <Route
-                path="master-alat"
-                element={
-                  <AdminPlaceholder title="Master Alat" icon="fa-microchip" />
-                }
-              />
+              <Route path="master-alat" element={<MasterAlat />} />
 
               <Route path="audit-log" element={<AuditLog />} />
             </Route>

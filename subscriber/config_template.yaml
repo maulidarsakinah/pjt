@@ -1,0 +1,64 @@
+# config.yaml
+# Skeleton konfigurasi HydroTrack pipeline.
+# Nilai berlabel CHANGE_ME wajib diisi sebelum pipeline dijalankan.
+# JANGAN commit file ini ke git setelah diisi kredensial asli --
+# tambahkan "config.yaml" ke .gitignore, dan simpan template kosong terpisah
+# (misal config.example.yaml) untuk referensi struktur di repo.
+
+mqtt:
+  host: "Change me"          # IP broker Mosquitto. Simulasi lokal: "localhost" atau "127.0.0.1"
+  port:                  # default MQTT port (non-TLS). Sesuaikan jika broker pakai TLS (8883)
+  topic: "Change me"   # wildcard "#" untuk subscribe semua device di bawah bsolo
+  qos: 0                     # sesuai kesepakatan proyek
+  client_id: "hydrotrack-pipeline"   # unik per instance, penting kalau ada >1 subscriber
+  keepalive: 60
+  username:              # isi jika broker produksi pakai autentikasi, null jika tidak
+  password: 
+  stale_threshold_seconds: 20   # watchdog: warning jika tidak ada pesan masuk melebihi ini
+                                  # (default ~4x interval publish device 5 detik)
+
+buffer:
+  sqlite_path: "./buffer/hydrotrack_buffer.db"   # lokasi file SQLite, relatif terhadap working dir
+  archive_dir: "./archive"    # folder arsip mentah .jsonl, rotasi otomatis per hari menggunakan WIB (LOCAL_TZ)
+
+normalization:
+  mapping_path: "./normalization_map.yaml"
+
+aggregation:
+  window_seconds: 60         # 1 menit per window agregasi (acuan LOGIS, bukan lagi jeda pengecekan)
+  # REVISI: check_interval_seconds menentukan seberapa sering scheduler CEK
+  # buffer (bukan lagi window_seconds). Dipisah supaya window yang sudah
+  # lengkap (12 sample, menit kalendernya sudah selesai) bisa langsung
+  # terkirim dalam hitungan detik, bukan nunggu sampai siklus window_seconds
+  # berikutnya (bisa telat puluhan detik tanpa alasan kalau jadwal cek tidak
+  # selaras dengan batas menit kalender asli data device).
+  check_interval_seconds: 5
+  # incomplete_window_policy menentukan perilaku saat sample_count < 12 dalam satu window:
+  #   "wait_next_cycle" -> data TIDAK dikirim & TIDAK dihapus, tetap di buffer,
+  #                        digabung dengan data baru di siklus berikutnya sampai genap
+  #                        (atau sampai kena batas incomplete_window_max_age_seconds)
+  #   "process_anyway"  -> tetap dikirim & dihapus apa adanya meski kurang dari 12 sample
+  #   "discard"         -> dibuang tanpa dikirim (data hilang permanen, dipakai kalau
+  #                        data parsial memang tidak diinginkan sama sekali)
+  incomplete_window_policy: "wait_next_cycle"
+  # Safety net khusus untuk "wait_next_cycle": kalau data sudah menunggu lebih lama
+  # dari ini (detik) tapi belum juga genap 12 sample (mis. publisher mati permanen),
+  # data dipaksa terkirim apa adanya supaya tidak menumpuk di buffer selamanya.
+  incomplete_window_max_age_seconds: 180
+
+oracle:
+  # Menunggu kredensial & connection info dari tim BE (direct DB access, bukan REST API).
+  dsn: "Change me"           # contoh format: "hostname:port/service_name"
+  user: "Change me"
+  password: "Change me"
+  table_name: "Change me"    # nama tabel tujuan, harus disepakati eksplisit dengan tim BE
+  pool_min: 1
+  pool_max: 5
+  pool_increment: 1
+  # WAJIB diisi untuk THICK MODE: path folder hasil extract Oracle Instant Client.
+  # Download dari situs resmi Oracle (Basic atau Basic Light), sesuai versi & platform.
+  # Contoh Windows: "D:\\oracle\\instantclient_21_x"
+  instant_client_lib_dir: "Change me"
+
+logging:
+  level: "INFO"               # DEBUG untuk simulasi/debugging, INFO untuk produksi
