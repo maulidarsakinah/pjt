@@ -424,6 +424,10 @@ export function getPermissions(query) {
   return apiRequest("/api/permissions", { query });
 }
 
+export function createPermission(body) {
+  return apiRequest("/api/permissions", { method: "POST", body });
+}
+
 export function createRole(body) {
   return apiRequest("/api/roles", { method: "POST", body });
 }
@@ -444,5 +448,86 @@ export function updateRolePermissions(id, permissionIds) {
   return apiRequest(`/api/roles/${id}/permissions`, {
     method: "PUT",
     body: { permission_ids: permissionIds },
+  });
+}
+
+export function getNotifications(query) {
+  return apiRequest("/api/notifications", { query });
+}
+
+export function getNotificationSummary() {
+  return apiRequest("/api/notifications/summary");
+}
+
+export function markNotificationRead(id) {
+  return apiRequest(`/api/notifications/${id}/read`, { method: "PATCH" });
+}
+
+export function markAllNotificationsRead() {
+  return apiRequest("/api/notifications/read-all", { method: "POST" });
+}
+
+export function getAlatList(query, options) {
+  return apiRequest("/api/alat", { query, ...options });
+}
+
+export function getAlat(id, options) {
+  return apiRequest(`/api/alat/${id}`, options);
+}
+
+export function getAlatStatus(id, options) {
+  return apiRequest(`/api/alat/${id}/status`, options);
+}
+
+export function createAlat(body) {
+  return apiRequest("/api/alat", { method: "POST", body }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function updateAlat(id, body) {
+  return apiRequest(`/api/alat/${id}`, { method: "PUT", body }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function patchAlat(id, body) {
+  return apiRequest(`/api/alat/${id}`, { method: "PATCH", body }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function deleteAlat(id) {
+  return apiRequest(`/api/alat/${id}`, { method: "DELETE" }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function getStationColumns(stationId, options) {
+  return apiRequest(`/api/stations/${stationId}/columns`, options);
+}
+
+export function addAlatThreshold(id, body) {
+  return apiRequest(`/api/alat/${id}/thresholds`, { method: "POST", body }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function updateAlatThreshold(id, thresholdId, body) {
+  return apiRequest(`/api/alat/${id}/thresholds/${thresholdId}`, { method: "PUT", body }).then((res) => {
+    clearReadRequestCache();
+    return res;
+  });
+}
+
+export function deleteAlatThreshold(id, thresholdId) {
+  return apiRequest(`/api/alat/${id}/thresholds/${thresholdId}`, { method: "DELETE" }).then((res) => {
+    clearReadRequestCache();
+    return res;
   });
 }
