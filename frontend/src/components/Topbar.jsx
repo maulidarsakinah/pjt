@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAuth from "../contexts/useAuth";
+import { getNotificationSummary } from "../services/api";
 import "./Topbar.css";
 
 const Topbar = ({ toggleSidebar, openLogoutModal }) => {
@@ -8,6 +9,7 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const accountRef = useRef(null);
   const displayName = user?.name || "Operator";
   const companyName = user?.company?.name || user?.company_name || "Company";
@@ -32,6 +34,26 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchSummary = async () => {
+      try {
+        const res = await getNotificationSummary();
+        if (isMounted && res && res.data) {
+          setUnreadCount(res.data.unread_count ?? 0);
+        }
+      } catch (_err) {
+        // silent fallback
+      }
+    };
+    fetchSummary();
+    const interval = setInterval(fetchSummary, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
     };
   }, []);
 
@@ -228,7 +250,9 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
           onClick={handleNotificationClick}
         >
           <i className="fa-regular fa-bell"></i>
-          <span className="topbar-notification-badge"></span>
+          {unreadCount > 0 && (
+            <span className="topbar-notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+          )}
         </button>
         <div className="account-menu" ref={accountRef}>
           <button
