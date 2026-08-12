@@ -10,47 +10,47 @@ import {
 import "./MasterData.css";
 
 const columnsSchema = [
-  { name: "kode_station", type: "text", label: "Kode Station" },
-  { name: "nama", type: "text", label: "Nama" },
-  { name: "x", type: "number", label: "X" },
-  { name: "y", type: "number", label: "Y" },
-  { name: "z", type: "number", label: "Z" },
-  { name: "id_desa", type: "number", label: "ID Desa" },
-  { name: "WaterLevel", type: "number", label: "WaterLevel" },
-  { name: "Rainfall", type: "number", label: "Rainfall" },
-  { name: "Repeater", type: "number", label: "Repeater" },
-  { name: "Master", type: "number", label: "Master" },
-  { name: "Sub", type: "number", label: "Sub" },
-  { name: "Branch", type: "number", label: "Branch" },
-  { name: "GSMRainfall", type: "number", label: "GSMRainfall" },
-  { name: "GSMWaterlevel", type: "number", label: "GSMWaterlevel" },
-  { name: "TableData", type: "text", label: "TableData" },
-  { name: "indexhuluhilir", type: "number", label: "indexhuluhilir" },
-  { name: "nostation", type: "text", label: "nostation" },
-  { name: "clock", type: "number", label: "clock" },
-  { name: "validpos", type: "text", label: "validpos" },
-  { name: "objecttype", type: "text", label: "objecttype" },
-  { name: "SIAGAWaterlevel", type: "text", label: "SIAGAWaterlevel" },
-  { name: "SIAGADisch", type: "text", label: "SIAGADisch" },
-  { name: "ws", type: "number", label: "ws" },
-  { name: "wl_decimal_num", type: "number", label: "wl_decimal_num" },
-  { name: "visible", type: "text", label: "visible" },
-  { name: "enabled", type: "number", label: "enabled" },
-  { name: "GSMWQMS", type: "number", label: "GSMWQMS" },
-  { name: "TableDataForecast", type: "text", label: "TableDataForecast" },
-  { name: "hasForecast", type: "number", label: "hasForecast" },
-  { name: "hasWLOffset", type: "number", label: "hasWLOffset" },
-  { name: "WLOffset", type: "number", label: "WLOffset" },
-  { name: "history_nomor", type: "text", label: "history_nomor" },
-  { name: "provider", type: "text", label: "provider" },
-  { name: "sigab_enabled", type: "number", label: "sigab_enabled" },
-  { name: "stastion_type", type: "text", label: "stastion_type" },
-  { name: "aq_location_identifier", type: "number", label: "aq_location_identifier" },
-  { name: "id_api", type: "text", label: "id_api" },
-  { name: "template_api", type: "text", label: "template_api" },
-  { name: "GSMINSTR", type: "number", label: "GSMINSTR" },
-  { name: "GSMFLOW", type: "number", label: "GSMFLOW" },
-  { name: "resolution", type: "text", label: "resolution" }
+  { name: "kode_station", type: "text", label: "Kode Station", placeholder: "Contoh: FLOW_LAMONGAN_01" },
+  { name: "nama", type: "text", label: "Nama Station", placeholder: "Contoh: Stasiun Flowmeter Lamongan" },
+  { name: "x", type: "number", label: "X (Longitude)", placeholder: "Contoh: 112.43" },
+  { name: "y", type: "number", label: "Y (Latitude)", placeholder: "Contoh: -7.14" },
+  { name: "z", type: "number", label: "Z (Elevasi)", placeholder: "Contoh: 15.5" },
+  { name: "id_desa", type: "number", label: "ID Desa", placeholder: "Contoh: 1201" },
+  { name: "WaterLevel", type: "number", label: "WaterLevel", placeholder: "Contoh: 1" },
+  { name: "Rainfall", type: "number", label: "Rainfall", placeholder: "Contoh: 1" },
+  { name: "Repeater", type: "number", label: "Repeater", placeholder: "Contoh: 0" },
+  { name: "Master", type: "number", label: "Master", placeholder: "Contoh: 0" },
+  { name: "Sub", type: "number", label: "Sub", placeholder: "Contoh: 0" },
+  { name: "Branch", type: "number", label: "Branch", placeholder: "Contoh: 0" },
+  { name: "GSMRainfall", type: "number", label: "GSMRainfall", placeholder: "Contoh: 0" },
+  { name: "GSMWaterlevel", type: "number", label: "GSMWaterlevel", placeholder: "Contoh: 0" },
+  { name: "TableData", type: "text", label: "TableData", placeholder: "Contoh: tb_arr_lamongan" },
+  { name: "indexhuluhilir", type: "number", label: "Index Hulu/Hilir", placeholder: "Contoh: 1" },
+  { name: "nostation", type: "text", label: "No Station", placeholder: "Contoh: ST-001" },
+  { name: "clock", type: "number", label: "Clock", placeholder: "Contoh: 60" },
+  { name: "validpos", type: "text", label: "Valid Pos", placeholder: "Contoh: YES" },
+  { name: "objecttype", type: "text", label: "Object Type", placeholder: "Contoh: FLOW" },
+  { name: "SIAGAWaterlevel", type: "text", label: "SIAGA Waterlevel", placeholder: "Contoh: NORMAL" },
+  { name: "SIAGADisch", type: "text", label: "SIAGA Discharge", placeholder: "Contoh: NORMAL" },
+  { name: "ws", type: "number", label: "Wilayah Sungai (WS)", placeholder: "Contoh: 1" },
+  { name: "wl_decimal_num", type: "number", label: "WL Decimal Num", placeholder: "Contoh: 2" },
+  { name: "visible", type: "text", label: "Visible", placeholder: "Contoh: 1" },
+  { name: "enabled", type: "number", label: "Enabled (1/0)", placeholder: "1 = Aktif, 0 = Non-aktif" },
+  { name: "GSMWQMS", type: "number", label: "GSM WQMS", placeholder: "Contoh: 0" },
+  { name: "TableDataForecast", type: "text", label: "TableData Forecast", placeholder: "Contoh: tb_fc_lamongan" },
+  { name: "hasForecast", type: "number", label: "Has Forecast (1/0)", placeholder: "Contoh: 0" },
+  { name: "hasWLOffset", type: "number", label: "Has WL Offset (1/0)", placeholder: "Contoh: 0" },
+  { name: "WLOffset", type: "number", label: "WL Offset", placeholder: "Contoh: 0.0" },
+  { name: "history_nomor", type: "text", label: "History Nomor", placeholder: "Contoh: HIST-001" },
+  { name: "provider", type: "text", label: "Provider", placeholder: "Contoh: TELKOMSEL" },
+  { name: "sigab_enabled", type: "number", label: "Sigab Enabled (1/0)", placeholder: "Contoh: 1" },
+  { name: "stastion_type", type: "text", label: "Station Type", placeholder: "Contoh: FLOW_MQTT" },
+  { name: "aq_location_identifier", type: "number", label: "AQ Location ID", placeholder: "Contoh: 101" },
+  { name: "id_api", type: "text", label: "ID API", placeholder: "Contoh: API-001" },
+  { name: "template_api", type: "text", label: "Template API", placeholder: "Contoh: TMPL-01" },
+  { name: "GSMINSTR", type: "number", label: "GSM INSTR", placeholder: "Contoh: 0" },
+  { name: "GSMFLOW", type: "number", label: "GSM FLOW", placeholder: "Contoh: 1" },
+  { name: "resolution", type: "text", label: "Resolution", placeholder: "Contoh: 10m" }
 ];
 
 // static preview so you can see the UI without DB — mirrors MasterAccount pattern
@@ -59,6 +59,54 @@ const STATIC_PREVIEW = [
   { id: 102, kode_station: "FLOW_BRANTAS_02", id_desa: 1202, nama: "Brantas — Mojokerto", stastion_type: "FLOW_API", enabled: 1, TableData: "tb_flow_brantas_02", x: 112.43, y: -7.46 },
   { id: 103, kode_station: "FLOW_CITARUM_03", id_desa: 1203, nama: "Citarum — Karawang", stastion_type: "FLOW_MQTT", enabled: 0, TableData: "tb_flow_citarum_03", x: 107.3, y: -6.31 },
 ];
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(
+    () => window.matchMedia(query).matches,
+  );
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    const handleChange = (event) => setMatches(event.matches);
+
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, [query]);
+
+  return matches;
+}
+
+const MasterDataMobileRow = ({ station, onDetail, onEdit, onDelete }) => (
+  <li>
+    <article className="master-data-mobile-card">
+      <div className="master-data-mobile-main">
+        <div className="master-data-mobile-topline">
+          <strong>{station.kode_station}</strong>
+          <span className={`md-mobile-status ${Number(station.enabled) === 1 ? "is-active" : "is-inactive"}`}>
+            <span className="badge-dot" />
+            {Number(station.enabled) === 1 ? "Active" : "Non-active"}
+          </span>
+        </div>
+        <p>{station.nama || "Nama station tidak tersedia"}</p>
+        <div className="master-data-mobile-meta">
+          <span className="master-data-mobile-badge">ID Desa: {station.id_desa || "-"}</span>
+          <span className="master-data-mobile-badge">{station.stastion_type || "Tanpa tipe"}</span>
+        </div>
+        <div className="master-data-mobile-actions">
+          <button className="md-icon-btn" type="button" title="Detail" aria-label={`Lihat detail ${station.kode_station}`} onClick={() => onDetail(station)}>
+            <i className="fa-regular fa-eye" />
+          </button>
+          <button className="md-icon-btn" type="button" title="Ubah" aria-label={`Ubah ${station.kode_station}`} onClick={() => onEdit(station)}>
+            <i className="fa-solid fa-pen" />
+          </button>
+          <button className="md-icon-btn is-danger" type="button" title="Hapus" aria-label={`Hapus ${station.kode_station}`} onClick={() => onDelete(station)}>
+            <i className="fa-regular fa-trash-can" />
+          </button>
+        </div>
+      </div>
+    </article>
+  </li>
+);
 
 const MasterData = () => {
   const { user } = useAuth();
@@ -83,6 +131,7 @@ const MasterData = () => {
   const [statusInput, setStatusInput] = useState("");
   const [applied, setApplied] = useState({ search: "", stastion_type: "", enabled: "" });
   const limit = 10;
+  const isMobile = useMediaQuery("(max-width: 768px)");
 
   const showToast = useCallback((msg, tone = "success") => {
     setToast({ msg, tone });
@@ -315,7 +364,6 @@ const MasterData = () => {
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                 placeholder="kode / nama"
-                style={{ height: 38, padding: "0 12px", border: "1px solid var(--border-color)", borderRadius: 6, minWidth: 160 }}
               />
             </div>
             <div className="master-filter-group">
@@ -354,24 +402,36 @@ const MasterData = () => {
         {isDemo && <div className="md-feedback is-info">Mode demo — data preview lokal. Aksi tulis (tambah/ubah/hapus) hanya simulasi di browser.</div>}
 
         <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>KODE STATION</th>
-                <th>ID DESA</th>
-                <th>NAMA</th>
-                <th>STATION TYPE</th>
-                <th>STATUS</th>
-                <th style={{ textAlign: "center" }}>AKSI</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan="6" style={{ textAlign: "center", padding: "20px" }}>Loading...</td></tr>
-              ) : stations.length === 0 ? (
-                <tr><td colSpan="6" style={{ textAlign: "center", padding: "20px" }}>No data found.</td></tr>
-              ) : (
-                stations.map((station) => (
+          {loading ? (
+            <div className="md-table-message">Loading...</div>
+          ) : stations.length === 0 ? (
+            <div className="md-table-message">No data found.</div>
+          ) : isMobile ? (
+            <ul className="master-data-mobile-list">
+              {stations.map((station) => (
+                <MasterDataMobileRow
+                  key={station.id}
+                  station={station}
+                  onDetail={setSelectedStation}
+                  onEdit={openEdit}
+                  onDelete={setDeleteTarget}
+                />
+              ))}
+            </ul>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>KODE STATION</th>
+                  <th>ID DESA</th>
+                  <th>NAMA</th>
+                  <th>STATION TYPE</th>
+                  <th>STATUS</th>
+                  <th style={{ textAlign: "center" }}>AKSI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stations.map((station) => (
                   <tr key={station.id}>
                     <td><b>{station.kode_station}</b></td>
                     <td>{station.id_desa || "-"}</td>
@@ -402,10 +462,10 @@ const MasterData = () => {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
         <nav className="pagination" aria-label="Navigasi halaman data">
           <div className="page-info">Menampilkan {firstShown}–{lastShown} dari {total} data</div>
@@ -454,7 +514,7 @@ const MasterData = () => {
                 {columnsSchema.map((col) => (
                   <div className="master-filter-group" key={col.name} style={{ marginBottom: 10 }}>
                     <label>{col.label}{ (col.name === "kode_station" || col.name === "nama") && <span style={{ color: "var(--danger-color)" }}> *</span>}</label>
-                    <input type={col.type} name={col.name} value={addFormData[col.name] !== undefined ? addFormData[col.name] : ""} onChange={handleAddChange} style={{ height: 38, padding: "0 12px", border: "1px solid var(--border-color)", borderRadius: 6 }} required={col.name === "kode_station" || col.name === "nama"} />
+                    <input type={col.type} name={col.name} value={addFormData[col.name] !== undefined ? addFormData[col.name] : ""} onChange={handleAddChange} placeholder={col.placeholder || `Masukkan ${col.label.toLowerCase()}...`} style={{ height: 38, padding: "0 12px", border: "1px solid var(--border-color)", borderRadius: 6 }} required={col.name === "kode_station" || col.name === "nama"} />
                   </div>
                 ))}
               </div>
@@ -476,7 +536,7 @@ const MasterData = () => {
                 {columnsSchema.map((col) => (
                   <div className="master-filter-group" key={col.name} style={{ marginBottom: 10 }}>
                     <label>{col.label}{ (col.name === "kode_station" || col.name === "nama") && <span style={{ color: "var(--danger-color)" }}> *</span>}</label>
-                    <input type={col.type} name={col.name} value={editFormData[col.name] !== undefined ? editFormData[col.name] : ""} onChange={handleEditChange} style={{ height: 38, padding: "0 12px", border: "1px solid var(--border-color)", borderRadius: 6 }} required={col.name === "kode_station" || col.name === "nama"} />
+                    <input type={col.type} name={col.name} value={editFormData[col.name] !== undefined ? editFormData[col.name] : ""} onChange={handleEditChange} placeholder={col.placeholder || `Masukkan ${col.label.toLowerCase()}...`} style={{ height: 38, padding: "0 12px", border: "1px solid var(--border-color)", borderRadius: 6 }} required={col.name === "kode_station" || col.name === "nama"} />
                   </div>
                 ))}
               </div>

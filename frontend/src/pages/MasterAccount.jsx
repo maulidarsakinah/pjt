@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import useAuth from "../contexts/useAuth";
 import KPICard from "../components/KPICard";
 import {
+  createPermission,
   createRole,
   createUser,
   getPermissions,
@@ -217,6 +218,7 @@ const MasterAccount = () => {
     active: 0,
   });
   const [roles, setRoles] = useState([]);
+  const [showPassword, setShowPassword] = useState(false);
   const [permissionCatalog, setPermissionCatalog] = useState([]);
   const [activeModal, setActiveModal] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -229,6 +231,11 @@ const MasterAccount = () => {
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+
+  const [showAddPermission, setShowAddPermission] = useState(false);
+  const [newPermissionName, setNewPermissionName] = useState("");
+  const [creatingPermission, setCreatingPermission] = useState(false);
+  const [permissionFormError, setPermissionFormError] = useState(null);
 
   const totalPages = Math.max(1, Math.ceil(totalUsers / PAGE_SIZE));
   const visiblePages = useMemo(
@@ -314,8 +321,33 @@ const MasterAccount = () => {
 
   const closeModal = () => {
     setActiveModal(null);
-    setSaving(false);
+    setSelectedUser(null);
     setSelectedRole(null);
+    setShowPassword(false);
+    setShowAddPermission(false);
+    setNewPermissionName("");
+    setPermissionFormError(null);
+  };
+
+  const handleAddPermissionSubmit = async () => {
+    const name = newPermissionName.trim().toLowerCase();
+    if (!name) return;
+    setCreatingPermission(true);
+    setPermissionFormError(null);
+    try {
+      const res = await createPermission({ name });
+      const newPerm = res.data;
+      if (newPerm && newPerm.id) {
+        setPermissionCatalog((prev) => [...prev, newPerm]);
+        setSelectedPermissionIds((prev) => [...prev, newPerm.id]);
+        setNewPermissionName("");
+        setShowAddPermission(false);
+      }
+    } catch (err) {
+      setPermissionFormError(err.message || "Gagal membuat permission");
+    } finally {
+      setCreatingPermission(false);
+    }
   };
 
   const openDetail = (user) => {
@@ -340,6 +372,7 @@ const MasterAccount = () => {
           }
         : initialForm,
     );
+    setShowPassword(false);
     setErrorMessage("");
     setActiveModal("form");
   };
@@ -927,6 +960,7 @@ const MasterAccount = () => {
                   onChange={(event) =>
                     setFormData({ ...formData, name: event.target.value })
                   }
+                  placeholder="Contoh: Ahmad Yani"
                 />
               </div>
               <div className="filter-group form-full">
@@ -937,6 +971,7 @@ const MasterAccount = () => {
                   onChange={(event) =>
                     setFormData({ ...formData, email: event.target.value })
                   }
+                  placeholder="contoh@gmail.com"
                 />
               </div>
               <div className="filter-group form-full">
@@ -946,6 +981,7 @@ const MasterAccount = () => {
                   onChange={(event) =>
                     setFormData({ ...formData, phone: event.target.value })
                   }
+                  placeholder="Contoh: 081234567890"
                 />
               </div>
               <div className="filter-group">
@@ -980,14 +1016,42 @@ const MasterAccount = () => {
                 <label>
                   {selectedUser ? "Password baru (opsional)" : "Password"}
                 </label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(event) =>
-                    setFormData({ ...formData, password: event.target.value })
-                  }
-                  minLength={8}
-                />
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={(event) =>
+                      setFormData({ ...formData, password: event.target.value })
+                    }
+                    placeholder={
+                      selectedUser
+                        ? "Kosongkan jika password tidak diubah..."
+                        : "Masukkan password (min. 8 karakter)..."
+                    }
+                    minLength={8}
+                    style={{ paddingRight: "40px", width: "100%" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    style={{
+                      position: "absolute",
+                      right: "12px",
+                      background: "none",
+                      border: "none",
+                      color: "var(--text-secondary, #64748b)",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      padding: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <i className={`fa-regular ${showPassword ? "fa-eye-slash" : "fa-eye"}`} />
+                  </button>
+                </div>
                 <small>
                   Minimal 8 karakter. Kosongkan saat edit jika password tidak
                   berubah.
@@ -1042,13 +1106,82 @@ const MasterAccount = () => {
                   placeholder="Contoh: Teknisi Lapangan"
                 />
               </div>
-              <div className="master-permission-heading">
-                <strong>Permission database</strong>
-                <span>
-                  {selectedPermissionIds.length} dipilih dari{" "}
-                  {permissionCatalog.length}
-                </span>
+              <div className="master-permission-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong>Permission database</strong>
+                  <span style={{ marginLeft: '8px' }}>
+                    {selectedPermissionIds.length} dipilih dari{" "}
+                    {permissionCatalog.length}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ padding: '4px 10px', fontSize: '12px' }}
+                  onClick={() => {
+                    setShowAddPermission((prev) => !prev);
+                    setPermissionFormError(null);
+                  }}
+                >
+                  <i className="fa-solid fa-plus" style={{ marginRight: '4px' }} /> Buat Permission
+                </button>
               </div>
+
+              {showAddPermission && (
+                <div
+                  style={{
+                    margin: "10px 0",
+                    padding: "10px 12px",
+                    background: "#f8fafc",
+                    border: "1px solid var(--border-color)",
+                    borderRadius: "8px",
+                    display: "flex",
+                    gap: "8px",
+                    alignItems: "center",
+                  }}
+                >
+                  <input
+                    type="text"
+                    className="form-input"
+                    style={{ flex: 1, padding: "6px 12px", fontSize: "13px" }}
+                    placeholder="Nama permission baru (contoh: create stations)..."
+                    value={newPermissionName}
+                    onChange={(e) => setNewPermissionName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddPermissionSubmit();
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ padding: "6px 12px", fontSize: "13px" }}
+                    disabled={creatingPermission || !newPermissionName.trim()}
+                    onClick={handleAddPermissionSubmit}
+                  >
+                    {creatingPermission ? "Menyimpan..." : "Tambah"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ padding: "6px 10px", fontSize: "13px" }}
+                    onClick={() => {
+                      setShowAddPermission(false);
+                      setNewPermissionName("");
+                      setPermissionFormError(null);
+                    }}
+                  >
+                    Batal
+                  </button>
+                </div>
+              )}
+              {permissionFormError && (
+                <div style={{ color: "var(--danger-color)", fontSize: "12px", marginBottom: "8px", marginTop: "4px" }}>
+                  {permissionFormError}
+                </div>
+              )}
               <div className="master-permission-list">
                 {permissionCatalog.length ? (
                   permissionCatalog.map((permission) => (
