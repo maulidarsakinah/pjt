@@ -11,6 +11,8 @@ const {
   requiredString,
 } = require("../utils/validation");
 
+const { getLatestLoginsByUser } = require("./logs");
+
 const PHONE_REGEX = /^\+?[\d\s\-.()]{7,20}$/;
 
 function normalizeStatus(value, field = "status") {
@@ -93,10 +95,11 @@ async function getRoles(connection, userId) {
 
 async function hydrateUser(connection, row) {
   if (!row) return null;
+  const recentLogins = await getLatestLoginsByUser();
   return {
     ...row,
     roles: await getRoles(connection, row.id),
-    last_login_at: null,
+    last_login_at: recentLogins[row.id] || null,
   };
 }
 
@@ -139,6 +142,7 @@ function buildUserListQuery({ limit, offset, search, roleId, status }) {
 async function listUsers(options) {
   const { limit } = options;
   const query = buildUserListQuery(options);
+  const recentLogins = await getLatestLoginsByUser();
   return withConnection(async (connection) => {
     const page = await connection.execute(query.pageSql, query.pageBinds, {
       fetchArraySize: Math.min(limit + 1, 100),
@@ -152,7 +156,7 @@ async function listUsers(options) {
       data: page.rows.slice(0, limit).map(({ rn, ...row }) => ({
         ...row,
         roles: row.role_name ? row.role_name.split(", ") : [],
-        last_login_at: null,
+        last_login_at: recentLogins[row.id] || null,
       })),
       total: count.rows[0].total,
       has_more: page.rows.length > limit,

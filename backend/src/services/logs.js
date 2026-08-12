@@ -281,6 +281,17 @@ function formatJakartaDate(value) {
 }
 
 function matchesFilters(entry, filters) {
+  if (entry.message === "server_started" || entry.message === "server_shutdown_started") {
+    return false;
+  }
+
+  if (entry.path && entry.status !== "failed") {
+    const p = String(entry.path).toLowerCase();
+    if (p.includes("/refresh") || p.includes("/me") || p.includes("/notifications")) {
+      return false;
+    }
+  }
+
   const searchValues = [
     entry.trace_id,
     entry.method,
@@ -546,10 +557,33 @@ async function listLogs({
   return cloneListResponse(response);
 }
 
+async function getLatestLoginsByUser(directory = DEFAULT_LOG_DIRECTORY) {
+  const result = {};
+  try {
+    const files = await listLogFiles(directory);
+    if (!files.length) return result;
+    const lines = await readRecentLines(files[0].filePath);
+    for (const record of lines) {
+      try {
+        const parsed = JSON.parse(record.line);
+        const action = parsed.event_action || parsed.action;
+        const userId = parsed.actor?.user_id ?? parsed.user_id ?? parsed.target?.id;
+        const time = parsed.time;
+        if (action === "user_login" && userId && time && !result[userId]) {
+          result[userId] = time;
+        }
+      } catch {}
+    }
+  } catch {}
+  return result;
+}
+
 module.exports = {
   DEFAULT_LOG_DIRECTORY,
   clearLogCache,
+  getLatestLoginsByUser,
   getLogCacheStats,
+  listLogFiles,
   listLogs,
   listTraceJourney,
   normalizeLogEntry,

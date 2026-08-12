@@ -114,6 +114,15 @@ router.get("/flow/:id/data", async (req, res, next) => {
   }
 });
 
+router.get("/:id/columns", async (req, res, next) => {
+  try {
+    const { getStationColumns } = require("../services/alat");
+    res.json({ data: await getStationColumns(req.params.id) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
 module.exports.invalidateStation = invalidateStation;
 module.exports.clearCache = clearCache;

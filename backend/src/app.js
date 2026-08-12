@@ -10,6 +10,7 @@ const {
 const requestLogger = require("./middleware/requestLogger");
 const errorHandler = require("./middleware/errorHandler");
 const authRoutes = require("./routes/auth");
+const alatRoutes = require("./routes/alat");
 const companiesRoutes = require("./routes/companies");
 const healthRoutes = require("./routes/health");
 const logsRoutes = require("./routes/logs");
@@ -18,8 +19,11 @@ const permissionsRoutes = require("./routes/permissions");
 const rolesRoutes = require("./routes/roles");
 const stationsRoutes = require("./routes/stations");
 const usersRoutes = require("./routes/users");
+const notificationsRoutes = require("./routes/notifications");
 const docsRoutes = require("./routes/docs");
 const openapiSpec = require("./openapi");
+const logger = require("./logger");
+const { evaluateNotificationsInternal } = require("./services/notifications");
 
 const app = express();
 
@@ -46,6 +50,7 @@ if (config.security.docsEnabled) {
 }
 
 app.use("/api", authRoutes);
+app.use("/api/alat", alatRoutes);
 app.use("/api/health", healthRoutes);
 app.use("/api/logs", logsRoutes);
 app.use("/api/companies", companiesRoutes);
@@ -54,6 +59,17 @@ app.use("/api/permissions", permissionsRoutes);
 app.use("/api/roles", rolesRoutes);
 app.use("/api/stations", stationsRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/notifications", notificationsRoutes);
+
+// Background 24/7 Notification Evaluation Job (Every 60s)
+setInterval(() => {
+  evaluateNotificationsInternal().catch((err) => {
+    logger.error(
+      { err, category: "notification-job" },
+      "[Notification Background Job Error] " + err.message,
+    );
+  });
+}, 60000);
 
 app.get("/health", (req, res) => {
   res.redirect(308, "/api/health");

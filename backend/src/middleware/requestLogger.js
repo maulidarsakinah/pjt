@@ -7,13 +7,34 @@ function shouldSkipRequestLog(req, statusCode) {
   const requestPath = getRequestPath(req);
   const requestUrl = req.url || req.originalUrl || "";
 
-  return (
-    (requestUrl.startsWith("/api/docs/") &&
-      /\.(css|js|png|ico|map)$/.test(requestUrl)) ||
-    (req.method === "GET" &&
-      requestPath.startsWith("/api/logs") &&
-      statusCode < 400)
-  );
+  if (
+    requestUrl.startsWith("/api/docs/") &&
+    /\.(css|js|png|ico|map)$/.test(requestUrl)
+  ) {
+    return true;
+  }
+
+  if (
+    statusCode &&
+    statusCode < 400 &&
+    req.method === "GET" &&
+    requestPath.startsWith("/api/logs")
+  ) {
+    return true;
+  }
+
+  // Skip logging for notifications, /me, and /refresh endpoints unless there's a 4xx/5xx error
+  if (!statusCode || statusCode < 400) {
+    if (
+      requestPath.includes("/notifications") ||
+      requestPath.includes("/me") ||
+      requestPath.includes("/refresh")
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function getLogLevel(statusCode) {
@@ -84,7 +105,8 @@ module.exports = (req, res, next) => {
   req.id = traceId;
   req.trace_id = traceId;
   req.log = logger.child({ trace_id: traceId });
-  req.skipJourneyLog = isAuditReadRequest(req);
+  req.skipJourneyLog =
+    isAuditReadRequest(req) || shouldSkipRequestLog(req, 200);
 
   logJourneyStage(req, "request_received");
 

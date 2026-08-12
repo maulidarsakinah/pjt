@@ -3,15 +3,7 @@ const config = require("./src/config");
 const db = require("./src/db");
 const logger = require("./src/logger");
 
-const server = app.listen(config.port, () => {
-  logger.info(
-    {
-      port: config.port,
-      oracleDriverMode: config.db.useThickMode ? "thick" : "thin",
-    },
-    "server_started",
-  );
-});
+const server = app.listen(config.port, () => {});
 
 const shutdown = (signal) => {
   logger.info({ signal }, "server_shutdown_started");
