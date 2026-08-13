@@ -1,20 +1,47 @@
 import { memo } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import useAuth from '../contexts/useAuth';
+import { has_permission } from '../utils/permission_utils';
 import './AdminSidebar.css';
 
-const adminNavItems = [
+const admin_nav_items = [
   { to: "/admin", end: true, icon: "fa-border-all", label: "Dashboard" },
   { to: "/admin/monitoring", icon: "fa-satellite-dish", label: "Monitoring" },
-  { to: "/admin/master-data", icon: "fa-database", label: "Master Data" },
-  { to: "/admin/master-alat", icon: "fa-microchip", label: "Master Alat" },
-  { to: "/admin/master-account", icon: "fa-users-gear", label: "Master Akun" },
+  {
+    to: "/admin/master-data",
+    icon: "fa-database",
+    label: "Master Data",
+    permission: "view stations",
+  },
+  {
+    to: "/admin/master-alat",
+    icon: "fa-microchip",
+    label: "Master Alat",
+    permission: "view stations",
+  },
+  {
+    to: "/admin/master-account",
+    icon: "fa-users-gear",
+    label: "Master Akun",
+    permission: ["list users", "list roles", "list permissions"],
+  },
 
-  { to: "/admin/audit-log", icon: "fa-clock-rotate-left", label: "Audit Log" },
+  {
+    to: "/admin/audit-log",
+    icon: "fa-clock-rotate-left",
+    label: "Audit Log",
+    permission: "view logs",
+  },
   { to: "/admin/settings", icon: "fa-gear", label: "Pengaturan" },
 ];
 
 const AdminSidebar = ({ openLogoutModal }) => {
   const location = useLocation();
+  const { user } = useAuth();
+
+  const filtered_nav_items = admin_nav_items.filter((item) =>
+    has_permission(user, item.permission),
+  );
 
   return (
     <aside className="sidebar admin-sidebar">
@@ -33,7 +60,7 @@ const AdminSidebar = ({ openLogoutModal }) => {
     </div>
 
     <ul className="nav-menu admin-nav-menu">
-      {adminNavItems.map((item) => (
+      {filtered_nav_items.map((item) => (
         <NavLink
           key={item.to}
           to={item.to}

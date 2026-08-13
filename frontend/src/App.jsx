@@ -13,6 +13,7 @@ import { AuthProvider } from "./contexts/AuthProvider";
 import useAuth from "./contexts/useAuth";
 import DashboardSkeleton from "./components/DashboardSkeleton";
 import { DetailSkeleton, MonitoringSkeleton } from "./components/PageSkeletons";
+import { has_permission } from "./utils/permission_utils";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Monitoring = lazy(() => import("./pages/Monitoring"));
@@ -24,6 +25,7 @@ const MasterData = lazy(() => import("./pages/MasterData"));
 const MasterAlat = lazy(() => import("./pages/MasterAlat"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const AdminPlaceholder = lazy(() => import("./pages/AdminPlaceholder"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const PageFallback = () => {
   const { pathname } = useLocation();
@@ -54,6 +56,16 @@ function isAdminUser(user) {
     roles.includes("super-admin")
   );
 }
+
+const PermissionGuard = ({ permission, children }) => {
+  const { user } = useAuth();
+
+  if (!has_permission(user, permission)) {
+    return <NotFound />;
+  }
+
+  return children;
+};
 
 const ProtectedRoute = ({ layout, requireAdmin = false }) => {
   const { isAuthenticated, isInitializing, user } = useAuth();
@@ -110,13 +122,44 @@ function App() {
               <Route path="monitoring" element={<Monitoring />} />
               <Route path="notifications" element={<Notifications />} />
               <Route path="detail/:stationKey" element={<Detail />} />
-              <Route path="master-account" element={<MasterAccount />} />
+              <Route
+                path="master-account"
+                element={
+                  <PermissionGuard
+                    permission={["list users", "list roles", "list permissions"]}
+                  >
+                    <MasterAccount />
+                  </PermissionGuard>
+                }
+              />
               <Route path="settings" element={<Settings />} />
-              <Route path="master-data" element={<MasterData />} />
-              <Route path="master-alat" element={<MasterAlat />} />
+              <Route
+                path="master-data"
+                element={
+                  <PermissionGuard permission="view stations">
+                    <MasterData />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="master-alat"
+                element={
+                  <PermissionGuard permission="view stations">
+                    <MasterAlat />
+                  </PermissionGuard>
+                }
+              />
 
-              <Route path="audit-log" element={<AuditLog />} />
+              <Route
+                path="audit-log"
+                element={
+                  <PermissionGuard permission="view logs">
+                    <AuditLog />
+                  </PermissionGuard>
+                }
+              />
             </Route>
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </Router>
