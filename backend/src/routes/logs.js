@@ -24,7 +24,7 @@ async function enrichLogUsers(entries) {
 
 router.get(
   "/journey/:traceId",
-  requirePermission("list accesses"),
+  requirePermission("view logs"),
   async (req, res, next) => {
     try {
       const journey = await listTraceJourney(req.params.traceId);
@@ -38,7 +38,7 @@ router.get(
   },
 );
 
-router.get("/", requirePermission("list accesses"), async (req, res, next) => {
+router.get("/", requirePermission("view logs"), async (req, res, next) => {
   try {
     const pagination = parsePagination(req.query, {
       defaultLimit: 50,

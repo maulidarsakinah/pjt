@@ -1278,7 +1278,7 @@ module.exports = {
       get: {
         tags: ["Access"],
         summary: "List user role assignments",
-        description: "Requires the `list accesses` permission.",
+        description: "Requires the `view logs` permission.",
         operationId: "listUserAccesses",
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1474,7 +1474,7 @@ module.exports = {
         tags: ["Logs"],
         summary: "List backend log entries",
         description:
-          "Reads normalized entries from the backend log directory. Successful reads of this endpoint are excluded to prevent self-generated audit noise. Totals and pages may be cached for up to 5 seconds. Requires the `list accesses` permission.",
+          "Reads normalized entries from the backend log directory. Successful reads of this endpoint are excluded to prevent self-generated audit noise. Totals and pages may be cached for up to 5 seconds. Requires the `view logs` permission.",
         operationId: "listLogs",
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1556,7 +1556,7 @@ module.exports = {
             },
           },
           401: { description: "Missing or invalid bearer token" },
-          403: { description: "Missing the list accesses permission" },
+          403: { description: "Missing the view logs permission" },
           500: {
             description: "Log directory or server error",
             content: {
@@ -1573,7 +1573,7 @@ module.exports = {
         tags: ["Logs"],
         summary: "Get the chronological journey for one trace ID",
         description:
-          "Returns up to 200 exact trace matches ordered oldest first. Requires the `list accesses` permission.",
+          "Returns up to 200 exact trace matches ordered oldest first. Requires the `view logs` permission.",
         operationId: "getLogJourney",
         security: [{ bearerAuth: [] }],
         parameters: [
@@ -1595,7 +1595,7 @@ module.exports = {
           },
           400: { description: "Invalid trace ID" },
           401: { description: "Missing or invalid bearer token" },
-          403: { description: "Missing the list accesses permission" },
+          403: { description: "Missing the view logs permission" },
         },
       },
     },
@@ -2892,7 +2892,7 @@ module.exports = {
           required_permission: {
             type: "string",
             nullable: true,
-            example: "list accesses",
+            example: "view logs",
           },
           event_category: { type: "string", nullable: true },
           event_action: { type: "string", nullable: true },

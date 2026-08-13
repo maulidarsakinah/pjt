@@ -72,7 +72,7 @@ router.post("/", requirePermission("create users"), idempotency(), async (req, r
 
 router.get(
   "/accesses",
-  requirePermission("list accesses"),
+  requirePermission("view logs"),
   async (req, res, next) => {
     try {
       const pagination = parsePagination(req.query);

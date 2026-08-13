@@ -176,7 +176,7 @@ async function getUserSummary() {
          SELECT
            u."id",
            CASE WHEN u."status" = '1' THEN 1 ELSE 0 END AS "is_active",
-           MAX(CASE WHEN LOWER(r."name") IN ('admin', 'administrator') THEN 1 ELSE 0 END) AS "is_admin",
+           MAX(CASE WHEN LOWER(r."name") IN ('admin', 'administrator', 'super-admin', 'superadmin') THEN 1 ELSE 0 END) AS "is_admin",
            MAX(CASE WHEN LOWER(r."name") = 'operator' THEN 1 ELSE 0 END) AS "is_operator"
          FROM "users" u
          LEFT JOIN "model_has_roles" m
