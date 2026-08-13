@@ -1,16 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import useAuth from "../contexts/useAuth";
+import { has_permission } from "../utils/permission_utils";
 import KPICard from "../components/KPICard";
 import {
+  createCompany,
   createPermission,
   createRole,
   createUser,
+  deleteCompany,
+  getCompanies,
   getPermissions,
   getRolePermissions,
   getRoles,
   getUserSummary,
   getUsers,
   resetUserPassword,
+  updateCompany,
   updateRole,
   updateRolePermissions,
   updateUser,
@@ -23,6 +28,7 @@ const initialForm = {
   name: "",
   email: "",
   phone: "",
+  companyId: "",
   roleId: "",
   status: "1",
   password: "",
@@ -48,6 +54,11 @@ const STATIC_PERMISSIONS = [
   { id: 1, action: "View Dashboard" },
   { id: 2, action: "Manage Users" },
   { id: 3, action: "Manage Stations" },
+];
+
+const STATIC_COMPANIES = [
+  { id: 1, name: "PT Jasa Tirta", address: "Jl. Malang No. 12", contact: "0341-555123" },
+  { id: 2, name: "HydroTrack Enterprise", address: "Jl. Brawijaya No. 8", contact: "081234567890" },
 ];
 
 const STATIC_SUMMARY = {
@@ -218,6 +229,13 @@ const MasterAccount = () => {
     active: 0,
   });
   const [roles, setRoles] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [companyFormData, setCompanyFormData] = useState({
+    name: "",
+    address: "",
+    contact: "",
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [permissionCatalog, setPermissionCatalog] = useState([]);
   const [activeModal, setActiveModal] = useState(null);
@@ -250,6 +268,7 @@ const MasterAccount = () => {
       setSummary(STATIC_SUMMARY);
       setRoles(STATIC_ROLES);
       setPermissionCatalog(STATIC_PERMISSIONS);
+      setCompanies(STATIC_COMPANIES);
       return;
     }
 
@@ -257,12 +276,14 @@ const MasterAccount = () => {
       getUserSummary(),
       getRoles({ limit: 500 }),
       getPermissions({ limit: 500 }),
+      getCompanies({ limit: 500 }),
     ])
-      .then(([summaryResponse, roleResponse, permissionResponse]) => {
+      .then(([summaryResponse, roleResponse, permissionResponse, companyResponse]) => {
         if (!active) return;
         setSummary(summaryResponse.data);
         setRoles(roleResponse.data || []);
         setPermissionCatalog(permissionResponse.data || []);
+        setCompanies(companyResponse.data || []);
       })
       .catch((error) => active && setErrorMessage(error.message));
 
@@ -364,10 +385,14 @@ const MasterAccount = () => {
             name: user.name,
             email: user.email,
             phone: user.phone || "",
+            companyId: user.company_id || user.companyId || "",
             roleId:
-              roles.find((role) => user.roleNames.includes(role.name))?.id ||
-              "",
-            status: user.status === "Aktif" ? "1" : "0",
+              roles.find(
+                (role) =>
+                  user.roleNames?.includes(role.name) ||
+                  user.roles?.includes(role.name),
+              )?.id || "",
+            status: user.status === "Aktif" || user.status === "1" ? "1" : "0",
             password: "",
           }
         : initialForm,
@@ -396,6 +421,79 @@ const MasterAccount = () => {
 
   const openRoleList = () => {
     setActiveModal("role-list");
+  };
+
+  const openCompanyList = () => {
+    setActiveModal("company-list");
+  };
+
+  const openCompanyForm = (company = null) => {
+    setSelectedCompany(company);
+    setCompanyFormData(
+      company
+        ? {
+            name: company.name || "",
+            address: company.address || "",
+            contact: company.contact || "",
+          }
+        : { name: "", address: "", contact: "" },
+    );
+    setActiveModal("company-form");
+  };
+
+  const saveCompanySubmit = async (event) => {
+    event.preventDefault();
+    if (isDemoUser) {
+      alert("Aksi ini dinonaktifkan untuk akun demo.");
+      closeModal();
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage("");
+
+    try {
+      if (selectedCompany) {
+        await updateCompany(selectedCompany.id, companyFormData);
+      } else {
+        await createCompany(companyFormData);
+      }
+
+      const companyResponse = await getCompanies({ limit: 500 });
+      setCompanies(companyResponse.data || []);
+      setActiveModal("company-list");
+    } catch (err) {
+      setErrorMessage(err.message || "Gagal menyimpan perusahaan.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openCompanyDelete = (company) => {
+    setSelectedCompany(company);
+    setActiveModal("company-delete");
+  };
+
+  const confirmDeleteCompany = async () => {
+    if (isDemoUser) {
+      alert("Aksi ini dinonaktifkan untuk akun demo.");
+      openCompanyList();
+      return;
+    }
+
+    if (!selectedCompany) return;
+    setSaving(true);
+    setErrorMessage("");
+
+    try {
+      await deleteCompany(selectedCompany.id);
+      setCompanies((prev) => prev.filter((c) => c.id !== selectedCompany.id));
+      setActiveModal("company-list");
+    } catch (err) {
+      setErrorMessage(err.message || "Gagal menghapus perusahaan.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openDelete = (user) => {
@@ -452,6 +550,10 @@ const MasterAccount = () => {
       status: formData.status,
       role_ids: formData.roleId ? [Number(formData.roleId)] : [],
     };
+
+    if (formData.companyId) {
+      body.company_id = Number(formData.companyId);
+    }
 
     try {
       if (selectedUser?.numericId) {
@@ -588,7 +690,7 @@ const MasterAccount = () => {
             "fa-user-shield",
             "ADMIN",
             "#d97706",
-            "Role administrator aktif",
+            "Role admin & super-admin aktif",
             masterKpiDescriptions.admin,
           ],
           [
@@ -697,20 +799,33 @@ const MasterAccount = () => {
 
           <div className="master-action-row">
             <div className="master-action-group">
-              <button
-                className="btn btn-primary"
-                type="button"
-                onClick={() => openForm("add")}
-              >
-                <i className="fa-solid fa-plus" /> Tambah Akun
-              </button>
-              <button
-                className="btn btn-outline"
-                type="button"
-                onClick={openRoleList}
-              >
-                <i className="fa-solid fa-list" /> Daftar Role
-              </button>
+              {has_permission(user, "create users") && (
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={() => openForm("add")}
+                >
+                  <i className="fa-solid fa-plus" /> Tambah Akun
+                </button>
+              )}
+              {has_permission(user, "list roles") && (
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={openRoleList}
+                >
+                  <i className="fa-solid fa-list" /> Daftar Role
+                </button>
+              )}
+              {has_permission(user, "list companies") && (
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={openCompanyList}
+                >
+                  <i className="fa-solid fa-building" /> Daftar Perusahaan
+                </button>
+              )}
             </div>
             <button
               className="btn btn-outline"
@@ -796,22 +911,26 @@ const MasterAccount = () => {
                         >
                           <i className="fa-regular fa-eye" />
                         </button>
-                        <button
-                          className="master-icon-button"
-                          type="button"
-                          title="Edit"
-                          onClick={() => openForm("edit", user)}
-                        >
-                          <i className="fa-solid fa-pen" />
-                        </button>
-                        <button
-                          className="master-icon-button danger"
-                          type="button"
-                          title="Nonaktifkan"
-                          onClick={() => openDelete(user)}
-                        >
-                          <i className="fa-solid fa-user-slash" />
-                        </button>
+                        {has_permission(user, "update users") && (
+                          <button
+                            className="master-icon-button"
+                            type="button"
+                            title="Edit"
+                            onClick={() => openForm("edit", user)}
+                          >
+                            <i className="fa-solid fa-pen" />
+                          </button>
+                        )}
+                        {has_permission(user, "update users") && (
+                          <button
+                            className="master-icon-button danger"
+                            type="button"
+                            title="Nonaktifkan"
+                            onClick={() => openDelete(user)}
+                          >
+                            <i className="fa-solid fa-user-slash" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1001,6 +1120,22 @@ const MasterAccount = () => {
                 </select>
               </div>
               <div className="filter-group">
+                <label>Perusahaan</label>
+                <select
+                  value={formData.companyId}
+                  onChange={(event) =>
+                    setFormData({ ...formData, companyId: event.target.value })
+                  }
+                >
+                  <option value="">Pilih Perusahaan...</option>
+                  {companies.map((company) => (
+                    <option key={company.id} value={company.id}>
+                      {company.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="filter-group">
                 <label>Status</label>
                 <select
                   value={formData.status}
@@ -1114,17 +1249,19 @@ const MasterAccount = () => {
                     {permissionCatalog.length}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  style={{ padding: '4px 10px', fontSize: '12px' }}
-                  onClick={() => {
-                    setShowAddPermission((prev) => !prev);
-                    setPermissionFormError(null);
-                  }}
-                >
-                  <i className="fa-solid fa-plus" style={{ marginRight: '4px' }} /> Buat Permission
-                </button>
+                {has_permission(user, "create permissions") && (
+                  <button
+                    type="button"
+                    className="btn btn-outline"
+                    style={{ padding: '4px 10px', fontSize: '12px' }}
+                    onClick={() => {
+                      setShowAddPermission((prev) => !prev);
+                      setPermissionFormError(null);
+                    }}
+                  >
+                    <i className="fa-solid fa-plus" style={{ marginRight: '4px' }} /> Buat Permission
+                  </button>
+                )}
               </div>
 
               {showAddPermission && (
@@ -1231,14 +1368,16 @@ const MasterAccount = () => {
             <div className="master-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <h3 style={{ margin: 0 }}>Daftar Role</h3>
-                <button
-                  className="btn btn-primary"
-                  type="button"
-                  onClick={() => openRoleForm()}
-                  style={{ padding: '6px 12px', fontSize: '13px' }}
-                >
-                  <i className="fa-solid fa-plus" style={{ marginRight: '6px' }} /> Buat Role
-                </button>
+                {has_permission(user, "create roles") && (
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => openRoleForm()}
+                    style={{ padding: '6px 12px', fontSize: '13px' }}
+                  >
+                    <i className="fa-solid fa-plus" style={{ marginRight: '6px' }} /> Buat Role
+                  </button>
+                )}
               </div>
               <button
                 className="master-close-button"
@@ -1267,14 +1406,16 @@ const MasterAccount = () => {
                           <td><span className="master-role-badge">{role.name}</span></td>
                           <td>
                             <div className="master-table-actions">
-                              <button
-                                className="master-icon-button"
-                                type="button"
-                                title="Edit Role"
-                                onClick={() => openRoleForm(role)}
-                              >
-                                <i className="fa-solid fa-pen" />
-                              </button>
+                              {has_permission(user, "update roles") && (
+                                <button
+                                  className="master-icon-button"
+                                  type="button"
+                                  title="Edit Role"
+                                  onClick={() => openRoleForm(role)}
+                                >
+                                  <i className="fa-solid fa-pen" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1297,6 +1438,252 @@ const MasterAccount = () => {
                 onClick={closeModal}
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === "company-list" && (
+        <div className="master-modal-overlay" onMouseDown={closeModal}>
+          <div
+            className="master-modal-card master-modal-card--wide"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div
+              className="master-modal-header"
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "16px" }}
+              >
+                <h3 style={{ margin: 0 }}>Daftar Perusahaan</h3>
+                {has_permission(user, "create companies") && (
+                  <button
+                    className="btn btn-primary"
+                    type="button"
+                    onClick={() => openCompanyForm()}
+                    style={{ padding: "6px 12px", fontSize: "13px" }}
+                  >
+                    <i
+                      className="fa-solid fa-plus"
+                      style={{ marginRight: "6px" }}
+                    />{" "}
+                    Tambah Perusahaan
+                  </button>
+                )}
+              </div>
+              <button
+                className="master-close-button"
+                type="button"
+                onClick={closeModal}
+                aria-label="Tutup"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div className="master-modal-body">
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nama Perusahaan</th>
+                      <th>Alamat</th>
+                      <th>Kontak</th>
+                      <th className="master-actions-heading">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {companies.length > 0 ? (
+                      companies.map((company) => (
+                        <tr key={company.id}>
+                          <td>
+                            <b>{company.id}</b>
+                          </td>
+                          <td>
+                            <span className="master-role-badge">
+                              {company.name}
+                            </span>
+                          </td>
+                          <td>{company.address || "-"}</td>
+                          <td>{company.contact || "-"}</td>
+                          <td>
+                            <div className="master-table-actions">
+                              {has_permission(user, "update companies") && (
+                                <button
+                                  className="master-icon-button"
+                                  type="button"
+                                  title="Edit Perusahaan"
+                                  onClick={() => openCompanyForm(company)}
+                                >
+                                  <i className="fa-solid fa-pen" />
+                                </button>
+                              )}
+                              {has_permission(user, "delete companies") && (
+                                <button
+                                  className="master-icon-button is-danger"
+                                  type="button"
+                                  title="Hapus Perusahaan"
+                                  onClick={() => openCompanyDelete(company)}
+                                >
+                                  <i className="fa-solid fa-trash" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5">
+                          <div className="master-empty-state">
+                            Tidak ada perusahaan.
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="master-modal-footer">
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={closeModal}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === "company-form" && (
+        <div className="master-modal-overlay" onMouseDown={closeModal}>
+          <div
+            className="master-modal-card"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="master-modal-header">
+              <h3>
+                {selectedCompany ? "Edit Perusahaan" : "Tambah Perusahaan Baru"}
+              </h3>
+              <button
+                className="master-close-button"
+                type="button"
+                onClick={openCompanyList}
+                aria-label="Kembali ke Daftar Perusahaan"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <form onSubmit={saveCompanySubmit}>
+              <div className="master-modal-body master-form-grid">
+                <div className="filter-group form-full">
+                  <label htmlFor="companyName">
+                    Nama Perusahaan <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    id="companyName"
+                    type="text"
+                    required
+                    value={companyFormData.name}
+                    onChange={(e) =>
+                      setCompanyFormData({
+                        ...companyFormData,
+                        name: e.target.value,
+                      })
+                    }
+                    placeholder="Contoh: PT Jasa Tirta"
+                  />
+                </div>
+                <div className="filter-group form-full">
+                  <label htmlFor="companyAddress">Alamat</label>
+                  <input
+                    id="companyAddress"
+                    type="text"
+                    value={companyFormData.address}
+                    onChange={(e) =>
+                      setCompanyFormData({
+                        ...companyFormData,
+                        address: e.target.value,
+                      })
+                    }
+                    placeholder="Contoh: Jl. Industri No. 12"
+                  />
+                </div>
+                <div className="filter-group form-full">
+                  <label htmlFor="companyContact">Kontak / Telepon</label>
+                  <input
+                    id="companyContact"
+                    type="text"
+                    value={companyFormData.contact}
+                    onChange={(e) =>
+                      setCompanyFormData({
+                        ...companyFormData,
+                        contact: e.target.value,
+                      })
+                    }
+                    placeholder="Contoh: 081234567890"
+                  />
+                </div>
+              </div>
+              <div className="master-modal-footer">
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={openCompanyList}
+                >
+                  Batal
+                </button>
+                <button
+                  className="btn btn-primary"
+                  type="submit"
+                  disabled={saving}
+                >
+                  {saving ? "Memproses…" : "Simpan Perusahaan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {activeModal === "company-delete" && selectedCompany && (
+        <div className="master-modal-overlay" onMouseDown={openCompanyList}>
+          <div
+            className="master-modal-card master-modal-card--danger"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="master-danger-icon">
+              <i className="fa-solid fa-trash-can" />
+            </div>
+            <h3>Hapus Perusahaan?</h3>
+            <p>
+              Apakah Anda yakin ingin menghapus perusahaan <b>{selectedCompany.name}</b>?
+              Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="master-danger-actions">
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={openCompanyList}
+              >
+                Batal
+              </button>
+              <button
+                className="btn btn-danger"
+                type="button"
+                onClick={confirmDeleteCompany}
+                disabled={saving}
+              >
+                {saving ? "Memproses…" : "Hapus Perusahaan"}
               </button>
             </div>
           </div>

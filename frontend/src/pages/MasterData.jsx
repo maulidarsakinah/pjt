@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import KPICard from "../components/KPICard";
 import useAuth from "../contexts/useAuth";
+import { has_permission } from "../utils/permission_utils";
 import {
   getMasterStations,
   createMasterStation,
@@ -389,9 +390,11 @@ const MasterData = () => {
             </div>
           </div>
           <div className="master-filter-actions">
-            <button className="btn btn-primary" type="button" onClick={() => setIsAddModalOpen(true)}>
-              <i className="fa-solid fa-plus"></i> TAMBAH DATA
-            </button>
+            {has_permission(user, "create stations") && (
+              <button className="btn btn-primary" type="button" onClick={() => setIsAddModalOpen(true)}>
+                <i className="fa-solid fa-plus"></i> TAMBAH DATA
+              </button>
+            )}
             <button className="btn btn-outline" type="button" onClick={handleExport}>
               <i className="fa-solid fa-download"></i> EXPORT
             </button>
@@ -453,12 +456,16 @@ const MasterData = () => {
                         <button className="md-icon-btn" type="button" title="Detail" onClick={() => setSelectedStation(station)}>
                           <i className="fa-regular fa-eye" />
                         </button>
-                        <button className="md-icon-btn" type="button" title="Ubah" onClick={() => openEdit(station)}>
-                          <i className="fa-solid fa-pen" />
-                        </button>
-                        <button className="md-icon-btn is-danger" type="button" title="Hapus" onClick={() => setDeleteTarget(station)}>
-                          <i className="fa-regular fa-trash-can" />
-                        </button>
+                        {has_permission(user, "update stations") && (
+                          <button className="md-icon-btn" type="button" title="Ubah" onClick={() => openEdit(station)}>
+                            <i className="fa-solid fa-pen" />
+                          </button>
+                        )}
+                        {has_permission(user, "delete stations") && (
+                          <button className="md-icon-btn is-danger" type="button" title="Hapus" onClick={() => setDeleteTarget(station)}>
+                            <i className="fa-regular fa-trash-can" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

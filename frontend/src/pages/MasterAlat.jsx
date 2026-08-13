@@ -1,5 +1,7 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
 import KPICard from "../components/KPICard";
+import useAuth from "../contexts/useAuth";
+import { has_permission } from "../utils/permission_utils";
 import {
   getAlatList,
   createAlat,
@@ -134,6 +136,7 @@ const MasterAlatMobileRow = ({
 );
 
 const MasterAlat = () => {
+  const { user } = useAuth();
   const [dataAlat, setDataAlat] = useState([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
@@ -569,9 +572,11 @@ const MasterAlat = () => {
         </div>
 
         <div className="action-bar">
-          <button className="btn btn-primary" type="button" onClick={openAddModal}>
-            <i className="fa-solid fa-plus"></i> TAMBAH ALAT
-          </button>
+          {has_permission(user, "create stations") && (
+            <button className="btn btn-primary" type="button" onClick={openAddModal}>
+              <i className="fa-solid fa-plus"></i> TAMBAH ALAT
+            </button>
+          )}
         </div>
 
         {error && (
@@ -644,20 +649,24 @@ const MasterAlat = () => {
                     <td>{getStatusDisplay(item.computed_status ?? item.status)}</td>
                     <td>
                       <div className="action-buttons">
-                        <button
-                          className="action-btn"
-                          title="Edit Alat"
-                          onClick={() => openEditModal(item)}
-                        >
-                          <i className="fa-solid fa-pen"></i>
-                        </button>
-                        <button
-                          className="action-btn delete"
-                          title="Hapus Alat"
-                          onClick={() => openDeleteModal(item)}
-                        >
-                          <i className="fa-solid fa-trash-can"></i>
-                        </button>
+                        {has_permission(user, "update stations") && (
+                          <button
+                            className="action-btn"
+                            title="Edit Alat"
+                            onClick={() => openEditModal(item)}
+                          >
+                            <i className="fa-solid fa-pen"></i>
+                          </button>
+                        )}
+                        {has_permission(user, "delete stations") && (
+                          <button
+                            className="action-btn delete"
+                            title="Hapus Alat"
+                            onClick={() => openDeleteModal(item)}
+                          >
+                            <i className="fa-solid fa-trash-can"></i>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

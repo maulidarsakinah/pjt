@@ -416,6 +416,22 @@ export function getUserSummary() {
   return apiRequest("/api/users/summary");
 }
 
+export function getCompanies(query) {
+  return apiRequest("/api/companies", { query });
+}
+
+export function createCompany(body) {
+  return apiRequest("/api/companies", { method: "POST", body });
+}
+
+export function updateCompany(id, body) {
+  return apiRequest(`/api/companies/${id}`, { method: "PATCH", body });
+}
+
+export function deleteCompany(id) {
+  return apiRequest(`/api/companies/${id}`, { method: "DELETE" });
+}
+
 export function getRoles(query) {
   return apiRequest("/api/roles", { query });
 }
