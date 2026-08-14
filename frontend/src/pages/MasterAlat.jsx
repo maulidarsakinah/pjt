@@ -579,28 +579,6 @@ const MasterAlat = () => {
           )}
         </div>
 
-        {error && (
-          <div
-            style={{
-              padding: "12px 16px",
-              margin: "16px 24px 0",
-              borderRadius: "8px",
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              color: "#991b1b",
-              fontSize: "14px",
-              fontWeight: "500",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-            }}
-            role="alert"
-          >
-            <i className="fa-solid fa-circle-exclamation" style={{ fontSize: "16px", flexShrink: 0 }} />
-            <div style={{ flex: 1 }}>{error}</div>
-          </div>
-        )}
-
         <div className="table-container">
           {initialLoading ? (
             <div style={{ padding: "32px", textAlign: "center", color: "var(--text-secondary)" }}>
