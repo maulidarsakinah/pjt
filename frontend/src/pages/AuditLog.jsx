@@ -7,7 +7,7 @@ import "./AuditLog.css";
 const STATIC_AUDIT_LOGS = [
   {
     level: "warn",
-    time: "2026-07-13T00:23:30.482Z",
+    time: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
     service: "pkl-api",
     env: "development",
     trace_id: "tx-ci-stations-flow-data",
@@ -24,7 +24,7 @@ const STATIC_AUDIT_LOGS = [
   },
   {
     level: "info",
-    time: "2026-07-13T00:19:48.878Z",
+    time: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
     service: "pkl-api",
     env: "development",
     trace_id: "tx-ci-health",
