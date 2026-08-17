@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const authenticate = require("../middleware/authenticate");
+const requirePermission = require("../middleware/requirePermission");
 const {
   evaluateNotificationsInternal,
   getNotificationSummary,
@@ -9,6 +10,7 @@ const {
 } = require("../services/notifications");
 
 router.use(authenticate);
+router.use(requirePermission(["receive notifications", "view notifications"]));
 
 router.get("/", async (req, res, next) => {
   try {

@@ -231,10 +231,36 @@ async function dispatch_notification_emails(connection, notifications) {
 
   try {
     const users_res = await connection.execute(
-      `SELECT "email" AS "email"
-       FROM "users"
-       WHERE "status" = '1'
-       AND "email" IS NOT NULL`,
+      `SELECT DISTINCT u."email" AS "email"
+       FROM "users" u
+       WHERE u."status" = '1'
+       AND u."email" IS NOT NULL
+       AND (
+         EXISTS (
+           SELECT 1 FROM "roles" r
+           JOIN "model_has_roles" mhr ON mhr."role_id" = r."id"
+           WHERE mhr."model_id" = u."id"
+             AND mhr."model_type" = 'App\\Models\\User'
+             AND LOWER(r."name") = 'super-admin'
+         )
+         OR
+         EXISTS (
+           SELECT 1 FROM "permissions" p
+           JOIN "role_has_permissions" rhp ON rhp."permission_id" = p."id"
+           JOIN "model_has_roles" mhr ON mhr."role_id" = rhp."role_id"
+           WHERE mhr."model_id" = u."id"
+             AND mhr."model_type" = 'App\\Models\\User'
+             AND LOWER(p."name") IN ('receive notifications', 'view notifications')
+         )
+         OR
+         EXISTS (
+           SELECT 1 FROM "permissions" p
+           JOIN "model_has_permissions" mhp ON mhp."permission_id" = p."id"
+           WHERE mhp."model_id" = u."id"
+             AND mhp."model_type" = 'App\\Models\\User'
+             AND LOWER(p."name") IN ('receive notifications', 'view notifications')
+         )
+       )`,
       {},
       { fetchArraySize: 100 },
     );
@@ -252,7 +278,7 @@ async function dispatch_notification_emails(connection, notifications) {
     const recipient_emails = Array.from(email_set);
     if (recipient_emails.length === 0) {
       logger.info(
-        "[Email Dispatch Skipped] No active users with valid email addresses found.",
+        "[Email Dispatch Skipped] No active users found with 'receive notifications' permission or super-admin role.",
       );
       return;
     }

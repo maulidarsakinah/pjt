@@ -17,8 +17,16 @@ module.exports = (permission) => async (req, res, next) => {
 
     const access = await getUserAccess(req.user.id);
 
-    if (!access.permissions.includes(permission)) {
-      throw forbidden(`missing permission: ${permission}`);
+    const required_permissions = Array.isArray(permission)
+      ? permission
+      : [permission];
+
+    const has_permission = required_permissions.some((p) =>
+      access.permissions.includes(p),
+    );
+
+    if (!has_permission) {
+      throw forbidden(`missing permission: ${required_permissions.join(" or ")}`);
     }
 
     logJourneyStage(req, "authorization", "success", {
