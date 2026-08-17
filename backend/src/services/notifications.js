@@ -3,6 +3,7 @@ const { badRequest, notFound } = require("../utils/httpErrors");
 const { buildListResponse, parsePagination } = require("../utils/pagination");
 const { parsePositiveInteger } = require("../utils/validation");
 const { evaluateAlatStatus } = require("./alat");
+const { dispatch_notification_emails } = require("./email_service");
 const logger = require("../logger");
 
 let isEvaluationRunning = false;
@@ -285,6 +286,7 @@ async function evaluateNotificationsInternal() {
     if (devices.length === 0) return { inserted: 0 };
 
     let insertedCount = 0;
+    const new_notifications = [];
 
     for (const dev of devices) {
       const tRes = await connection.execute(
@@ -340,6 +342,19 @@ async function evaluateNotificationsInternal() {
             },
           );
           insertedCount++;
+          new_notifications.push({
+            id: next_n_id,
+            type: "warning",
+            category: "master_alat",
+            title,
+            message,
+            alat_id: dev.id,
+            station_id: dev.station_id,
+            metric_name: statusMetric,
+            metric_value: null,
+            threshold_limit: null,
+            created_at: new Date(),
+          });
         }
       }
 
@@ -380,6 +395,19 @@ async function evaluateNotificationsInternal() {
             },
           );
           insertedCount++;
+          new_notifications.push({
+            id: next_n_id,
+            type: "warning",
+            category: "monitoring_offline",
+            title,
+            message,
+            alat_id: null,
+            station_id: dev.station_id,
+            metric_name: "telemetry_heartbeat",
+            metric_value: null,
+            threshold_limit: null,
+            created_at: new Date(),
+          });
         }
       }
 
@@ -428,9 +456,26 @@ async function evaluateNotificationsInternal() {
               },
             );
             insertedCount++;
+            new_notifications.push({
+              id: next_n_id,
+              type: "critical",
+              category: "threshold_alert",
+              title,
+              message,
+              alat_id: dev.id,
+              station_id: dev.station_id,
+              metric_name: item.treshold_name,
+              metric_value: item.last_value,
+              threshold_limit: boundVal,
+              created_at: new Date(),
+            });
           }
         }
       }
+    }
+
+    if (new_notifications.length > 0) {
+      await dispatch_notification_emails(connection, new_notifications);
     }
 
     return { inserted: insertedCount };

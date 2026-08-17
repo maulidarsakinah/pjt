@@ -44,12 +44,72 @@ router.post("/read-all", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
-
 router.post("/evaluate", async (req, res, next) => {
   try {
     const result = await evaluateNotificationsInternal();
     res.json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
+const {
+  send_notification_email,
+  verify_smtp_connection,
+} = require("../services/email_service");
+
+router.post("/test-email", async (req, res, next) => {
+  try {
+    const recipient_email =
+      req.body?.target_email && typeof req.body.target_email === "string"
+        ? req.body.target_email.trim()
+        : req.user?.email;
+
+    if (!recipient_email) {
+      return res.status(400).json({
+        success: false,
+        message: "recipient email is required (provide target_email in body or log in with a user having an email)",
+      });
+    }
+
+    const smtp_status = await verify_smtp_connection();
+    if (!smtp_status.configured) {
+      return res.status(400).json({
+        success: false,
+        message: smtp_status.message,
+      });
+    }
+
+    if (!smtp_status.success) {
+      return res.status(500).json({
+        success: false,
+        message: `Google SMTP connection failed: ${smtp_status.message}`,
+      });
+    }
+
+    const test_notification = {
+      type: "info",
+      title: "HydroTrack Test Notification",
+      message: "This is a test notification email sent via Google SMTP to verify your email alert configuration.",
+      metric_name: "test_metric",
+      metric_value: 100,
+      threshold_limit: 150,
+      created_at: new Date(),
+    };
+
+    const email_sent = await send_notification_email(recipient_email, test_notification);
+
+    if (email_sent) {
+      res.json({
+        success: true,
+        message: `Test notification email successfully sent to ${recipient_email}`,
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Failed to send test notification email. Check server logs for details.",
+      });
+    }
   } catch (error) {
     next(error);
   }

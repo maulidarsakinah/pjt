@@ -138,6 +138,23 @@ const config = {
       return Number.isInteger(v) && v > 0 ? v : 5000;
     })(),
   },
+  smtp: {
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === "true",
+    user: process.env.SMTP_USER || process.env.GMAIL_USER || "",
+    pass:
+      process.env.SMTP_PASS ||
+      process.env.GMAIL_PASS ||
+      process.env.GMAIL_APP_PASSWORD ||
+      "",
+    from:
+      process.env.SMTP_FROM ||
+      (process.env.SMTP_USER || process.env.GMAIL_USER
+        ? `"HydroTrack System" <${process.env.SMTP_USER || process.env.GMAIL_USER}>`
+        : '"HydroTrack System" <noreply@gmail.com>'),
+    enabled: process.env.EMAIL_NOTIFICATIONS_ENABLED !== "false",
+  },
 };
 
 module.exports = config;
