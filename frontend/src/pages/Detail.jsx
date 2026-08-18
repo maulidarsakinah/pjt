@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import DeferredFlowChart from "../components/DeferredFlowChart";
 import useAuth from "../contexts/useAuth";
@@ -215,6 +215,7 @@ const Detail = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
+  const currentStationRef = useRef(null);
 
   useEffect(() => {
     if (isDemoUser) {
@@ -224,15 +225,20 @@ const Detail = () => {
     let isActive = true;
     const controller = new AbortController();
 
-    async function loadStationDetail() {
-      setIsLoading(true);
-      setError("");
+    async function loadStationDetail(isSilent = false) {
+      if (!isSilent) {
+        setIsLoading(true);
+        setError("");
+      }
 
       try {
         let selectedStation =
-          navigationStation &&
-          LIVE_STATION_IDS.has(String(navigationStation.id)) &&
-          stationMatchesKey(navigationStation, stationKey)
+          currentStationRef.current &&
+          stationMatchesKey(currentStationRef.current, stationKey)
+            ? currentStationRef.current
+            : navigationStation &&
+              LIVE_STATION_IDS.has(String(navigationStation.id)) &&
+              stationMatchesKey(navigationStation, stationKey)
             ? navigationStation
             : null;
 
@@ -254,6 +260,8 @@ const Detail = () => {
         if (!selectedStation) {
           throw new Error("Stasiun tidak ditemukan.");
         }
+
+        currentStationRef.current = selectedStation;
 
         const dataResponse = await getFlowStationData(
           selectedStation.id,
@@ -301,7 +309,7 @@ const Detail = () => {
             );
           });
 
-          if (dataResponse.has_more) {
+          if (dataResponse.has_more && !isSilent) {
             void prefetchFlowStationData(selectedStation.id, {
               ...historyRange,
               limit: DETAIL_PAGE_SIZE,
@@ -318,23 +326,30 @@ const Detail = () => {
         }
       } catch (requestError) {
         if (isActive && requestError.name !== "AbortError") {
-          setStation(null);
-          setLiveTableData([]);
-          setTotalRows(0);
-          setLoadedPage(0);
-          setError(requestError.message || "Gagal memuat detail stasiun.");
+          if (!isSilent) {
+            setStation(null);
+            setLiveTableData([]);
+            setTotalRows(0);
+            setLoadedPage(0);
+            setError(requestError.message || "Gagal memuat detail stasiun.");
+          }
         }
       } finally {
-        if (isActive) {
+        if (isActive && !isSilent) {
           setIsLoading(false);
         }
       }
     }
 
-    loadStationDetail();
+    loadStationDetail(false);
+
+    const intervalId = setInterval(() => {
+      loadStationDetail(true);
+    }, 5000);
 
     return () => {
       isActive = false;
+      clearInterval(intervalId);
       controller.abort();
     };
   }, [historyRange, isDemoUser, navigationStation, page, stationKey]);

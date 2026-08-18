@@ -42,6 +42,10 @@
   transition: opacity 160ms ease;
 }
 
+.detail-table-container table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
 .detail-table-container--loading table,
 .detail-table-container--loading .detail-mobile-list {
   opacity: 0.58;
