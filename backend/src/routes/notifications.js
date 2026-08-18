@@ -46,6 +46,8 @@ router.post("/read-all", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
+});
+
 router.post("/evaluate", async (req, res, next) => {
   try {
     const result = await evaluateNotificationsInternal();
