@@ -25,7 +25,8 @@ normalization:
   mapping_path: "./normalization_map.yaml"
 
 aggregation:
-  window_seconds: 60         # 1 menit per window agregasi (acuan LOGIS, bukan lagi jeda pengecekan)
+  window_seconds: 60         # durasi window agregasi dalam detik (sebelumnya cuma dokumentasi dan sekarang benar-benar dipakai)
+  device_interval_seconds: 5  # BARU: interval publish device dalam detik, dipakai untuk hitung otomatis expected_samples_per_window (window_seconds / device_interval_seconds)
   # REVISI: check_interval_seconds menentukan seberapa sering scheduler CEK
   # buffer (bukan lagi window_seconds). Dipisah supaya window yang sudah
   # lengkap (12 sample, menit kalendernya sudah selesai) bisa langsung
