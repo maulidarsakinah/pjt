@@ -62,14 +62,20 @@ app.use("/api/users", usersRoutes);
 app.use("/api/notifications", notificationsRoutes);
 
 // Background 24/7 Notification Evaluation Job (Every 60s)
-setInterval(() => {
-  evaluateNotificationsInternal().catch((err) => {
-    logger.error(
-      { err, category: "notification-job" },
-      "[Notification Background Job Error] " + err.message,
-    );
-  });
-}, 60000);
+if (process.env.NODE_ENV !== "test") {
+  const notification_interval = setInterval(() => {
+    evaluateNotificationsInternal().catch((err) => {
+      logger.error(
+        { err, category: "notification-job" },
+        "[Notification Background Job Error] " + err.message,
+      );
+    });
+  }, 60000);
+
+  if (notification_interval.unref) {
+    notification_interval.unref();
+  }
+}
 
 app.get("/health", (req, res) => {
   res.redirect(308, "/api/health");
