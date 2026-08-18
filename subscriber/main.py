@@ -25,7 +25,8 @@ from inputs.filter import validate_payload
 from buffer.sqlite_handler import SqliteBuffer
 from buffer.archive_logger import ArchiveLogger
 from processors.aggregator import AggregationScheduler
-from outputs.oracle_client import OracleForwarder  
+from outputs.mysql_client import MysqlForwarder
+# from outputs.oracle_client import OracleForwarder  # aktifkan lagi saat pindah ke Oracle produksi
 
 # ---------------------------------------------------------------------------
 # Setup logging
@@ -98,13 +99,21 @@ def main():
 
     archive_logger = ArchiveLogger(archive_dir=config["buffer"]["archive_dir"])
 
-    db_forwarder = OracleForwarder(oracle_config=config["oracle"])
+    # Testing lokal via MySQL/DBeaver. Untuk pindah ke Oracle produksi nanti,
+    # ganti baris ini menjadi:
+    #   db_forwarder = OracleForwarder(oracle_config=config["oracle"])
+    # (dan aktifkan kembali import OracleForwarder di atas)
+    db_forwarder = MysqlForwarder(mysql_config=config["mysql"])
     db_forwarder.start()
+    db_forwarder.init_schema()  # khusus MysqlForwarder, buat tabel testing jika belum ada
 
     aggregation_scheduler = AggregationScheduler(
         sqlite_buffer=sqlite_buffer,
         oracle_forwarder=db_forwarder,
         window_seconds=config["aggregation"]["window_seconds"],
+        device_interval_seconds=config["aggregation"].get(
+            "device_interval_seconds", 5
+        ),
         incomplete_window_policy=config["aggregation"].get(
             "incomplete_window_policy", "wait_next_cycle"
         ),

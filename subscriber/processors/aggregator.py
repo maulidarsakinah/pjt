@@ -69,7 +69,6 @@ logger = logging.getLogger("aggregator")
 # per station, bukan konstanta tetap seperti sekarang.
 LOCAL_TZ = timezone(timedelta(hours=7))
 
-EXPECTED_SAMPLES_PER_WINDOW = 12  # asumsi interval device 5 detik, window 60 detik
 VALID_POLICIES = {"wait_next_cycle", "process_anyway", "discard"}
 
 
@@ -79,31 +78,46 @@ class AggregationScheduler:
         sqlite_buffer,
         oracle_forwarder,
         window_seconds: int,
+        device_interval_seconds: int = 5,
         incomplete_window_policy: str = "wait_next_cycle",
         incomplete_window_max_age_seconds: int = 180,
         check_interval_seconds: int = 5,
     ):
         """
+        REVISI -- window_seconds & device_interval_seconds SEKARANG BENAR-BENAR
+        DIPAKAI, bukan cuma dokumentasi:
+
+        Sebelumnya EXPECTED_SAMPLES_PER_WINDOW (jumlah sample yang diharapkan
+        per window) itu KONSTANTA HARDCODE (nilai 12), begitu juga logic
+        pembulatan waktu di _chunk_rows() yang literal "bulatkan ke menit"
+        (replace(second=0, microsecond=0)) -- durasi window SEBENARNYA tidak
+        bisa diubah cuma lewat config.yaml walau field window_seconds ada di
+        sana, karena dua tempat ini tidak membaca nilainya sama sekali.
+
+        Sekarang:
+        - self._expected_samples dihitung OTOMATIS dari window_seconds dibagi
+          device_interval_seconds (mis. 60/5 = 12), bukan angka tetap.
+        - _chunk_rows() membulatkan waktu berdasarkan window_seconds secara
+          umum (bisa 60 detik/menit, bisa 300 detik/5 menit, dst), bukan
+          selalu ke batas menit.
+        Konsekuensinya, mengubah window_seconds di config.yaml sekarang
+        BENAR-BENAR mengubah durasi window agregasi, tanpa perlu ubah kode.
+
         REVISI -- check_interval_seconds dipisah dari window_seconds:
-
-        Sebelumnya scheduler cuma cek buffer sekali per window_seconds (60
-        detik), TIDAK selaras dengan batas menit kalender asli data device.
-        Akibatnya: window yang sebenarnya sudah lengkap (12 sample, menit
-        kalendernya sudah selesai) baru terdeteksi & terkirim di siklus cek
-        BERIKUTNYA -- bisa telat sampai puluhan detik tanpa alasan, padahal
-        datanya sudah lengkap sejak sample ke-12 masuk.
-
-        Sekarang scheduler cek buffer JAUH LEBIH SERING (default tiap 5 detik,
-        via check_interval_seconds), sementara window_seconds tetap dipakai
-        sebagai acuan LOGIS ukuran window (dipakai di logging/dokumentasi,
-        bukan lagi jadi jeda antar pengecekan). Begitu satu menit kalender
-        genap 12 sample, window itu terkirim di siklus cek berikutnya --
-        keterlambatan turun dari puluhan detik jadi maksimal seukuran
-        check_interval_seconds.
+        Scheduler cek buffer JAUH LEBIH SERING (default tiap 5 detik, via
+        check_interval_seconds) daripada window_seconds itu sendiri --
+        supaya window yang sudah lengkap langsung terkirim dalam hitungan
+        detik, bukan menunggu siklus window_seconds penuh berikutnya.
         """
         self._buffer = sqlite_buffer
         self._forwarder = oracle_forwarder
         self._window_seconds = window_seconds
+        self._device_interval_seconds = device_interval_seconds
+        # Pembagian bulat ke bawah -- kalau window_seconds tidak habis dibagi
+        # rapi oleh device_interval_seconds (mis. window 65 detik, device 5
+        # detik -> 13 sample), sisa itu diabaikan (13, bukan 13.0). Kalau
+        # window_seconds lebih kecil dari device_interval_seconds, minimal 1.
+        self._expected_samples = max(1, window_seconds // device_interval_seconds)
         self._check_interval_seconds = check_interval_seconds
         self._stop_event = threading.Event()
         self._thread = None
@@ -187,8 +201,8 @@ class AggregationScheduler:
             if len(chunks) > 1:
                 logger.info(
                     "Backlog terdeteksi untuk station=%s: %d baris dipecah jadi "
-                    "%d window terpisah, "
-                    "untuk tetap merepresentasikan ~1 menit data asli.",
+                    "%d window terpisah (bukan digabung jadi satu agregasi), "
+                    "supaya tiap window tetap merepresentasikan ~1 menit data asli.",
                     station, len(rows), len(chunks),
                 )
 
@@ -197,45 +211,70 @@ class AggregationScheduler:
 
     def _chunk_rows(self, rows: list) -> list:
         """
-        CLOCK-ALIGNED CHUNKING: rows dikelompokkan berdasarkan MENIT ASLI dari
-        _terminalTime device (semua sample dengan menit 09:46 jadi satu grup,
-        apapun jumlah sample-nya) -- supaya window_end_time hasil agregasi
-        benar-benar merepresentasikan rentang waktu nyata di lapangan, cocok
-        dipakai sebagai sumbu waktu grafik yang presisi per menit.
+        CLOCK-ALIGNED CHUNKING: rows dikelompokkan berdasarkan WINDOW WAKTU
+        ASLI dari _terminalTime device -- semua sample yang jatuh di window
+        yang sama jadi satu grup, apapun jumlah sample-nya -- supaya
+        window_end_time hasil agregasi benar-benar merepresentasikan rentang
+        waktu nyata di lapangan.
 
-        Tiap grup menit langsung jadi SATU chunk utuh, tidak ada pembatasan
-        ukuran maksimal per chunk -- kalau suatu menit ternyata berisi lebih
-        dari EXPECTED_SAMPLES_PER_WINDOW (12) sample (kasus jarang, mis. device
-        sempat kirim lebih rapat dari biasanya), semuanya tetap digabung jadi
-        satu window yang sama, bukan dipotong lagi.
+        REVISI -- generik untuk window_seconds APAPUN, bukan cuma per menit:
+        Sebelumnya pembulatan waktu selalu "ke menit" (replace(second=0,
+        microsecond=0)) secara hardcode -- window durasi lain (mis. 5 menit,
+        atau 30 detik) tidak akan terbulatkan dengan benar. Sekarang dihitung
+        via _floor_to_window(), yang membulatkan berdasarkan self._window_seconds
+        yang sesungguhnya (dibaca dari config.yaml).
+
+        Tiap grup window langsung jadi SATU chunk utuh, tidak ada pembatasan
+        ukuran maksimal per chunk -- kalau suatu window ternyata berisi lebih
+        dari self._expected_samples (kasus jarang, mis. device sempat kirim
+        lebih rapat dari biasanya), semuanya tetap digabung jadi satu window
+        yang sama, bukan dipotong lagi.
         """
-        # Kelompokkan per menit, urutan grup mengikuti urutan rows ASC (jadi
+        # Kelompokkan per window, urutan grup mengikuti urutan rows ASC (jadi
         # otomatis kronologis, tidak perlu sorting tambahan).
-        minute_groups = {}
+        window_groups = {}
         group_order = []
 
         for row in rows:
             parsed = self._parse_terminal_time(row["terminal_time"])
             if isinstance(parsed, datetime):
-                minute_key = parsed.replace(second=0, microsecond=0)
+                window_key = self._floor_to_window(parsed)
             else:
                 # Fallback kalau parsing gagal (format tak dikenal) -- jangan
-                # sampai bikin proses crash, tiap baris begini dapat "menit"
+                # sampai bikin proses crash, tiap baris begini dapat "window"
                 # tersendiri (tidak digabung ke grup manapun) supaya tetap
                 # kekirim, cuma sendirian, sambil warning sudah ter-log di
                 # _parse_terminal_time sebelumnya.
-                minute_key = ("unparsed", row["terminal_time"])
+                window_key = ("unparsed", row["terminal_time"])
 
-            if minute_key not in minute_groups:
-                minute_groups[minute_key] = []
-                group_order.append(minute_key)
-            minute_groups[minute_key].append(row)
+            if window_key not in window_groups:
+                window_groups[window_key] = []
+                group_order.append(window_key)
+            window_groups[window_key].append(row)
 
-        return [minute_groups[key] for key in group_order]
+        return [window_groups[key] for key in group_order]
+
+    def _floor_to_window(self, dt: datetime) -> datetime:
+        """
+        Bulatkan datetime ke bawah ke batas window terdekat, berdasarkan
+        self._window_seconds -- generalisasi dari "bulatkan ke menit" supaya
+        berlaku untuk durasi window berapapun (detik, menit, atau kelipatan
+        menit lain).
+
+        Caranya: hitung total detik sejak tengah malam hari itu, bulatkan ke
+        bawah ke kelipatan window_seconds terdekat, lalu bentuk ulang jadi
+        datetime. Contoh window_seconds=60 (1 menit): hasilnya identik dengan
+        cara lama (replace(second=0, microsecond=0)). Contoh window_seconds=300
+        (5 menit): 09:47:23 dibulatkan ke 09:45:00, bukan 09:47:00.
+        """
+        midnight = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        seconds_since_midnight = (dt - midnight).total_seconds()
+        floored_seconds = (int(seconds_since_midnight) // self._window_seconds) * self._window_seconds
+        return midnight + timedelta(seconds=floored_seconds)
 
     def _chunk_minute_label(self, rows: list) -> str:
         """
-        Hasilkan label menit window (mis. "2026-08-07 09:49") berdasarkan
+        Hasilkan label window (mis. "2026-08-07 09:49") berdasarkan
         terminal_time baris pertama dalam chunk, untuk ditampilkan di log --
         supaya warning/info log langsung menunjukkan window MANA yang
         dimaksud, bukan cuma waktu kapan log itu dicetak (yang bisa jauh
@@ -255,7 +294,7 @@ class AggregationScheduler:
         untuk seluruh baris station sekaligus.
         """
         sample_count = len(rows)
-        is_incomplete = sample_count < EXPECTED_SAMPLES_PER_WINDOW
+        is_incomplete = sample_count < self._expected_samples
         minute_label = self._chunk_minute_label(rows)
 
         if is_incomplete:
@@ -264,7 +303,7 @@ class AggregationScheduler:
                 logger.info(
                     "Window belum lengkap untuk station=%s (menit %s): %d/%d sample. "
                     "Data disimpan di buffer, menunggu sample tambahan siklus berikutnya.",
-                    station, minute_label, sample_count, EXPECTED_SAMPLES_PER_WINDOW,
+                    station, minute_label, sample_count, self._expected_samples,
                 )
                 return
             elif decision == "discard":
@@ -273,14 +312,14 @@ class AggregationScheduler:
                 logger.warning(
                     "Window tidak lengkap untuk station=%s (menit %s, %d/%d sample) DIBUANG "
                     "sesuai incomplete_window_policy='discard'.",
-                    station, minute_label, sample_count, EXPECTED_SAMPLES_PER_WINDOW,
+                    station, minute_label, sample_count, self._expected_samples,
                 )
                 return
             # decision == "process": lanjut ke bawah, tetap dikirim.
             logger.warning(
                 "Window tidak lengkap untuk station=%s (menit %s): %d/%d sample "
                 "-- tetap diproses (policy=%s).",
-                station, minute_label, sample_count, EXPECTED_SAMPLES_PER_WINDOW,
+                station, minute_label, sample_count, self._expected_samples,
                 self._incomplete_policy,
             )
 
@@ -305,7 +344,7 @@ class AggregationScheduler:
         else:
             logger.warning(
                 "Gagal kirim ke database tujuan untuk station=%s (%d baris), "
-                "data tetap disimpan di buffer untuk dicoba ulang siklus berikutnya.",
+                "data TETAP disimpan di buffer untuk dicoba ulang siklus berikutnya.",
                 station, len(rows),
             )
 
@@ -387,23 +426,24 @@ class AggregationScheduler:
 
         last_row = rows[-1]
 
-        # REVISI -- window_end_time dibulatkan ke AWAL MENIT BERIKUTNYA
-        # (bukan awal menit data itu sendiri), supaya benar-benar mencerminkan
-        # AKHIR window sesuai nama kolomnya.
+        # REVISI -- window_end_time dibulatkan ke AWAL WINDOW BERIKUTNYA
+        # (bukan awal window data itu sendiri), supaya benar-benar mencerminkan
+        # AKHIR window sesuai nama kolomnya. Sekarang generik untuk durasi
+        # window berapapun (self._window_seconds), bukan hardcode 1 menit.
         #
-        # Contoh: window berisi sample 10:07:00 s.d. 10:07:55 (semua di menit
-        # 10:07) -> window ini "berakhir" saat menit 10:07 selesai, yaitu titik
-        # 10:08:00 (batas eksklusif) -- BUKAN 10:07:00 (itu awal window) dan
-        # BUKAN 10:07:55 (itu cuma sample terakhir, bukan batas window).
+        # Contoh (window_seconds=60): window berisi sample 10:07:00 s.d.
+        # 10:07:55 -> window ini "berakhir" di 10:08:00 (batas eksklusif) --
+        # BUKAN 10:07:00 (itu awal window) dan BUKAN 10:07:55 (itu cuma sample
+        # terakhir, bukan batas window).
         #
         # Ini konsisten dengan makna literal nama kolom "window_end_time" --
         # kalau suatu saat mau pakai konvensi "bucket start" ala Grafana/
-        # InfluxDB (label = awal interval), tinggal hapus timedelta(minutes=1)
-        # di bawah ini.
+        # InfluxDB (label = awal interval), tinggal hapus penambahan
+        # timedelta(seconds=self._window_seconds) di bawah ini.
         parsed_last = self._parse_terminal_time(last_row["terminal_time"])
         if isinstance(parsed_last, datetime):
-            window_start = parsed_last.replace(second=0, microsecond=0)
-            window_end_time = window_start + timedelta(minutes=1)
+            window_start = self._floor_to_window(parsed_last)
+            window_end_time = window_start + timedelta(seconds=self._window_seconds)
         else:
             # Fallback: parsing gagal (format tak dikenal), tidak bisa
             # dibulatkan -- kirim apa adanya seperti sebelumnya, sudah
@@ -414,7 +454,7 @@ class AggregationScheduler:
             "id_station": station,
             "window_end_time": window_end_time,
             "sample_count": sample_count,
-            "expected_samples": EXPECTED_SAMPLES_PER_WINDOW,
+            "expected_samples": self._expected_samples,
             "flow_avg": flow_avg,
             "velocity_avg": velocity_avg,
             "totalizer_delta": totalizer_delta,
