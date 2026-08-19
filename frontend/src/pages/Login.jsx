@@ -130,9 +130,13 @@ const Login = () => {
         </svg>
 
         <div className="brand">
-          <i className="fa-solid fa-droplet"></i>
+          <img
+            className="login-brand-logo"
+            src="/Logo PJT.png"
+            alt="Logo Jasa Tirta 1"
+          />
           <span>
-            Hydro<b>Track</b>
+            JASA <b>TIRTA 1</b>
           </span>
         </div>
 

@@ -15,45 +15,29 @@
   box-shadow: 12px 0 30px rgba(15, 23, 42, 0.04);
 }
 .logo-container {
-  padding: 24px 20px 20px;
+  padding: 24px 22px 20px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.9);
   display: flex;
   align-items: center;
   gap: 14px;
+  background: transparent;
 }
-.logo-mark {
-  width: 62px;
-  height: 62px;
-  border-radius: 20px;
-  background: linear-gradient(
-    180deg,
-    rgba(181, 207, 246, 0.4),
-    rgba(181, 207, 246, 0.15)
-  );
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+.sidebar-logo-img {
+  width: 50px;
+  height: 36px;
+  object-fit: contain;
   flex: 0 0 auto;
-}
-.logo-image {
-  width: 48px;
-  height: 48px;
   display: block;
 }
-.logo-copy {
-  min-width: 0;
-}
-.logo-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1.1;
-}
-.logo-subtitle {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 4px;
+.sidebar-logo-text {
+  font-family: 'Montserrat', 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  font-style: italic;
+  color: #555e68;
+  letter-spacing: 0.03em;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 .nav-menu {
   padding: 18px 0 20px;

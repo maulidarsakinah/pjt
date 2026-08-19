@@ -19,7 +19,7 @@ const Settings = () => {
   const isDemoUser = Boolean(user?.is_demo);
   const roles = user?.roles?.length ? user.roles.join(", ") : "-";
   const companyName = user?.company?.name || user?.company_name || "-";
-  const displayName = user?.name || "Pengguna HydroTrack";
+  const displayName = user?.name || "Pengguna Jasa Tirta I";
   const username = user?.username || user?.email?.split("@")?.[0] || "-";
   const position = user?.position || user?.job_title || roles;
   const initials =

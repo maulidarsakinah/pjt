@@ -46,17 +46,12 @@ const AdminSidebar = ({ openLogoutModal }) => {
   return (
     <aside className="sidebar admin-sidebar">
     <div className="logo-container admin-logo-container">
-      <div className="logo-mark">
-        <img
-          className="logo-image"
-          src="/logo-hydrotrack.svg"
-          alt="HydroTrack logo"
-        />
-      </div>
-      <div className="logo-copy">
-        <div className="logo-title">HydroTrack</div>
-        <div className="logo-subtitle">Enterprise IoT Admin</div>
-      </div>
+      <img
+        className="sidebar-logo-img"
+        src="/Logo PJT.png"
+        alt="Logo Jasa Tirta I"
+      />
+      <span className="sidebar-logo-text">JASA TIRTA I</span>
     </div>
 
     <ul className="nav-menu admin-nav-menu">

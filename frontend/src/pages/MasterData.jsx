@@ -339,7 +339,7 @@ const MasterData = () => {
       <div className="header-section">
         <div>
           <h1>Master Data</h1>
-          <p>Pengelolaan data entitas dan konfigurasi sistem HydroTrack</p>
+          <p>Pengelolaan data entitas dan konfigurasi sistem Jasa Tirta I</p>
         </div>
       </div>
 
@@ -353,7 +353,7 @@ const MasterData = () => {
       <section className="panel master-table-panel md-panel-accent">
         <div className="master-table-header">
           <div className="panel-title">Pengelolaan Master Data</div>
-          <div className="panel-subtitle">Menampilkan dan mengelola data entitas utama yang terhubung pada dashboard HydroTrack.</div>
+          <div className="panel-subtitle">Menampilkan dan mengelola data entitas utama yang terhubung pada dashboard Jasa Tirta I.</div>
         </div>
 
         <div className="master-table-tools">

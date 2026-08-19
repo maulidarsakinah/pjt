@@ -35,7 +35,7 @@ const initialForm = {
 };
 
 const masterKpiDescriptions = {
-  total: "Total seluruh akun pengguna yang tercatat pada aplikasi HydroTrack.",
+  total: "Total seluruh akun pengguna yang tercatat pada aplikasi Jasa Tirta I.",
   admin:
     "Jumlah akun dengan role administrator yang memiliki akses pengelolaan sistem.",
   operator:
@@ -669,7 +669,7 @@ const MasterAccount = () => {
       <div className="header-section master-account-header">
         <div>
           <h1>Master Akun</h1>
-          <p>Kelola pengguna, role, dan perizinan akses aplikasi HydroTrack.</p>
+          <p>Kelola pengguna, role, dan perizinan akses aplikasi Jasa Tirta I.</p>
         </div>
       </div>
 

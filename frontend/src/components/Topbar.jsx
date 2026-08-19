@@ -234,11 +234,11 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
         </button>
         <img
           className="topbar-logo"
-          src="/logo-hydrotrack.svg"
-          alt="HydroTrack"
+          src="/Logo PJT.png"
+          alt="Jasa Tirta 1"
         />
         <div className="topbar-copy">
-          <span className="topbar-app-name">HydroTrack Control Center</span>
+          <span className="topbar-app-name">Jasa Tirta 1 Control Center</span>
           <div className="breadcrumb">{getBreadcrumb()}</div>
         </div>
       </div>

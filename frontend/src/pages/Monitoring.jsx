@@ -575,7 +575,7 @@ const Monitoring = () => {
       <div className="panel" style={{ marginTop: "8px" }}>
         <div className="panel-header" style={{ marginBottom: "20px", flexDirection: "column", alignItems: "flex-start", gap: "5px" }}>
           <div className="panel-title">Historical Monitoring Data</div>
-          <div className="panel-subtitle">Menampilkan riwayat data hasil pemantauan sistem HydroTrack secara berkala.</div>
+          <div className="panel-subtitle">Menampilkan riwayat data hasil pemantauan sistem Jasa Tirta I secara berkala.</div>
         </div>
 
         <div className="filter-section">

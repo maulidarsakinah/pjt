@@ -457,7 +457,7 @@ const MasterAlat = () => {
     <div className="view-section master-alat-page">
       <div className="page-header">
         <h1>Master Alat</h1>
-        <p>Pengelolaan data perangkat, sensor, dan threshold stasiun pemantauan HydroTrack.</p>
+        <p>Pengelolaan data perangkat, sensor, dan threshold stasiun pemantauan Jasa Tirta I.</p>
       </div>
 
       <div className="master-kpi-grid">
@@ -496,7 +496,7 @@ const MasterAlat = () => {
           <div>
             <div className="panel-title">Pengelolaan Master Alat</div>
             <div className="panel-subtitle">
-              Menampilkan dan mengelola daftar perangkat sensor hidrologi yang terhubung pada dashboard HydroTrack.
+              Menampilkan dan mengelola daftar perangkat sensor hidrologi yang terhubung pada dashboard Jasa Tirta I.
             </div>
           </div>
           <span className="master-table-count" style={{
