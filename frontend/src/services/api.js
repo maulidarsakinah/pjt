@@ -448,6 +448,10 @@ export function createPermission(body) {
   return apiRequest("/api/permissions", { method: "POST", body });
 }
 
+export function deletePermission(id) {
+  return apiRequest(`/api/permissions/${id}`, { method: "DELETE" });
+}
+
 export function createRole(body) {
   return apiRequest("/api/roles", { method: "POST", body });
 }

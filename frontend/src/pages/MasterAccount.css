@@ -282,6 +282,16 @@
   overflow-y: auto;
 }
 
+.master-delete-message {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.master-delete-message strong {
+  color: var(--text-primary);
+}
+
 .master-close-button {
   width: 36px;
   height: 36px;
@@ -719,5 +729,63 @@
     font-size: 10px;
     font-weight: 600;
     color: var(--text-secondary);
+  }
+}
+.master-error-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fff1f2;
+  box-shadow: 0 14px 36px rgba(127, 29, 29, 0.18);
+  color: #991b1b;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  animation: master-error-toast-in 0.2s ease-out;
+}
+
+.master-error-toast > i {
+  margin-top: 3px;
+  color: #dc2626;
+}
+
+.master-error-toast span {
+  min-width: 0;
+  flex: 1;
+}
+
+.master-error-toast button {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.master-error-toast button:hover {
+  background: #ffe4e6;
+}
+
+@keyframes master-error-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }

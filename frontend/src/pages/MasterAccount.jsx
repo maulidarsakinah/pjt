@@ -8,6 +8,8 @@ import {
   createRole,
   createUser,
   deleteCompany,
+  deletePermission,
+  deleteRole,
   deleteUser,
   getCompanies,
   getPermissions,
@@ -287,9 +289,11 @@ const MasterAccount = () => {
   const [roleName, setRoleName] = useState("");
   const [selectedPermissionIds, setSelectedPermissionIds] = useState([]);
   const [selectedRole, setSelectedRole] = useState(null);
+  const [selectedPermission, setSelectedPermission] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [errorToast, setErrorToast] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
 
   const [showAddPermission, setShowAddPermission] = useState(false);
@@ -302,6 +306,20 @@ const MasterAccount = () => {
     () => pageNumbers(page, totalPages),
     [page, totalPages],
   );
+
+  const showErrorPopup = (message) => {
+    const safeMessage = message || "Terjadi kendala. Silakan coba lagi.";
+
+    setErrorMessage(safeMessage);
+    setErrorToast(safeMessage);
+  };
+
+  useEffect(() => {
+    if (!errorToast) return undefined;
+
+    const timer = window.setTimeout(() => setErrorToast(""), 5000);
+    return () => window.clearTimeout(timer);
+  }, [errorToast]);
 
   useEffect(() => {
     let active = true;
@@ -327,7 +345,11 @@ const MasterAccount = () => {
         setPermissionCatalog(permissionResponse.data || []);
         setCompanies(companyResponse.data || []);
       })
-      .catch((error) => active && setErrorMessage(error.message));
+      .catch((error) => {
+        if (!active) return;
+        setErrorMessage(error.message);
+        setErrorToast(error.message);
+      });
 
     return () => {
       active = false;
@@ -380,7 +402,11 @@ const MasterAccount = () => {
         );
         setTotalUsers(Number(response.total) || 0);
       })
-      .catch((error) => active && setErrorMessage(error.message))
+      .catch((error) => {
+        if (!active) return;
+        setErrorMessage(error.message);
+        setErrorToast(error.message);
+      })
       .finally(() => active && setLoading(false));
 
     return () => {
@@ -392,6 +418,7 @@ const MasterAccount = () => {
     setActiveModal(null);
     setSelectedUser(null);
     setSelectedRole(null);
+    setSelectedPermission(null);
     setShowPassword(false);
     setShowAddPermission(false);
     setNewPermissionName("");
@@ -414,6 +441,7 @@ const MasterAccount = () => {
       }
     } catch (err) {
       setPermissionFormError(err.message || "Gagal membuat permission");
+      showErrorPopup(err.message || "Gagal membuat permission baru.");
     } finally {
       setCreatingPermission(false);
     }
@@ -458,7 +486,7 @@ const MasterAccount = () => {
         const res = await getRolePermissions(role.id);
         setSelectedPermissionIds((res.data || []).map(p => p.id));
       } catch (err) {
-        setErrorMessage(err.message);
+        showErrorPopup(err.message);
       }
     } else {
       setRoleName("");
@@ -469,6 +497,73 @@ const MasterAccount = () => {
 
   const openRoleList = () => {
     setActiveModal("role-list");
+  };
+
+  const openRoleDelete = (role) => {
+    setSelectedRole(role);
+    setActiveModal("role-delete");
+  };
+
+  const confirmDeleteRole = async () => {
+    if (!selectedRole) return;
+    if (isDemoUser) {
+      alert("Aksi ini dinonaktifkan untuk akun demo.");
+      openRoleList();
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage("");
+
+    try {
+      await deleteRole(selectedRole.id);
+      setRoles((current) => current.filter((role) => role.id !== selectedRole.id));
+      setSelectedRole(null);
+      setActiveModal("role-list");
+      refreshData();
+    } catch (error) {
+      showErrorPopup(error.message || "Gagal menghapus role.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openPermissionList = () => {
+    setActiveModal("permission-list");
+  };
+
+  const openPermissionDelete = (permission) => {
+    setSelectedPermission(permission);
+    setActiveModal("permission-delete");
+  };
+
+  const confirmDeletePermission = async () => {
+    if (!selectedPermission) return;
+    if (isDemoUser) {
+      alert("Aksi ini dinonaktifkan untuk akun demo.");
+      openPermissionList();
+      return;
+    }
+
+    setSaving(true);
+    setErrorMessage("");
+
+    try {
+      await deletePermission(selectedPermission.id);
+      setPermissionCatalog((current) =>
+        current.filter((permission) => permission.id !== selectedPermission.id),
+      );
+      setSelectedPermissionIds((current) =>
+        current.filter((id) => id !== selectedPermission.id),
+      );
+      setSelectedPermission(null);
+      setActiveModal("permission-list");
+      refreshData();
+    } catch (error) {
+      showErrorPopup(error.message || "Gagal menghapus permission.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const openCompanyList = () => {
@@ -511,7 +606,7 @@ const MasterAccount = () => {
       setCompanies(companyResponse.data || []);
       setActiveModal("company-list");
     } catch (err) {
-      setErrorMessage(err.message || "Gagal menyimpan perusahaan.");
+      showErrorPopup(err.message || "Gagal menyimpan perusahaan.");
     } finally {
       setSaving(false);
     }
@@ -538,7 +633,7 @@ const MasterAccount = () => {
       setCompanies((prev) => prev.filter((c) => c.id !== selectedCompany.id));
       setActiveModal("company-list");
     } catch (err) {
-      setErrorMessage(err.message || "Gagal menghapus perusahaan.");
+      showErrorPopup(err.message || "Gagal menghapus perusahaan.");
     } finally {
       setSaving(false);
     }
@@ -620,7 +715,7 @@ const MasterAccount = () => {
       closeModal();
       refreshData();
     } catch (error) {
-      setErrorMessage(error.message);
+      showErrorPopup(error.message);
     } finally {
       setSaving(false);
     }
@@ -639,7 +734,7 @@ const MasterAccount = () => {
       closeModal();
       refreshData();
     } catch (error) {
-      setErrorMessage(error.message);
+      showErrorPopup(error.message);
     } finally {
       setSaving(false);
     }
@@ -660,7 +755,7 @@ const MasterAccount = () => {
       closeModal();
       refreshData();
     } catch (error) {
-      setErrorMessage(error.message);
+      showErrorPopup(error.message);
     } finally {
       setSaving(false);
     }
@@ -696,7 +791,7 @@ const MasterAccount = () => {
       closeModal();
       refreshData();
     } catch (error) {
-      setErrorMessage(error.message);
+      showErrorPopup(error.message);
     } finally {
       setSaving(false);
     }
@@ -832,12 +927,12 @@ const MasterAccount = () => {
               />
             </div>
             <div className="filter-group">
-              <label>Peran Pengguna</label>
+              <label>Role Pengguna</label>
               <select
                 value={roleFilter}
                 onChange={(event) => setRoleFilter(event.target.value)}
               >
-                <option value="">Semua peran</option>
+                <option value="">Semua role</option>
                 {roles.map((role) => (
                   <option key={role.id} value={role.id}>
                     {role.name}
@@ -894,6 +989,15 @@ const MasterAccount = () => {
                   <i className="fa-solid fa-list" /> Daftar Role
                 </button>
               )}
+              {has_permission(currentUser, "list permissions") && (
+                <button
+                  className="btn btn-outline"
+                  type="button"
+                  onClick={openPermissionList}
+                >
+                  <i className="fa-solid fa-key" /> Daftar Permission
+                </button>
+              )}
               {has_permission(currentUser, "list companies") && (
                 <button
                   className="btn btn-outline"
@@ -918,6 +1022,20 @@ const MasterAccount = () => {
         {errorMessage && (
           <div className="master-feedback is-error" role="alert">
             {errorMessage}
+          </div>
+        )}
+
+        {errorToast && (
+          <div className="master-error-toast" role="alert" aria-live="assertive">
+            <i className="fa-solid fa-circle-exclamation" aria-hidden="true" />
+            <span>{errorToast}</span>
+            <button
+              type="button"
+              onClick={() => setErrorToast("")}
+              aria-label="Tutup notifikasi kesalahan"
+            >
+              <i className="fa-solid fa-xmark" aria-hidden="true" />
+            </button>
           </div>
         )}
 
@@ -953,7 +1071,7 @@ const MasterAccount = () => {
                   <th>ID Pengguna</th>
                   <th>Nama</th>
                   <th>Email</th>
-                  <th>Peran</th>
+                  <th>Role</th>
                   <th>Status</th>
                   <th>Terakhir Login</th>
                   <th className="master-actions-heading">Aksi</th>
@@ -1194,7 +1312,7 @@ const MasterAccount = () => {
                 />
               </div>
               <div className="filter-group">
-                <label>Peran</label>
+                <label>Role</label>
                 <select
                   value={formData.roleId}
                   onChange={(event) =>
@@ -1506,6 +1624,16 @@ const MasterAccount = () => {
                                   <i className="fa-solid fa-pen" />
                                 </button>
                               )}
+                              {has_permission(currentUser, "delete roles") && (
+                                <button
+                                  className="master-icon-button danger"
+                                  type="button"
+                                  title="Hapus Role"
+                                  onClick={() => openRoleDelete(role)}
+                                >
+                                  <i className="fa-solid fa-trash-can" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -1528,6 +1656,149 @@ const MasterAccount = () => {
                 onClick={closeModal}
               >
                 Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === "permission-list" && (
+        <div className="master-modal-overlay" onMouseDown={closeModal}>
+          <div
+            className="master-modal-card master-modal-card--wide"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="master-modal-header">
+              <h3>Daftar Permission</h3>
+              <button
+                className="master-close-button"
+                type="button"
+                onClick={closeModal}
+                aria-label="Tutup"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div className="master-modal-body">
+              <div className="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Nama Permission</th>
+                      <th>Guard</th>
+                      <th className="master-actions-heading">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {permissionCatalog.length ? (
+                      permissionCatalog.map((permission) => (
+                        <tr key={permission.id}>
+                          <td><b>{permission.id}</b></td>
+                          <td>{permission.name}</td>
+                          <td>{permission.guard_name || "web"}</td>
+                          <td>
+                            <div className="master-table-actions">
+                              {has_permission(currentUser, "delete permissions") && (
+                                <button
+                                  className="master-icon-button danger"
+                                  type="button"
+                                  title="Hapus Permission"
+                                  onClick={() => openPermissionDelete(permission)}
+                                >
+                                  <i className="fa-solid fa-trash-can" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4">
+                          <div className="master-empty-state">Tidak ada permission.</div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="master-modal-footer">
+              <button className="btn btn-outline" type="button" onClick={closeModal}>
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === "role-delete" && selectedRole && (
+        <div className="master-modal-overlay" onMouseDown={() => !saving && openRoleList()}>
+          <div
+            className="master-modal-card master-modal-card--sm"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="master-modal-header">
+              <h3>Hapus Role?</h3>
+              <button
+                className="master-close-button"
+                type="button"
+                onClick={openRoleList}
+                disabled={saving}
+                aria-label="Tutup"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div className="master-modal-body">
+              <p className="master-delete-message">
+                Role <strong>{selectedRole.name}</strong> akan dihapus. Seluruh
+                penetapan role pada akun pengguna juga akan dilepas.
+              </p>
+            </div>
+            <div className="master-modal-footer">
+              <button className="btn btn-outline" type="button" onClick={openRoleList} disabled={saving}>
+                Batal
+              </button>
+              <button className="btn btn-danger" type="button" onClick={confirmDeleteRole} disabled={saving}>
+                {saving ? "Menghapus..." : "Hapus Role"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === "permission-delete" && selectedPermission && (
+        <div className="master-modal-overlay" onMouseDown={() => !saving && openPermissionList()}>
+          <div
+            className="master-modal-card master-modal-card--sm"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="master-modal-header">
+              <h3>Hapus Permission?</h3>
+              <button
+                className="master-close-button"
+                type="button"
+                onClick={openPermissionList}
+                disabled={saving}
+                aria-label="Tutup"
+              >
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div className="master-modal-body">
+              <p className="master-delete-message">
+                Permission <strong>{selectedPermission.name}</strong> akan dihapus dari
+                semua role dan akun pengguna yang menggunakannya.
+              </p>
+            </div>
+            <div className="master-modal-footer">
+              <button className="btn btn-outline" type="button" onClick={openPermissionList} disabled={saving}>
+                Batal
+              </button>
+              <button className="btn btn-danger" type="button" onClick={confirmDeletePermission} disabled={saving}>
+                {saving ? "Menghapus..." : "Hapus Permission"}
               </button>
             </div>
           </div>
