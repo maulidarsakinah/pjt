@@ -81,6 +81,10 @@
   color: var(--success-color);
   font-weight: 600;
 }
+
+.kpi-desc.alert-text {
+  color: #dc2626;
+}
 .trend-up {
   color: var(--success-color);
   display: inline-flex;

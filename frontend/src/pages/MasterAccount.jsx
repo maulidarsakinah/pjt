@@ -8,6 +8,7 @@ import {
   createRole,
   createUser,
   deleteCompany,
+  deleteUser,
   getCompanies,
   getPermissions,
   getRolePermissions,
@@ -128,6 +129,25 @@ function normalizeUser(user) {
   };
 }
 
+function isCurrentUser(account, currentUser) {
+  if (!currentUser) return false;
+
+  const accountId = account.numericId ?? account.id;
+  if (
+    accountId !== undefined &&
+    currentUser.id !== undefined &&
+    String(accountId) === String(currentUser.id)
+  ) {
+    return true;
+  }
+
+  return Boolean(
+    account.email &&
+      currentUser.email &&
+      account.email.trim().toLowerCase() === currentUser.email.trim().toLowerCase(),
+  );
+}
+
 function useMediaQuery(query) {
   const [matches, setMatches] = useState(
     () => window.matchMedia(query).matches,
@@ -157,7 +177,15 @@ function pageNumbers(currentPage, totalPages) {
     .sort((a, b) => a - b);
 }
 
-const MasterMobileRow = ({ user, openDetail, openForm, openDelete }) => (
+const MasterMobileRow = ({
+  user,
+  canDelete,
+  canUpdate,
+  openDetail,
+  openForm,
+  openDeactivate,
+  openPermanentDelete,
+}) => (
   <li>
     <div className="master-mobile-log">
       <span className="master-mobile-log-main">
@@ -183,22 +211,36 @@ const MasterMobileRow = ({ user, openDetail, openForm, openDelete }) => (
             >
               <i className="fa-regular fa-eye" />
             </button>
-            <button
-              className="master-icon-button"
-              type="button"
-              title="Edit"
-              onClick={() => openForm("edit", user)}
-            >
-              <i className="fa-solid fa-pen" />
-            </button>
-            <button
-              className="master-icon-button danger"
-              type="button"
-              title="Nonaktifkan"
-              onClick={() => openDelete(user)}
-            >
-              <i className="fa-solid fa-user-slash" />
-            </button>
+            {canUpdate && (
+              <>
+                <button
+                  className="master-icon-button"
+                  type="button"
+                  title="Edit"
+                  onClick={() => openForm("edit", user)}
+                >
+                  <i className="fa-solid fa-pen" />
+                </button>
+                <button
+                  className="master-icon-button danger"
+                  type="button"
+                  title="Nonaktifkan"
+                  onClick={() => openDeactivate(user)}
+                >
+                  <i className="fa-solid fa-user-slash" />
+                </button>
+              </>
+            )}
+            {canDelete && (
+              <button
+                className="master-icon-button danger"
+                type="button"
+                title="Hapus permanen"
+                onClick={() => openPermanentDelete(user)}
+              >
+                <i className="fa-solid fa-trash-can" />
+              </button>
+            )}
           </div>
           <span className="master-mobile-last-login">{user.lastLogin}</span>
         </div>
@@ -208,8 +250,8 @@ const MasterMobileRow = ({ user, openDetail, openForm, openDelete }) => (
 );
 
 const MasterAccount = () => {
-  const { user } = useAuth();
-  const isDemoUser = Boolean(user?.is_demo);
+  const { user: currentUser } = useAuth();
+  const isDemoUser = Boolean(currentUser?.is_demo);
   const isMobile = useMediaQuery("(max-width: 760px)");
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
@@ -304,7 +346,9 @@ const MasterAccount = () => {
     if (appliedFilters.status) query.status = appliedFilters.status;
 
     if (isDemoUser) {
-      let filteredUsers = [...STATIC_USERS];
+      let filteredUsers = STATIC_USERS.filter(
+        (account) => !isCurrentUser(account, currentUser),
+      );
       if (query.search) {
         const searchLower = query.search.toLowerCase();
         filteredUsers = filteredUsers.filter(u =>
@@ -329,7 +373,11 @@ const MasterAccount = () => {
     getUsers(query)
       .then((response) => {
         if (!active) return;
-        setUsers((response.data || []).map(normalizeUser));
+        setUsers(
+          (response.data || [])
+            .filter((account) => !isCurrentUser(account, currentUser))
+            .map(normalizeUser),
+        );
         setTotalUsers(Number(response.total) || 0);
       })
       .catch((error) => active && setErrorMessage(error.message))
@@ -338,7 +386,7 @@ const MasterAccount = () => {
     return () => {
       active = false;
     };
-  }, [appliedFilters, page, reloadKey, isDemoUser]);
+  }, [appliedFilters, page, reloadKey, isDemoUser, currentUser]);
 
   const closeModal = () => {
     setActiveModal(null);
@@ -501,6 +549,11 @@ const MasterAccount = () => {
     setActiveModal("delete");
   };
 
+  const openPermanentDelete = (user) => {
+    setSelectedUser(user);
+    setActiveModal("permanent-delete");
+  };
+
   const applyFilters = () => {
     setLoading(true);
     setErrorMessage("");
@@ -582,6 +635,26 @@ const MasterAccount = () => {
     setSaving(true);
     try {
       await updateUser(selectedUser.numericId, { status: "0" });
+      closeModal();
+      refreshData();
+    } catch (error) {
+      setErrorMessage(error.message);
+      setSaving(false);
+    }
+  };
+
+  const deleteUserAccount = async () => {
+    if (isDemoUser) {
+      alert("Aksi ini dinonaktifkan untuk akun demo.");
+      closeModal();
+      return;
+    }
+    if (!selectedUser) return;
+
+    setSaving(true);
+    setErrorMessage("");
+    try {
+      await deleteUser(selectedUser.numericId);
       closeModal();
       refreshData();
     } catch (error) {
@@ -799,7 +872,7 @@ const MasterAccount = () => {
 
           <div className="master-action-row">
             <div className="master-action-group">
-              {has_permission(user, "create users") && (
+              {has_permission(currentUser, "create users") && (
                 <button
                   className="btn btn-primary"
                   type="button"
@@ -808,7 +881,7 @@ const MasterAccount = () => {
                   <i className="fa-solid fa-plus" /> Tambah Akun
                 </button>
               )}
-              {has_permission(user, "list roles") && (
+              {has_permission(currentUser, "list roles") && (
                 <button
                   className="btn btn-outline"
                   type="button"
@@ -817,7 +890,7 @@ const MasterAccount = () => {
                   <i className="fa-solid fa-list" /> Daftar Role
                 </button>
               )}
-              {has_permission(user, "list companies") && (
+              {has_permission(currentUser, "list companies") && (
                 <button
                   className="btn btn-outline"
                   type="button"
@@ -860,9 +933,12 @@ const MasterAccount = () => {
                 <MasterMobileRow
                   key={user.numericId}
                   user={user}
+                  canDelete={has_permission(currentUser, "delete users")}
+                  canUpdate={has_permission(currentUser, "update users")}
                   openDetail={openDetail}
                   openForm={openForm}
-                  openDelete={openDelete}
+                  openDeactivate={openDelete}
+                  openPermanentDelete={openPermanentDelete}
                 />
               ))}
             </ul>
@@ -911,7 +987,7 @@ const MasterAccount = () => {
                         >
                           <i className="fa-regular fa-eye" />
                         </button>
-                        {has_permission(user, "update users") && (
+                        {has_permission(currentUser, "update users") && (
                           <button
                             className="master-icon-button"
                             type="button"
@@ -921,7 +997,7 @@ const MasterAccount = () => {
                             <i className="fa-solid fa-pen" />
                           </button>
                         )}
-                        {has_permission(user, "update users") && (
+                        {has_permission(currentUser, "update users") && (
                           <button
                             className="master-icon-button danger"
                             type="button"
@@ -929,6 +1005,16 @@ const MasterAccount = () => {
                             onClick={() => openDelete(user)}
                           >
                             <i className="fa-solid fa-user-slash" />
+                          </button>
+                        )}
+                        {has_permission(currentUser, "delete users") && (
+                          <button
+                            className="master-icon-button danger"
+                            type="button"
+                            title="Hapus permanen"
+                            onClick={() => openPermanentDelete(user)}
+                          >
+                            <i className="fa-solid fa-trash-can" />
                           </button>
                         )}
                       </div>
@@ -1249,7 +1335,7 @@ const MasterAccount = () => {
                     {permissionCatalog.length}
                   </span>
                 </div>
-                {has_permission(user, "create permissions") && (
+                {has_permission(currentUser, "create permissions") && (
                   <button
                     type="button"
                     className="btn btn-outline"
@@ -1368,7 +1454,7 @@ const MasterAccount = () => {
             <div className="master-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <h3 style={{ margin: 0 }}>Daftar Role</h3>
-                {has_permission(user, "create roles") && (
+                {has_permission(currentUser, "create roles") && (
                   <button
                     className="btn btn-primary"
                     type="button"
@@ -1406,7 +1492,7 @@ const MasterAccount = () => {
                           <td><span className="master-role-badge">{role.name}</span></td>
                           <td>
                             <div className="master-table-actions">
-                              {has_permission(user, "update roles") && (
+                              {has_permission(currentUser, "update roles") && (
                                 <button
                                   className="master-icon-button"
                                   type="button"
@@ -1462,7 +1548,7 @@ const MasterAccount = () => {
                 style={{ display: "flex", alignItems: "center", gap: "16px" }}
               >
                 <h3 style={{ margin: 0 }}>Daftar Perusahaan</h3>
-                {has_permission(user, "create companies") && (
+                {has_permission(currentUser, "create companies") && (
                   <button
                     className="btn btn-primary"
                     type="button"
@@ -1514,7 +1600,7 @@ const MasterAccount = () => {
                           <td>{company.contact || "-"}</td>
                           <td>
                             <div className="master-table-actions">
-                              {has_permission(user, "update companies") && (
+                              {has_permission(currentUser, "update companies") && (
                                 <button
                                   className="master-icon-button"
                                   type="button"
@@ -1524,7 +1610,7 @@ const MasterAccount = () => {
                                   <i className="fa-solid fa-pen" />
                                 </button>
                               )}
-                              {has_permission(user, "delete companies") && (
+                              {has_permission(currentUser, "delete companies") && (
                                 <button
                                   className="master-icon-button is-danger"
                                   type="button"
@@ -1719,6 +1805,41 @@ const MasterAccount = () => {
                 disabled={saving}
               >
                 {saving ? "Memproses…" : "Nonaktifkan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeModal === "permanent-delete" && selectedUser && (
+        <div className="master-modal-overlay" onMouseDown={closeModal}>
+          <div
+            className="master-modal-card master-modal-card--danger"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="master-danger-icon">
+              <i className="fa-solid fa-trash-can" />
+            </div>
+            <h3>Hapus akun secara permanen?</h3>
+            <p>
+              Akun <b>{selectedUser.name}</b>, aksesnya, dan riwayat status
+              baca notifikasi akan dihapus. Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="master-danger-actions">
+              <button
+                className="btn btn-outline"
+                type="button"
+                onClick={closeModal}
+              >
+                Batal
+              </button>
+              <button
+                className="btn btn-danger"
+                type="button"
+                onClick={deleteUserAccount}
+                disabled={saving}
+              >
+                {saving ? "Memprosesâ€¦" : "Hapus Akun"}
               </button>
             </div>
           </div>

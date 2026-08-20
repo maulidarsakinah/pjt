@@ -405,6 +405,10 @@ export function updateUser(id, body) {
   return apiRequest(`/api/users/${id}`, { method: "PATCH", body });
 }
 
+export function deleteUser(id) {
+  return apiRequest(`/api/users/${id}`, { method: "DELETE" });
+}
+
 export function resetUserPassword(id, password) {
   return apiRequest(`/api/users/${id}/reset-password`, {
     method: "POST",
@@ -473,6 +477,10 @@ export function getNotifications(query) {
 
 export function getNotificationSummary() {
   return apiRequest("/api/notifications/summary");
+}
+
+export function getActiveAnomalySummary() {
+  return apiRequest("/api/notifications/active-summary");
 }
 
 export function markNotificationRead(id) {

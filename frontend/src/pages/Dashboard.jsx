@@ -8,7 +8,11 @@ import {
 } from "react";
 import KPICard from "../components/KPICard";
 import useAuth from "../contexts/useAuth";
-import { getFlowStationData, getFlowStations } from "../services/api";
+import {
+  getActiveAnomalySummary,
+  getFlowStationData,
+  getFlowStations,
+} from "../services/api";
 import {
   formatDateTime,
   formatNumber,
@@ -137,6 +141,7 @@ const Dashboard = () => {
   const isMobile = useMediaQuery("(max-width: 760px)");
   const [stations, setStations] = useState([]);
   const [liveReadings, setLiveReadings] = useState([]);
+  const [activeAnomalyCount, setActiveAnomalyCount] = useState(0);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [areWidgetsReady, setAreWidgetsReady] = useState(false);
@@ -166,7 +171,10 @@ const Dashboard = () => {
       setError("");
 
       try {
-        const stationResponse = await getFlowStations({ limit: 20, offset: 0 });
+        const [stationResponse, anomalyResponse] = await Promise.all([
+          getFlowStations({ limit: 20, offset: 0 }),
+          getActiveAnomalySummary(),
+        ]);
         const stationRows = (stationResponse.data || []).filter(
           isFlowmeterLamongan,
         );
@@ -186,6 +194,9 @@ const Dashboard = () => {
         if (isActive) {
           setStations(stationRows);
           setLiveReadings(latestRows);
+          setActiveAnomalyCount(
+            Number(anomalyResponse.data?.active_count || 0),
+          );
         }
       } catch (requestError) {
         if (isActive) {
@@ -199,9 +210,11 @@ const Dashboard = () => {
     }
 
     loadDashboard();
+    const refreshId = window.setInterval(loadDashboard, 30_000);
 
     return () => {
       isActive = false;
+      window.clearInterval(refreshId);
     };
   }, [isDemoUser]);
 
@@ -311,13 +324,21 @@ const Dashboard = () => {
           </button>
           <KPICard
             title="Peringatan Anomali"
-            value="0"
+            value={String(activeAnomalyCount)}
             icon="fa-triangle-exclamation"
-            badge="CLEAR"
+            badge={activeAnomalyCount > 0 ? "ALERT" : "CLEAR"}
             accent="#ef4444"
-            descIcon="fa-shield-heart"
-            descClass="success-text"
-            descText="Semua sistem normal"
+            descIcon={
+              activeAnomalyCount > 0
+                ? "fa-triangle-exclamation"
+                : "fa-shield-heart"
+            }
+            descClass={activeAnomalyCount > 0 ? "alert-text" : "success-text"}
+            descText={
+              activeAnomalyCount > 0
+                ? "Anomali aktif perlu ditangani"
+                : "Semua sistem normal"
+            }
           />
         </div>
       </div>
