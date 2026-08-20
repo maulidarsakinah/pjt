@@ -44,9 +44,12 @@ async function main() {
       body: JSON.stringify({}),
     });
 
-    if (invalidRegistration.response.status !== 400) {
+    if (
+      invalidRegistration.response.status !== 401 ||
+      invalidRegistration.body.code !== "UNAUTHORIZED"
+    ) {
       throw new Error(
-        `Expected malformed /api/register to return 400, got ${invalidRegistration.response.status}`,
+        `Expected unauthenticated /api/register to return 401, got ${invalidRegistration.response.status}`,
       );
     }
 
