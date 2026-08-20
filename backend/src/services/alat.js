@@ -1,5 +1,5 @@
 const { withConnection, withTransaction } = require("./database");
-const { badRequest, notFound } = require("../utils/httpErrors");
+const { badRequest, conflict, notFound } = require("../utils/httpErrors");
 const { buildListResponse, parsePagination } = require("../utils/pagination");
 const { parsePositiveInteger } = require("../utils/validation");
 
@@ -155,6 +155,34 @@ function validateAlatPayload(body, { partial = false } = {}) {
   }
 
   return payload;
+}
+
+async function assertUniqueAlat(connection, { name, station_id }, excludeId) {
+  const binds = {
+    name: name.toLowerCase(),
+    station_id,
+  };
+  const exclusions = [];
+
+  if (excludeId !== undefined) {
+    binds.exclude_id = excludeId;
+    exclusions.push(`"ID" <> :exclude_id`);
+  }
+
+  const result = await connection.execute(
+    `SELECT "ID"
+     FROM "tb_master_alat"
+     WHERE LOWER("NAME") = :name
+       AND "STATION_ID" = :station_id
+       ${exclusions.length ? `AND ${exclusions.join(" AND ")}` : ""}
+       AND ROWNUM = 1`,
+    binds,
+    { maxRows: 1 },
+  );
+
+  if (result.rows.length) {
+    throw conflict("Nama perangkat sudah terdaftar pada stasiun ini");
+  }
 }
 
 async function getThresholdsByAlatId(connection, alat_id) {
@@ -632,7 +660,7 @@ async function listAlat(query = {}) {
              FROM "tb_master_alat" a
              LEFT JOIN "tb_master_station_position" s ON a."STATION_ID" = s."id"
              ${where_sql}
-             ORDER BY a."ID" DESC
+             ORDER BY a."ID" ASC
            ) page_query
            WHERE ROWNUM <= :page_end
          )
@@ -675,7 +703,7 @@ async function listAlat(query = {}) {
                FROM "tb_master_alat" a
                LEFT JOIN "tb_master_station_position" s ON a."STATION_ID" = s."id"
                ${altWhereSql}
-               ORDER BY a."ID" DESC
+               ORDER BY a."ID" ASC
              ) page_query
              WHERE ROWNUM <= :page_end
            )
@@ -875,6 +903,7 @@ async function createAlat(body) {
     }
 
     await connection.execute(`LOCK TABLE "tb_master_alat" IN EXCLUSIVE MODE`);
+    await assertUniqueAlat(connection, payload);
     const id_result = await connection.execute(
       `SELECT NVL(MAX("ID"), 0) + 1 AS "next_id" FROM "tb_master_alat"`,
     );
@@ -954,10 +983,20 @@ async function updateAlat(id_value, body, { partial = false } = {}) {
   const payload = validateAlatPayload(body, { partial });
 
   return withTransaction(async (connection) => {
+    await connection.execute(`LOCK TABLE "tb_master_alat" IN EXCLUSIVE MODE`);
     const existing = await getAlatByIdInternal(connection, id);
     if (!existing) {
       throw notFound("master alat not found");
     }
+
+    await assertUniqueAlat(
+      connection,
+      {
+        name: payload.name ?? existing.alat.name,
+        station_id: payload.station_id ?? existing.alat.station_id,
+      },
+      id,
+    );
 
     if (payload.station_id !== undefined) {
       const station_res = await connection.execute(

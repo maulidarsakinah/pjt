@@ -90,14 +90,16 @@ router.post("/test-email", async (req, res, next) => {
     if (!smtp_status.configured) {
       return res.status(400).json({
         success: false,
-        message: smtp_status.message,
+        message:
+          "Notifikasi email belum dikonfigurasi. Hubungi administrator untuk mengatur layanan email.",
       });
     }
 
     if (!smtp_status.success) {
-      return res.status(500).json({
+      return res.status(503).json({
         success: false,
-        message: `Google SMTP connection failed: ${smtp_status.message}`,
+        message:
+          "Layanan email sedang tidak tersedia. Periksa konfigurasi email lalu coba lagi.",
       });
     }
 
@@ -119,9 +121,10 @@ router.post("/test-email", async (req, res, next) => {
         message: `Test notification email successfully sent to ${recipient_email}`,
       });
     } else {
-      res.status(500).json({
+      res.status(502).json({
         success: false,
-        message: "Failed to send test notification email. Check server logs for details.",
+        message:
+          "Layanan email tidak menerima pesan uji. Periksa alamat penerima dan konfigurasi email, lalu coba lagi.",
       });
     }
   } catch (error) {

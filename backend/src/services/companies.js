@@ -1,5 +1,5 @@
 const db = require("../db");
-const { badRequest, notFound } = require("../utils/httpErrors");
+const { badRequest, conflict, notFound } = require("../utils/httpErrors");
 
 const COMPANY_FIELDS = ["name", "address", "contact"];
 
@@ -66,6 +66,30 @@ async function getCompanyById(connection, id) {
   );
 
   return result.rows[0];
+}
+
+async function assertUniqueCompanyName(connection, name, excludeId) {
+  const binds = { name: name.toLowerCase() };
+  const exclusions = [];
+
+  if (excludeId !== undefined) {
+    binds.exclude_id = excludeId;
+    exclusions.push(`"id" <> :exclude_id`);
+  }
+
+  const result = await connection.execute(
+    `SELECT "id"
+     FROM "companies"
+     WHERE LOWER("name") = :name
+       ${exclusions.length ? `AND ${exclusions.join(" AND ")}` : ""}
+       AND ROWNUM = 1`,
+    binds,
+    { maxRows: 1 },
+  );
+
+  if (result.rows.length) {
+    throw conflict("Nama perusahaan sudah terdaftar");
+  }
 }
 
 async function listCompanies(pagination) {
@@ -137,6 +161,7 @@ async function createCompany(payload) {
     shouldRollback = true;
 
     await connection.execute(`LOCK TABLE "companies" IN EXCLUSIVE MODE`);
+    await assertUniqueCompanyName(connection, payload.name);
 
     const idResult = await connection.execute(
       `SELECT NVL(MAX("id"), 0) + 1 AS "next_id"
@@ -171,7 +196,12 @@ async function createCompany(payload) {
     await connection.commit();
     shouldRollback = false;
 
-    return getCompanyById(connection, nextId);
+    return {
+      id: nextId,
+      name: payload.name,
+      address: payload.address || null,
+      contact: payload.contact || null,
+    };
   } catch (error) {
     if (connection && shouldRollback) {
       await connection.rollback();
@@ -200,6 +230,11 @@ async function updateCompany(id, payload) {
     connection = await db.getConnection();
     shouldRollback = true;
 
+    if (payload.name !== undefined) {
+      await connection.execute(`LOCK TABLE "companies" IN EXCLUSIVE MODE`);
+      await assertUniqueCompanyName(connection, payload.name, id);
+    }
+
     const result = await connection.execute(
       `UPDATE "companies"
        SET ${setClauses.join(", ")}
@@ -214,10 +249,11 @@ async function updateCompany(id, payload) {
       throw notFound("company not found");
     }
 
+    const company = await getCompanyById(connection, id);
     await connection.commit();
     shouldRollback = false;
 
-    return getCompanyById(connection, id);
+    return company;
   } catch (error) {
     if (connection && shouldRollback) {
       await connection.rollback();
@@ -254,6 +290,10 @@ async function deleteCompany(id) {
   } catch (error) {
     if (connection && shouldRollback) {
       await connection.rollback();
+    }
+
+    if (error.code === "ORA-02292") {
+      throw conflict("Perusahaan tidak dapat dihapus karena masih digunakan oleh akun pengguna");
     }
 
     throw error;

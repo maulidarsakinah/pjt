@@ -1,7 +1,7 @@
 const { clearAccessCache } = require("./access");
 const { buildFieldChanges, writeAuditEvent } = require("./audit");
 const { withConnection, withTransaction } = require("./database");
-const { badRequest, notFound } = require("../utils/httpErrors");
+const { badRequest, conflict, notFound } = require("../utils/httpErrors");
 const { parsePositiveInteger, requiredString } = require("../utils/validation");
 
 function logRoleAudit(req, action, roleId, details = {}) {
@@ -53,6 +53,34 @@ async function getRoleById(connection, id) {
   );
 
   return result.rows[0];
+}
+
+async function assertUniqueRole(connection, { name, guard_name }, excludeId) {
+  const binds = {
+    name: name.toLowerCase(),
+    guard_name: guard_name.toLowerCase(),
+  };
+  const exclusions = [];
+
+  if (excludeId !== undefined) {
+    binds.exclude_id = excludeId;
+    exclusions.push(`"id" <> :exclude_id`);
+  }
+
+  const result = await connection.execute(
+    `SELECT "id"
+     FROM "roles"
+     WHERE LOWER("name") = :name
+       AND LOWER("guard_name") = :guard_name
+       ${exclusions.length ? `AND ${exclusions.join(" AND ")}` : ""}
+       AND ROWNUM = 1`,
+    binds,
+    { maxRows: 1 },
+  );
+
+  if (result.rows.length) {
+    throw conflict("Nama role sudah terdaftar untuk guard ini");
+  }
 }
 
 async function getRolePermissions(connection, roleId) {
@@ -155,6 +183,7 @@ async function createRole(body, req) {
   const payload = validateRolePayload(body);
   const result = await withTransaction(async (connection) => {
     await connection.execute(`LOCK TABLE "roles" IN EXCLUSIVE MODE`);
+    await assertUniqueRole(connection, payload);
 
     const idResult = await connection.execute(
       `SELECT NVL(MAX("id"), 0) + 1 AS "next_id"
@@ -195,11 +224,21 @@ async function createRole(body, req) {
 async function updateRole(id, body, req, { partial = true } = {}) {
   const payload = validateRolePayload(body, { partial });
   const result = await withTransaction(async (connection) => {
+    await connection.execute(`LOCK TABLE "roles" IN EXCLUSIVE MODE`);
     const before = await getRoleById(connection, id);
 
     if (!before) {
       throw notFound("role not found");
     }
+
+    await assertUniqueRole(
+      connection,
+      {
+        name: payload.name ?? before.name,
+        guard_name: payload.guard_name ?? before.guard_name,
+      },
+      id,
+    );
 
     const setClauses = Object.keys(payload).map(
       (field) => `"${field}" = :${field}`,

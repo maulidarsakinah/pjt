@@ -1,7 +1,7 @@
 const config = require("../config");
 const { TtlCache } = require("../cache");
 const { buildListResponse, parsePagination } = require("../utils/pagination");
-const { badRequest, notFound } = require("../utils/httpErrors");
+const { badRequest, conflict, notFound } = require("../utils/httpErrors");
 const { withConnection } = require("./database");
 
 const stationCache = new TtlCache({
@@ -509,6 +509,32 @@ async function getMasterStationById(connection, id) {
   return rest;
 }
 
+async function assertUniqueStationCode(connection, code, excludeId) {
+  if (code === null || code === undefined) return;
+
+  const binds = { kode_station: String(code).trim().toLowerCase() };
+  const exclusions = [];
+
+  if (excludeId !== undefined) {
+    binds.exclude_id = excludeId;
+    exclusions.push(`"id" <> :exclude_id`);
+  }
+
+  const result = await connection.execute(
+    `SELECT "id"
+     FROM "tb_master_station_position"
+     WHERE LOWER("kode_station") = :kode_station
+       ${exclusions.length ? `AND ${exclusions.join(" AND ")}` : ""}
+       AND ROWNUM = 1`,
+    binds,
+    { maxRows: 1 },
+  );
+
+  if (result.rows.length) {
+    throw conflict("Kode stasiun sudah terdaftar");
+  }
+}
+
 async function listMasterStations(query) {
   const pagination = parsePagination(query);
   const binds = {
@@ -604,20 +630,21 @@ async function createMasterStation(data) {
     try {
       await connection.execute(`LOCK TABLE "tb_master_station_position" IN EXCLUSIVE MODE`);
       shouldRollback = true;
+      await assertUniqueStationCode(connection, payload.kode_station);
       const idResult = await connection.execute(`SELECT NVL(MAX("id"),0)+1 AS "next_id" FROM "tb_master_station_position"`);
       const nextId = Number(idResult.rows[0].next_id);
       await connection.execute(
         `INSERT INTO "tb_master_station_position" ("id", ${colNames}) VALUES (:id, ${placeholders})`,
         { id: nextId, ...payload },
       );
+      const created = await getMasterStationById(connection, nextId);
       await connection.commit();
       shouldRollback = false;
-      const created = await getMasterStationById(connection, nextId);
       return { data: created };
     } catch (error) {
       if (shouldRollback) try { await connection.rollback(); } catch {}
       if (error.code === "ORA-00001" || String(error.message).includes("ORA-00001")) {
-        const e = new Error("kode_station already exists");
+        const e = new Error("Kode stasiun sudah terdaftar");
         e.statusCode = 409;
         throw e;
       }
@@ -639,6 +666,10 @@ async function updateMasterStation(idValue, data, { partial = true } = {}) {
     try {
       const before = await getMasterStationById(connection, id);
       if (!before) throw notFound("master station not found");
+      if (payload.kode_station !== undefined) {
+        await connection.execute(`LOCK TABLE "tb_master_station_position" IN EXCLUSIVE MODE`);
+        await assertUniqueStationCode(connection, payload.kode_station, id);
+      }
 
       const setClauses = Object.keys(payload).map((field) => `"${field}" = :${field}`);
       const binds = { ...payload, id };
@@ -648,15 +679,15 @@ async function updateMasterStation(idValue, data, { partial = true } = {}) {
         binds,
       );
       if (result.rowsAffected === 0) throw notFound("master station not found");
+      const after = await getMasterStationById(connection, id);
       await connection.commit();
       shouldRollback = false;
-      const after = await getMasterStationById(connection, id);
       return { data: after, before };
     } catch (error) {
       if (shouldRollback) try { await connection.rollback(); } catch {}
       if (error.statusCode) throw error;
       if (error.code === "ORA-00001" || String(error.message).includes("ORA-00001")) {
-        const e = new Error("kode_station already exists");
+        const e = new Error("Kode stasiun sudah terdaftar");
         e.statusCode = 409;
         throw e;
       }
