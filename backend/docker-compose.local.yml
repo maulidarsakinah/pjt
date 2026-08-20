@@ -1,0 +1,74 @@
+services:
+  database:
+    image: gvenzl/oracle-free:23.26.2-slim
+    ports:
+      - "127.0.0.1:${LOCAL_DB_PORT:-1521}:1521"
+    environment:
+      ORACLE_PASSWORD: ${LOCAL_ORACLE_PASSWORD:-LocalOracle_2026!}
+      APP_USER: pkl_app
+      APP_USER_PASSWORD: ${LOCAL_DB_PASSWORD:-LocalApp_2026!}
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+      - ./docker/init:/container-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+    ports:
+      - "127.0.0.1:${LOCAL_API_PORT:-3000}:3000"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      LOG_LEVEL: info
+      LOG_TO_FILE: "true"
+      LOG_FILE_PATH: logs/app.log
+      LOG_RETENTION_COUNT: 30
+      SERVICE_NAME: pkl-api-local
+      DB_USER: pkl_app
+      DB_PASSWORD: ${LOCAL_DB_PASSWORD:-LocalApp_2026!}
+      DB_CONNECT_STRING: database:1521/FREEPDB1
+      DB_POOL_MIN: 1
+      DB_POOL_MAX: 10
+      DB_POOL_INCREMENT: 1
+      DB_POOL_TIMEOUT: 60
+      DB_STATEMENT_CACHE_SIZE: 30
+      ORACLE_USE_THICK_MODE: "true"
+      ORACLE_CLIENT_LIB_DIR: /opt/oracle/instantclient
+      JWT_SECRET: local-development-jwt-secret-change-before-sharing-2026
+      JWT_EXPIRES_IN: 15m
+      JWT_ISSUER: pkl-api-local
+      JWT_AUDIENCE: pkl-api-local-users
+      REFRESH_TOKEN_SECRET: local-development-refresh-token-secret-change-before-sharing-2026
+      REFRESH_TOKEN_TTL_SECONDS: 604800
+      REFRESH_TOKEN_AUDIENCE: pkl-api-local-refresh
+      REFRESH_COOKIE_NAME: hydrotrack_refresh
+      REFRESH_COOKIE_SECURE: "false"
+      TOKEN_REVOCATION_MAX_ITEMS: 10000
+      ENABLE_DOCS: "true"
+      BODY_LIMIT: 100kb
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      TRUST_PROXY: "false"
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX: 300
+      AUTH_RATE_LIMIT_MAX: 20
+      AUTH_CACHE_TTL_SECONDS: 30
+      AUTH_CACHE_MAX_ITEMS: 5000
+      STATION_CACHE_TTL_SECONDS: 300
+      STATION_CACHE_MAX_ITEMS: 1000
+      EMAIL_NOTIFICATIONS_ENABLED: "false"
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  oracle-data:

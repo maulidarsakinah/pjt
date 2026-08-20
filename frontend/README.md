@@ -1,3 +1,14 @@
+# Separate-domain Nginx deployment
+
+Build the frontend with `npm run build`, deploy `dist/` to your web root, and use
+`nginx.frontend.conf` for the frontend domain. Use `../backend/nginx.backend.conf`
+for the API domain. Replace both placeholder domains and the frontend `root` path,
+then use Certbot to add HTTPS.
+
+Before the production build, copy `.env.production.example` to `.env.production`
+and set `VITE_API_BASE_URL` to the HTTPS API domain. Configure the backend's
+`CORS_ORIGINS` to the frontend origin and set `TRUST_PROXY=true`.
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
