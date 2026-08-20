@@ -621,6 +621,7 @@ const MasterAccount = () => {
       refreshData();
     } catch (error) {
       setErrorMessage(error.message);
+    } finally {
       setSaving(false);
     }
   };
@@ -639,6 +640,7 @@ const MasterAccount = () => {
       refreshData();
     } catch (error) {
       setErrorMessage(error.message);
+    } finally {
       setSaving(false);
     }
   };
@@ -659,6 +661,7 @@ const MasterAccount = () => {
       refreshData();
     } catch (error) {
       setErrorMessage(error.message);
+    } finally {
       setSaving(false);
     }
   };
@@ -694,6 +697,7 @@ const MasterAccount = () => {
       refreshData();
     } catch (error) {
       setErrorMessage(error.message);
+    } finally {
       setSaving(false);
     }
   };
