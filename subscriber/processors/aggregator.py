@@ -466,6 +466,46 @@ class AggregationScheduler:
         }
 
     @staticmethod
+    def _clean_terminal_time_artifact(raw_value: str) -> str:
+        """
+        TAMBALAN SEMENTARA -- bukan format baru yang permanen.
+
+        Ditemukan device kadang mengirim _terminalTime dengan artefak
+        aneh, contoh: " + 2026-08-20+10:11:31" -- ada prefix " + " (sisa
+        string concatenation yang salah di sisi device/publisher) dan
+        pemisah tanggal/jam pakai '+' alih-alih 'T' atau spasi.
+
+        Fungsi ini MEMBERSIHKAN pola tersebut menjadi format standar ISO
+        ("2026-08-20T10:11:31") SEBELUM dicoba dicocokkan ke KNOWN_FORMATS.
+        Kalau string tidak cocok pola ini, dikembalikan apa adanya (tidak
+        diubah) -- supaya format-format lain yang sudah dikenal tetap
+        berjalan normal seperti biasa.
+
+        CATATAN: ini SENGAJA dipisah dari KNOWN_FORMATS (bukan ditambahkan
+        sebagai satu entri format baru), karena sifatnya cuma tambalan
+        kompatibilitas sementara -- kalau device sudah kembali ke format
+        normal, fungsi ini aman dibiarkan (tidak akan match apa-apa, tidak
+        mengganggu), atau boleh dihapus kapan saja tanpa mempengaruhi
+        parsing format lain.
+        """
+        import re
+
+        if not isinstance(raw_value, str):
+            return raw_value
+
+        cleaned = raw_value.strip()
+        # Buang prefix sampah seperti "+ " atau "+" di awal string.
+        cleaned = re.sub(r"^\+\s*", "", cleaned)
+
+        # Kalau polanya "YYYY-MM-DD+HH:MM:SS" (pemisah '+' antara tanggal
+        # dan jam, BUKAN offset timezone di akhir) -- ganti '+' itu jadi 'T'.
+        match = re.match(r"^(\d{4}-\d{2}-\d{2})\+(\d{2}:\d{2}:\d{2})$", cleaned)
+        if match:
+            cleaned = f"{match.group(1)}T{match.group(2)}"
+
+        return cleaned
+
+    @staticmethod
     def _parse_terminal_time(raw_value):
         """
         Konversi _terminalTime device menjadi objek datetime Python asli.
@@ -474,6 +514,9 @@ class AggregationScheduler:
         (ditemukan dari log produksi):
             - Format lama:  "2026-07-31 14:41:42"           (tanpa timezone)
             - Format baru:  "2026-08-05T07:44:22+07:00"      (ISO 8601 + timezone)
+            - Artefak sementara: " + 2026-08-20+10:11:31"    (dibersihkan oleh
+              _clean_terminal_time_artifact() sebelum dicoba format standar --
+              lihat catatan di fungsi tersebut, ini tambalan SEMENTARA)
         Karena itu parsing dicoba berlapis (beberapa format), bukan cuma satu
         strptime() kaku -- supaya perubahan format dari device tidak langsung
         membuat SEMUA data gagal terkirim ke database tujuan.
@@ -488,13 +531,18 @@ class AggregationScheduler:
         sudah kirim jam lokal WIB apa adanya), TIDAK perlu konversi apa-apa,
         langsung dipakai sebagai naive datetime WIB.
 
-        Kalau SEMUA format dikenal gagal, fallback ke string mentah apa adanya
-        (skenario terburuk, kemungkinan ditolak Oracle) -- tapi paling tidak
-        pipeline tidak berhenti, dan warning eksplisit tetap muncul supaya
-        format baru yang belum dikenal bisa ditambahkan ke daftar di bawah.
+        Kalau SEMUA format dikenal gagal (bahkan setelah dibersihkan), fallback
+        ke string mentah apa adanya (skenario terburuk, kemungkinan ditolak
+        Oracle) -- tapi paling tidak pipeline tidak berhenti, dan warning
+        eksplisit tetap muncul supaya format baru yang belum dikenal bisa
+        ditambahkan ke daftar di bawah.
         """
         if not raw_value:
             return raw_value
+
+        # Bersihkan artefak sementara dulu (lihat _clean_terminal_time_artifact).
+        # Kalau raw_value tidak cocok pola artefak, fungsi ini no-op (aman).
+        candidate = AggregationScheduler._clean_terminal_time_artifact(raw_value)
 
         # Daftar format yang pernah/mungkin dikirim device, dicoba berurutan.
         KNOWN_FORMATS = [
@@ -505,7 +553,7 @@ class AggregationScheduler:
 
         for fmt in KNOWN_FORMATS:
             try:
-                parsed = datetime.strptime(raw_value, fmt)
+                parsed = datetime.strptime(candidate, fmt)
                 if parsed.tzinfo is not None:
                     # Konversi ke WIB (LOCAL_TZ) lalu buang info timezone (naive),
                     # konsisten dengan received_at (WIB naive) di SQLite dan
@@ -516,10 +564,10 @@ class AggregationScheduler:
                 continue
 
         logger.warning(
-            "Gagal parsing _terminalTime '%s' dengan semua format yang dikenal (%s). "
-            "Dikirim sebagai string mentah, kemungkinan akan ditolak oleh kolom "
-            "TIMESTAMP di database tujuan. Perlu ditambahkan format baru ke "
-            "KNOWN_FORMATS di aggregator.py.",
-            raw_value, KNOWN_FORMATS,
+            "Gagal parsing _terminalTime '%s' (setelah dibersihkan: '%s') dengan "
+            "semua format yang dikenal (%s). Dikirim sebagai string mentah, "
+            "kemungkinan akan ditolak oleh kolom TIMESTAMP di database tujuan. "
+            "Perlu ditambahkan format baru ke KNOWN_FORMATS di aggregator.py.",
+            raw_value, candidate, KNOWN_FORMATS,
         )
         return raw_value
