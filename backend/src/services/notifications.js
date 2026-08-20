@@ -8,6 +8,108 @@ const logger = require("../logger");
 
 let isEvaluationRunning = false;
 
+function collectActiveAnomalies(device, status) {
+  if (["inactive", "maintenance"].includes(status.computed_status)) {
+    return [];
+  }
+
+  const anomalies = [];
+
+  if (
+    status.computed_status === "offline" ||
+    status.is_telemetry_offline === true
+  ) {
+    anomalies.push({
+      category: "monitoring_offline",
+      alat_id: device.id,
+      station_id: device.station_id,
+      metric_name: "telemetry_heartbeat",
+    });
+  }
+
+  for (const evaluation of status.evaluations || []) {
+    if (
+      !["alert_above_max", "alert_below_min"].includes(
+        evaluation.evaluation,
+      )
+    ) {
+      continue;
+    }
+
+    anomalies.push({
+      category: "threshold_alert",
+      alat_id: device.id,
+      station_id: device.station_id,
+      metric_name: evaluation.treshold_name,
+      evaluation: evaluation.evaluation,
+    });
+  }
+
+  return anomalies;
+}
+
+async function getActiveAnomalySummary() {
+  return withConnection(async (connection) => {
+    const devicesResult = await connection.execute(
+      `SELECT
+         a."ID" AS "id",
+         a."NAME" AS "name",
+         a."STATION_ID" AS "station_id",
+         s."TableData" AS "table_data",
+         a."STATUS" AS "status"
+       FROM "tb_master_alat" a
+       LEFT JOIN "tb_master_station_position" s ON a."STATION_ID" = s."id"
+       WHERE a."STATUS" = 1`,
+    );
+    const devices = devicesResult.rows || [];
+
+    if (devices.length === 0) {
+      return { active_count: 0, data: [] };
+    }
+
+    const thresholdBinds = {};
+    const thresholdPlaceholders = devices.map((device, index) => {
+      const key = `alat_id_${index}`;
+      thresholdBinds[key] = device.id;
+      return `:${key}`;
+    });
+    const thresholdsResult = await connection.execute(
+      `SELECT
+         "ID" AS "id",
+         "ALAT_ID" AS "alat_id",
+         "TRESHOLD_NAME" AS "treshold_name",
+         "TRESHOLD_MINIMUM" AS "treshold_minimum",
+         "TRESHOLD_MAXIMUM" AS "treshold_maximum"
+       FROM "tb_alat_threshold"
+       WHERE "ALAT_ID" IN (${thresholdPlaceholders.join(", ")})`,
+      thresholdBinds,
+    );
+    const thresholdsByDevice = new Map();
+
+    for (const threshold of thresholdsResult.rows || []) {
+      const thresholds = thresholdsByDevice.get(threshold.alat_id) || [];
+      thresholds.push(threshold);
+      thresholdsByDevice.set(threshold.alat_id, thresholds);
+    }
+
+    const anomalies = [];
+
+    for (const device of devices) {
+      const status = await evaluateAlatStatus(
+        connection,
+        device,
+        thresholdsByDevice.get(device.id) || [],
+      );
+      anomalies.push(...collectActiveAnomalies(device, status));
+    }
+
+    return {
+      active_count: anomalies.length,
+      data: anomalies,
+    };
+  });
+}
+
 async function listNotifications(query = {}, userId) {
   const pagination = parsePagination(query);
   const uid = parsePositiveInteger(userId, "user_id");
@@ -492,7 +594,9 @@ async function evaluateNotificationsInternal() {
 }
 
 module.exports = {
+  collectActiveAnomalies,
   evaluateNotificationsInternal,
+  getActiveAnomalySummary,
   getNotificationSummary,
   listNotifications,
   markAllNotificationsRead,

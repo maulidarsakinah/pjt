@@ -14,6 +14,7 @@ const {
 } = require("../services/userAccess");
 const {
   createUser,
+  deleteUser,
   getUser,
   getUserSummary,
   listUsers,
@@ -36,6 +37,7 @@ router.get("/", requirePermission("list users"), async (req, res, next) => {
           ? undefined
           : parsePositiveInteger(req.query.role_id, "role_id"),
       status: req.query.status,
+      excludeUserId: req.user.id,
     });
     res.json({
       data: result.data,
@@ -111,6 +113,20 @@ router.patch(
           req,
         ),
       });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+router.delete(
+  "/:id",
+  requirePermission("delete users"),
+  idempotency(),
+  async (req, res, next) => {
+    try {
+      await deleteUser(parsePositiveInteger(req.params.id), req.user.id, req);
+      res.status(204).send();
     } catch (error) {
       next(error);
     }

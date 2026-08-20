@@ -52,7 +52,13 @@ module.exports = {
       post: {
         tags: ["Auth"],
         summary: "Register a user",
+        description: "Requires the `create users` permission.",
         operationId: "registerUser",
+        security: [
+          {
+            bearerAuth: [],
+          },
+        ],
         requestBody: {
           required: true,
           content: {
@@ -76,6 +82,26 @@ module.exports = {
           },
           400: {
             description: "Validation error",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          401: {
+            description: "Missing or invalid bearer token",
+            content: {
+              "application/json": {
+                schema: {
+                  $ref: "#/components/schemas/ErrorResponse",
+                },
+              },
+            },
+          },
+          403: {
+            description: "Missing required permission",
             content: {
               "application/json": {
                 schema: {
@@ -1242,6 +1268,20 @@ module.exports = {
               },
             },
           },
+          404: { description: "User not found" },
+        },
+      },
+      delete: {
+        tags: ["Users"],
+        summary: "Permanently delete a user account",
+        description:
+          "Requires the `delete users` permission. The caller cannot delete their own account.",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ $ref: "#/components/parameters/IdPath" }],
+        responses: {
+          204: { description: "User account deleted" },
+          400: { description: "The caller attempted to delete their own account" },
+          403: { description: "Missing required permission" },
           404: { description: "User not found" },
         },
       },

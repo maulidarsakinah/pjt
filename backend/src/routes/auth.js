@@ -32,15 +32,25 @@ function sendSession(res, result, statusCode = 200) {
   res.status(statusCode).json(response);
 }
 
-router.post("/register", authRateLimit, idempotency(), async (req, res, next) => {
-  try {
-    const result = await registerUser(req.body, req);
+const authenticate = require("../middleware/authenticate");
+const requirePermission = require("../middleware/requirePermission");
 
-    sendSession(res, result, 201);
-  } catch (error) {
-    next(error);
-  }
-});
+router.post(
+  "/register",
+  authenticate,
+  requirePermission("create users"),
+  authRateLimit,
+  idempotency(),
+  async (req, res, next) => {
+    try {
+      const result = await registerUser(req.body, req);
+
+      sendSession(res, result, 201);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 router.post("/login", authRateLimit, idempotency(), async (req, res, next) => {
   try {

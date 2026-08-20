@@ -3,6 +3,7 @@ const authenticate = require("../middleware/authenticate");
 const requirePermission = require("../middleware/requirePermission");
 const {
   evaluateNotificationsInternal,
+  getActiveAnomalySummary,
   getNotificationSummary,
   listNotifications,
   markAllNotificationsRead,
@@ -24,6 +25,15 @@ router.get("/", async (req, res, next) => {
 router.get("/summary", async (req, res, next) => {
   try {
     const result = await getNotificationSummary(req.user.id);
+    res.json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/active-summary", async (_req, res, next) => {
+  try {
+    const result = await getActiveAnomalySummary();
     res.json({ data: result });
   } catch (error) {
     next(error);

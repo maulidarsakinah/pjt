@@ -103,7 +103,7 @@ async function hydrateUser(connection, row) {
   };
 }
 
-function buildUserListQuery({ limit, offset, search, roleId, status }) {
+function buildUserListQuery({ limit, offset, search, roleId, status, excludeUserId }) {
   const filterBinds = {};
   const conditions = [];
   if (search) {
@@ -125,6 +125,13 @@ function buildUserListQuery({ limit, offset, search, roleId, status }) {
   if (status !== undefined) {
     filterBinds.status = normalizeStatus(status);
     conditions.push(`u."status" = :status`);
+  }
+  if (excludeUserId !== undefined) {
+    filterBinds.exclude_user_id = parsePositiveInteger(
+      excludeUserId,
+      "exclude_user_id",
+    );
+    conditions.push(`u."id" <> :exclude_user_id`);
   }
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   const base = `SELECT u."id" AS "id", u."name" AS "name", u."email" AS "email", u."phone" AS "phone",
@@ -388,9 +395,53 @@ async function resetUserPassword(id, password, req) {
   });
 }
 
+async function deleteUser(id, actorId, req) {
+  const targetId = parsePositiveInteger(id);
+  const requestingUserId = parsePositiveInteger(actorId, "actor_id");
+
+  if (targetId === requestingUserId) {
+    throw badRequest("you cannot delete your own account");
+  }
+
+  await withTransaction(async (connection) => {
+    const existing = await userById(connection, targetId);
+    if (!existing) throw notFound("user not found");
+
+    await connection.execute(
+      `DELETE FROM "tb_notification_reads" WHERE "USER_ID" = :id`,
+      { id: targetId },
+    );
+    await connection.execute(
+      `DELETE FROM "model_has_permissions" WHERE "model_id" = :id AND "model_type" = 'App\\Models\\User'`,
+      { id: targetId },
+    );
+    await connection.execute(
+      `DELETE FROM "model_has_roles" WHERE "model_id" = :id AND "model_type" = 'App\\Models\\User'`,
+      { id: targetId },
+    );
+    const result = await connection.execute(
+      `DELETE FROM "users" WHERE "id" = :id`,
+      { id: targetId },
+    );
+
+    if (!result.rowsAffected) throw notFound("user not found");
+  });
+
+  clearAccessCache();
+  authenticate.invalidateUser(targetId);
+  revokeUserTokens(targetId);
+  writeAuditEvent(req, {
+    category: "access_admin",
+    action: "delete_user",
+    targetType: "user",
+    targetId,
+  });
+}
+
 module.exports = {
   buildUserListQuery,
   createUser,
+  deleteUser,
   getUser,
   getUserIdentities,
   getUserSummary,
