@@ -16,17 +16,22 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
     "view notifications",
     "receive notifications",
   ]);
-  const displayName = user?.name || "Operator";
-  const companyName = user?.company?.name || user?.company_name || "Company";
+  const displayName = user?.name || "User";
+  const companyName = user?.company?.name || user?.company_name || "-";
   const roleText =
-    user?.role || user?.role_name || user?.roles?.join(", ") || "Operator";
+    Array.isArray(user?.roles) && user.roles.length > 0
+      ? user.roles
+          .map((r) => (typeof r === "string" ? r : r?.name))
+          .filter(Boolean)
+          .join(", ")
+      : user?.role || user?.role_name || "-";
   const initials =
     displayName
       .split(" ")
       .filter(Boolean)
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase())
-      .join("") || "OP";
+      .join("") || "U";
 
   useEffect(() => {
     const handleClickOutside = (event) => {
