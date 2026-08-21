@@ -40,36 +40,30 @@ const FLOW_DOMAIN = [85, 150];
 
 const STATIC_STATIONS = [
   {
-    id: "flow-lamongan",
+    id: "740",
     station_name: "Flowmeter Lamongan",
     kode_station: "PJT-FLOW-LMG",
+    x: 112.2806,
+    y: -7.0382,
   },
 ];
 
 const STATIC_FLOW_CHART_DATA = [
-  { time: "00:00", ploso: 135.2, babat: 0 },
-  { time: "02:00", ploso: 136.1, babat: 0 },
-  { time: "04:00", ploso: 135.8, babat: 0 },
-  { time: "06:00", ploso: 136.7, babat: 0 },
-  { time: "08:00", ploso: 138.2, babat: 0 },
-  { time: "10:00", ploso: 141.0, babat: 0 },
-  { time: "12:00", ploso: 142.5, babat: 0 },
-  { time: "14:00", ploso: 141.8, babat: 0 },
-  { time: "16:00", ploso: 140.7, babat: 0 },
-  { time: "18:00", ploso: 139.6, babat: 0 },
-  { time: "20:00", ploso: 140.8, babat: 0 },
-  { time: "22:00", ploso: 142.1, babat: 0 },
+  { time: "10:20", ploso: 139.8 },
+  { time: "10:25", ploso: 140.4 },
+  { time: "10:30", ploso: 141.1 },
+  { time: "10:35", ploso: 141.6 },
+  { time: "10:40", ploso: 142.0 },
+  { time: "10:45", ploso: 142.5 },
 ];
 
 const STATIC_VOLTAGE_CHART_DATA = [
-  { time: "06:00", vcc: 12.33 },
-  { time: "08:00", vcc: 12.35 },
-  { time: "10:00", vcc: 12.38 },
-  { time: "12:00", vcc: 12.41 },
-  { time: "14:00", vcc: 12.43 },
-  { time: "16:00", vcc: 12.45 },
-  { time: "18:00", vcc: 12.44 },
-  { time: "20:00", vcc: 12.42 },
+  { time: "10:20", vcc: 12.38 },
+  { time: "10:25", vcc: 12.39 },
+  { time: "10:30", vcc: 12.40 },
+  { time: "10:35", vcc: 12.41 },
+  { time: "10:40", vcc: 12.42 },
+  { time: "10:45", vcc: 12.42 },
 ];
 
 const STATIC_LATEST_READINGS = [
@@ -92,9 +86,10 @@ const dashboardKpiDescriptions = {
 
 function isFlowmeterLamongan(station) {
   const value =
-    `${station?.station_name || ""} ${station?.kode_station || ""} ${station?.table_data || ""}`.toLowerCase();
+    `${station?.station_name || ""} ${station?.kode_station || ""} ${station?.table_data || ""} ${station?.id || ""}`.toLowerCase();
 
   return (
+    String(station?.id) === "740" ||
     value.includes("flowmeter lamongan") ||
     value.includes("flow_lamongan") ||
     value.includes("tb_flow_lamongan")
@@ -145,7 +140,7 @@ const Dashboard = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [areWidgetsReady, setAreWidgetsReady] = useState(false);
-  const formatHourTick = useCallback((value) => value.replace(":00", ""), []);
+  const formatTimeTick = useCallback((value) => value, []);
   const formatVoltageTick = useCallback((value) => `${value.toFixed(1)}V`, []);
   const formatFlowTick = useCallback((value) => `${value.toFixed(0)}`, []);
 
@@ -178,18 +173,22 @@ const Dashboard = () => {
         const stationRows = (stationResponse.data || []).filter(
           isFlowmeterLamongan,
         );
-        const latestRows = await Promise.all(
-          stationRows.slice(0, 1).map(async (station) => {
-            try {
-              const response = await getFlowStationData(station.id, {
-                mode: "latest",
-              });
-              return readingToRow(station, response.data?.[0] || {});
-            } catch {
-              return readingToRow(station, {});
-            }
-          }),
-        );
+        const primaryStation = stationRows[0];
+        let latestRows = [];
+        if (primaryStation) {
+          try {
+            const response = await getFlowStationData(primaryStation.id, {
+              mode: "latest",
+              limit: 6,
+            });
+            const readings = response.data || [];
+            latestRows = readings.map((reading) =>
+              readingToRow(primaryStation, reading),
+            );
+          } catch {
+            latestRows = [readingToRow(primaryStation, {})];
+          }
+        }
 
         if (isActive) {
           setStations(stationRows);
@@ -219,10 +218,15 @@ const Dashboard = () => {
   }, [isDemoUser]);
 
   const visibleStations = isDemoUser ? STATIC_STATIONS : stations;
+  const chartReadings = useMemo(() => {
+    if (!liveReadings.length) return [];
+    return [...liveReadings].reverse();
+  }, [liveReadings]);
+
   const latestReadings = useMemo(
     () =>
       liveReadings.length
-        ? liveReadings.map((row) => ({
+        ? [liveReadings[0]].map((row) => ({
             station: row.stationName,
             flow:      row.schema === "new" ? formatNumber(row.flow_avg) : formatNumber(row.flow1),
             totalizer: row.schema === "new" ? formatNumber(row.totalizer_end, 0) : formatNumber(row.totalizer1, 0),
@@ -234,23 +238,23 @@ const Dashboard = () => {
   );
   const flowChartData = useMemo(
     () =>
-      liveReadings.length
-        ? liveReadings.map((row) => ({
+      chartReadings.length
+        ? chartReadings.map((row) => ({
             time: formatTime(row.datetime),
             ploso: row.schema === "new" ? row.flow_avg : row.flow1,
           }))
         : STATIC_FLOW_CHART_DATA,
-    [liveReadings],
+    [chartReadings],
   );
   const voltageChartData = useMemo(
     () =>
-      liveReadings.length
-        ? liveReadings.map((row) => ({
+      chartReadings.length
+        ? chartReadings.map((row) => ({
             time: formatTime(row.datetime),
             vcc: row.schema === "new" ? row.vcc_last : row.vcc,
           }))
         : STATIC_VOLTAGE_CHART_DATA,
-    [liveReadings],
+    [chartReadings],
   );
   const averageFlow = useMemo(
     () =>
@@ -258,6 +262,48 @@ const Dashboard = () => {
       flowChartData.length,
     [flowChartData],
   );
+
+  const averageVcc = useMemo(() => {
+    const validValues = voltageChartData
+      .map((row) => Number(row.vcc))
+      .filter((v) => Number.isFinite(v));
+    if (!validValues.length) return null;
+    return (
+      validValues.reduce((sum, v) => sum + v, 0) / validValues.length
+    );
+  }, [voltageChartData]);
+
+  const deviceCondition = useMemo(() => {
+    if (averageVcc === null) {
+      return {
+        title: "Menunggu Data",
+        desc: "Belum ada pembacaan tegangan",
+        icon: "fa-solid fa-battery-half",
+      };
+    }
+
+    if (averageVcc >= 12 && averageVcc <= 15) {
+      return {
+        title: "Daya Baterai Optimal",
+        desc: `Rata-rata suplai daya ${formatNumber(averageVcc, 2)}V`,
+        icon: "fa-solid fa-battery-full",
+      };
+    }
+
+    if (averageVcc < 12) {
+      return {
+        title: "Tegangan Rendah",
+        desc: `Rata-rata suplai daya ${formatNumber(averageVcc, 2)}V (di bawah 12V)`,
+        icon: "fa-solid fa-battery-quarter",
+      };
+    }
+
+    return {
+      title: "Tegangan Berlebih",
+      desc: `Rata-rata suplai daya ${formatNumber(averageVcc, 2)}V (di atas 15V)`,
+      icon: "fa-solid fa-triangle-exclamation",
+    };
+  }, [averageVcc]);
 
   return (
     <div className="view-section dashboard-page">
@@ -392,7 +438,7 @@ const Dashboard = () => {
                     badge=""
                     data={voltageChartData}
                     xKey="time"
-                    xTickFormatter={formatHourTick}
+                    xTickFormatter={formatTimeTick}
                     yTickFormatter={formatVoltageTick}
                     yDomain={VCC_DOMAIN}
                     height="100%"
@@ -416,11 +462,11 @@ const Dashboard = () => {
             </div>
             <div className="stat-summary">
               <div className="stat-icon">
-                <i className="fa-solid fa-battery-full"></i>
+                <i className={deviceCondition.icon}></i>
               </div>
               <div className="stat-details">
-                <h4>Daya Baterai Optimal</h4>
-                <p>Rata-rata suplai daya 12.4V</p>
+                <h4>{deviceCondition.title}</h4>
+                <p>{deviceCondition.desc}</p>
               </div>
             </div>
           </section>
@@ -449,7 +495,7 @@ const Dashboard = () => {
                 badge=""
                 data={flowChartData}
                 xKey="time"
-                xTickFormatter={formatHourTick}
+                xTickFormatter={formatTimeTick}
                 yTickFormatter={formatFlowTick}
                 yDomain={FLOW_DOMAIN}
                 height="100%"
