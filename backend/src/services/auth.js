@@ -288,7 +288,7 @@ async function loginUser(body, req) {
         targetId: user.id,
         metadata: { reason: "inactive_account" },
       });
-      throw unauthorized("invalid email or password");
+      throw unauthorized("Akun sudah tidak aktif");
     }
 
     const passwordMatches = await bcrypt.compare(
