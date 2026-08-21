@@ -121,6 +121,40 @@ function App() {
                 }
               />
               <Route path="detail/:stationKey" element={<Detail />} />
+              <Route
+                path="master-data"
+                element={
+                  <PermissionGuard permission="view stations">
+                    <MasterData />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="master-alat"
+                element={
+                  <PermissionGuard permission="view stations">
+                    <MasterAlat />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="master-account"
+                element={
+                  <PermissionGuard
+                    permission={["list users", "list roles", "list permissions"]}
+                  >
+                    <MasterAccount />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="audit-log"
+                element={
+                  <PermissionGuard permission="view logs">
+                    <AuditLog />
+                  </PermissionGuard>
+                }
+              />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route

@@ -117,6 +117,50 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
             <span>Pengaturan</span>
           </>
         );
+      case "/dashboard/master-account":
+        return (
+          <>
+            Dashboard{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Master Akun</span>
+          </>
+        );
+      case "/dashboard/master-data":
+        return (
+          <>
+            Dashboard{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Master Data</span>
+          </>
+        );
+      case "/dashboard/master-alat":
+        return (
+          <>
+            Dashboard{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Master Alat</span>
+          </>
+        );
+      case "/dashboard/audit-log":
+        return (
+          <>
+            Dashboard{" "}
+            <i
+              className="fa-solid fa-chevron-right"
+              style={{ fontSize: "10px", margin: "0 8px", color: "#cbd5e1" }}
+            ></i>{" "}
+            <span>Audit Log</span>
+          </>
+        );
       case "/admin":
         return <span>Admin Dashboard</span>;
       case "/admin/monitoring":
