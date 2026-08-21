@@ -98,14 +98,15 @@ function buildDataFilter(query) {
   const binds = {};
 
   if (mode === "latest") {
+    const limit = Math.max(1, Math.min(Number(query.limit) || 1, IOT_MAX_LIMIT));
     return {
       mode,
       whereSql: "",
       binds,
       pagination: {
-        limit: 1,
+        limit,
         offset: 0,
-        pageEnd: 2,
+        pageEnd: limit + 1,
       },
     };
   }
@@ -198,7 +199,9 @@ async function findFlowStationById(connection, stationId) {
        "kode_station" AS "kode_station",
        "nama" AS "station_name",
        "stastion_type" AS "station_type",
-       "TableData" AS "table_data"
+       "TableData" AS "table_data",
+       "x" AS "x",
+       "y" AS "y"
      FROM "tb_master_station_position"
      WHERE "id" = :station_id
      AND "stastion_type" LIKE 'FLOW!_%' ESCAPE '!'
@@ -261,7 +264,9 @@ async function listFlowStations(query) {
          "kode_station",
          "station_name",
          "station_type",
-         "table_data"
+         "table_data",
+         "x",
+         "y"
        FROM (
          SELECT page_query.*, ROWNUM AS "rn"
          FROM (
@@ -270,7 +275,9 @@ async function listFlowStations(query) {
              "kode_station" AS "kode_station",
              "nama" AS "station_name",
              "stastion_type" AS "station_type",
-             "TableData" AS "table_data"
+             "TableData" AS "table_data",
+             "x" AS "x",
+             "y" AS "y"
            FROM "tb_master_station_position"
            WHERE "stastion_type" LIKE 'FLOW!_%' ESCAPE '!'
            ORDER BY "nama" ASC

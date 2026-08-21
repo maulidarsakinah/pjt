@@ -1091,6 +1091,19 @@ async function deleteAlat(id_value) {
     }
 
     await connection.execute(
+      `DELETE FROM "tb_notification_reads"
+       WHERE "NOTIFICATION_ID" IN (
+         SELECT "ID" FROM "tb_notifications" WHERE "ALAT_ID" = :id
+       )`,
+      { id },
+    );
+
+    await connection.execute(
+      `DELETE FROM "tb_notifications" WHERE "ALAT_ID" = :id`,
+      { id },
+    );
+
+    await connection.execute(
       `DELETE FROM "tb_alat_threshold" WHERE "ALAT_ID" = :id`,
       { id },
     );
