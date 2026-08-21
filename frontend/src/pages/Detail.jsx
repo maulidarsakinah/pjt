@@ -37,7 +37,7 @@ const DEMO_TABLE_DATA = [...DEMO_CHART_DATA].reverse().map((row) => ({
   schema: "old",
 }));
 const DETAIL_PAGE_SIZE = 10;
-const LIVE_STATION_IDS = new Set(["697", "740"]);
+const LIVE_STATION_IDS = new Set(["740"]);
 const FLOW_DOMAIN = [130, 150];
 const TOTALIZER_DOMAIN = [450000, 453000];
 const VCC_DOMAIN = [12.2, 12.6];

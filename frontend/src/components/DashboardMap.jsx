@@ -1,10 +1,7 @@
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
-const FALLBACK_STATIONS = [
-  { id: "fallback-1", station_name: "Flowmeter Lamongan" },
-];
-const MAP_CENTER = [-7.1147, 112.4146];
+const DEFAULT_CENTER = [-7.0382, 112.2806];
 const MAP_STYLE = {
   height: "100%",
   width: "100%",
@@ -12,35 +9,58 @@ const MAP_STYLE = {
   zIndex: 1,
 };
 
-function markerPosition(index) {
-  const baseLat = -7.1147;
-  const baseLng = 112.4146;
-  const row = Math.floor(index / 3);
-  const column = index % 3;
+const FALLBACK_STATIONS = [
+  {
+    id: "740",
+    station_name: "Flowmeter Lamongan",
+    kode_station: "PJT-FLOW-LMG",
+    x: 112.2806,
+    y: -7.0382,
+  },
+];
 
-  return [baseLat + (row - 1) * 0.018, baseLng + (column - 1) * 0.025];
+function getCoordinates(station) {
+  const lat = Number(station?.y);
+  const lng = Number(station?.x);
+
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return [lat, lng];
+  }
+
+  return DEFAULT_CENTER;
 }
 
-const DashboardMap = ({ stations }) => {
-  const visibleStations = (
-    stations.length ? stations : FALLBACK_STATIONS
-  ).slice(0, 1);
+const DashboardMap = ({ stations = [] }) => {
+  const stationList = stations.length ? stations : FALLBACK_STATIONS;
+  const targetStation =
+    stationList.find((station) => String(station.id) === "740") ||
+    stationList[0];
+
+  const position = getCoordinates(targetStation);
 
   return (
     <MapContainer
-      center={MAP_CENTER}
-      zoom={11}
+      center={position}
+      zoom={13}
       zoomControl={false}
       style={MAP_STYLE}
     >
       <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
-      {visibleStations.map((station, index) => (
-        <Marker key={station.id} position={markerPosition(index)}>
+      {targetStation && (
+        <Marker position={position}>
           <Popup>
-            <b>{station.station_name || station.kode_station}</b>
+            <b>
+              {targetStation.station_name ||
+                targetStation.kode_station ||
+                "Flowmeter Lamongan"}
+            </b>
+            <br />
+            <span>
+              {position[0].toFixed(4)}° S, {position[1].toFixed(4)}° E
+            </span>
           </Popup>
         </Marker>
-      ))}
+      )}
     </MapContainer>
   );
 };

@@ -28,7 +28,7 @@ const MonitoringMap = lazy(() => import("../components/MonitoringMap"));
 const DEMO_HISTORY_DATA = [
   {
     id: 1,
-    station: "FLOW-Ploso_Lamongan",
+    station: "Flowmeter Lamongan",
     debit: 142.5,
     totalizer: 452109,
     vcc: 12.42,
@@ -38,17 +38,7 @@ const DEMO_HISTORY_DATA = [
   },
   {
     id: 2,
-    station: "FLOW-Babat_Hilir",
-    debit: 95.4,
-    totalizer: 210985,
-    vcc: 12.38,
-    temp: 30.1,
-    status: "Active",
-    time: "2026-07-06 10:42",
-  },
-  {
-    id: 3,
-    station: "FLOW-Ploso_Lamongan",
+    station: "Flowmeter Lamongan",
     debit: 140.2,
     totalizer: 451900,
     vcc: 12.4,
@@ -56,39 +46,24 @@ const DEMO_HISTORY_DATA = [
     status: "Active",
     time: "2026-07-06 10:40",
   },
-  {
-    id: 4,
-    station: "FLOW-Babat_Hilir",
-    debit: 92.1,
-    totalizer: 210500,
-    vcc: 12.35,
-    temp: 29.9,
-    status: "Active",
-    time: "2026-07-06 10:35",
-  },
 ];
 
 const DEMO_STATIONS = [
   {
-    id: "ST-PLS-01",
-    kode_station: "ST-PLS-01",
-    station_name: "FLOW-Ploso_Lamongan",
+    id: "740",
+    kode_station: "PJT-FLOW-LMG",
+    station_name: "Flowmeter Lamongan",
     latest_debit: "142.5",
     latest_time: "2 menit yang lalu",
-  },
-  {
-    id: "ST-BBT-02",
-    kode_station: "ST-BBT-02",
-    station_name: "FLOW-Babat_Hilir",
-    latest_debit: "95.4",
-    latest_time: "5 menit yang lalu",
+    x: 112.2806,
+    y: -7.0382,
   },
 ];
 
 const DEFAULT_LOCATION = "all";
 const DEFAULT_TIME_RANGE = "24h";
 const HISTORY_PAGE_SIZE = 10;
-const LIVE_STATION_IDS = new Set(["697", "740"]);
+const LIVE_STATION_IDS = new Set(["740"]);
 
 function buildRangeQuery(timeRange) {
   const end = new Date();
@@ -542,7 +517,7 @@ const Monitoring = () => {
       <div className="monitoring-layout">
         <div className="map-monitoring-container">
           <Suspense fallback={<MapSkeleton />}>
-            <MonitoringMap />
+            <MonitoringMap stations={visibleStations} />
           </Suspense>
         </div>
 
