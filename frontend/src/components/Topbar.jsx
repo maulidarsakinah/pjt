@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import useAuth from "../contexts/useAuth";
 import { getNotificationSummary } from "../services/api";
+import { has_permission } from "../utils/permission_utils";
 import "./Topbar.css";
 
 const Topbar = ({ toggleSidebar, openLogoutModal }) => {
@@ -11,6 +12,10 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const accountRef = useRef(null);
+  const canViewNotifications = has_permission(user, [
+    "view notifications",
+    "receive notifications",
+  ]);
   const displayName = user?.name || "Operator";
   const companyName = user?.company?.name || user?.company_name || "Company";
   const roleText =
@@ -38,6 +43,11 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
   }, []);
 
   useEffect(() => {
+    if (!canViewNotifications) {
+      setUnreadCount(0);
+      return undefined;
+    }
+
     let isMounted = true;
     const fetchSummary = async () => {
       try {
@@ -55,7 +65,7 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [canViewNotifications]);
 
   const handleExit = () => {
     setIsAccountOpen(false);
@@ -243,17 +253,19 @@ const Topbar = ({ toggleSidebar, openLogoutModal }) => {
         </div>
       </div>
       <div className="topbar-right">
-        <button 
-          className="topbar-notification-btn" 
-          title="Notifikasi" 
-          type="button"
-          onClick={handleNotificationClick}
-        >
-          <i className="fa-regular fa-bell"></i>
-          {unreadCount > 0 && (
-            <span className="topbar-notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
-          )}
-        </button>
+        {canViewNotifications && (
+          <button 
+            className="topbar-notification-btn" 
+            title="Notifikasi" 
+            type="button"
+            onClick={handleNotificationClick}
+          >
+            <i className="fa-regular fa-bell"></i>
+            {unreadCount > 0 && (
+              <span className="topbar-notification-badge">{unreadCount > 99 ? "99+" : unreadCount}</span>
+            )}
+          </button>
+        )}
         <div className="account-menu" ref={accountRef}>
           <button
             className={`user-dropdown ${isAccountOpen ? "active" : ""}`}

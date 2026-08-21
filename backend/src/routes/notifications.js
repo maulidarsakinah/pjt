@@ -11,6 +11,18 @@ const {
 } = require("../services/notifications");
 
 router.use(authenticate);
+
+// Active anomaly summary count for Dashboard KPI — accessible to all authenticated users
+router.get("/active-summary", async (_req, res, next) => {
+  try {
+    const result = await getActiveAnomalySummary();
+    res.json({ data: result });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Personal notification management requires specific permissions
 router.use(requirePermission(["receive notifications", "view notifications"]));
 
 router.get("/", async (req, res, next) => {
@@ -25,15 +37,6 @@ router.get("/", async (req, res, next) => {
 router.get("/summary", async (req, res, next) => {
   try {
     const result = await getNotificationSummary(req.user.id);
-    res.json({ data: result });
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get("/active-summary", async (_req, res, next) => {
-  try {
-    const result = await getActiveAnomalySummary();
     res.json({ data: result });
   } catch (error) {
     next(error);

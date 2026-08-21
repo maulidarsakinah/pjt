@@ -168,7 +168,7 @@ const Dashboard = () => {
       try {
         const [stationResponse, anomalyResponse] = await Promise.all([
           getFlowStations({ limit: 20, offset: 0 }),
-          getActiveAnomalySummary(),
+          getActiveAnomalySummary().catch(() => ({ data: { active_count: 0 } })),
         ]);
         const stationRows = (stationResponse.data || []).filter(
           isFlowmeterLamongan,

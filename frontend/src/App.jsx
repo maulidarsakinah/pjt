@@ -110,7 +110,16 @@ function App() {
             <Route path="/dashboard" element={<ProtectedRoute />}>
               <Route index element={<Dashboard />} />
               <Route path="monitoring" element={<Monitoring />} />
-              <Route path="notifications" element={<Notifications />} />
+              <Route
+                path="notifications"
+                element={
+                  <PermissionGuard
+                    permission={["view notifications", "receive notifications"]}
+                  >
+                    <Notifications />
+                  </PermissionGuard>
+                }
+              />
               <Route path="detail/:stationKey" element={<Detail />} />
               <Route path="settings" element={<Settings />} />
             </Route>
@@ -120,7 +129,16 @@ function App() {
             >
               <Route index element={<Dashboard />} />
               <Route path="monitoring" element={<Monitoring />} />
-              <Route path="notifications" element={<Notifications />} />
+              <Route
+                path="notifications"
+                element={
+                  <PermissionGuard
+                    permission={["view notifications", "receive notifications"]}
+                  >
+                    <Notifications />
+                  </PermissionGuard>
+                }
+              />
               <Route path="detail/:stationKey" element={<Detail />} />
               <Route
                 path="master-account"
