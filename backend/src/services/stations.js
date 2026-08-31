@@ -204,7 +204,7 @@ async function findFlowStationById(connection, stationId) {
        "y" AS "y"
      FROM "tb_master_station_position"
      WHERE "id" = :station_id
-     AND "stastion_type" LIKE 'FLOW!_%' ESCAPE '!'
+     AND ("stastion_type" LIKE 'FLOW!_%' ESCAPE '!' OR UPPER("stastion_type") = 'FLOW' OR UPPER("kode_station") LIKE 'FLOW%')
      AND "TableData" IS NOT NULL
      AND ROWNUM = 1`,
     { station_id: stationId },
@@ -279,7 +279,7 @@ async function listFlowStations(query) {
              "x" AS "x",
              "y" AS "y"
            FROM "tb_master_station_position"
-           WHERE "stastion_type" LIKE 'FLOW!_%' ESCAPE '!'
+            WHERE ("stastion_type" LIKE 'FLOW!_%' ESCAPE '!' OR UPPER("stastion_type") = 'FLOW' OR UPPER("kode_station") LIKE 'FLOW%')
            ORDER BY "nama" ASC
          ) page_query
          WHERE ROWNUM <= :page_end
