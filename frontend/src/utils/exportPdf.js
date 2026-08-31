@@ -39,7 +39,7 @@ export function buildPdfBlob({ title, subtitle, headers, rows }) {
 
   const pageCount = chunks.length;
   addObj("<< /Type /Catalog /Pages 2 0 R >>");
-  addObj(`<< /Type /Pages /Kids [${Array.from({ length: pageCount }, (_, i) => `${3 + i * 2} 0 R`).join(" ")}] /Count ${pageCount} >>`);
+  const pagesObjNum = addObj(""); // Object 2: will be populated with exact Kids array
 
   const fontRegular = addObj("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
   const fontBold = addObj("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
@@ -50,6 +50,9 @@ export function buildPdfBlob({ title, subtitle, headers, rows }) {
     pageObjNums.push(addObj(""));
     contentObjNums.push(addObj(""));
   });
+
+  // Correctly link Kids to the page objects (e.g. 5 0 R, 7 0 R)
+  objects[pagesObjNum - 1] = `<< /Type /Pages /Kids [${pageObjNums.map((num) => `${num} 0 R`).join(" ")}] /Count ${pageCount} >>`;
 
   const contents = chunks.map((chunk, pageIdx) => {
     let y = pageH - 54;
@@ -105,7 +108,7 @@ export function buildPdfBlob({ title, subtitle, headers, rows }) {
   contentObjNums.forEach((objNum, idx) => {
     const stream = contents[idx];
     const len = new TextEncoder().encode(stream).length;
-    objects[objNum - 1] = `<< /Length ${len} >>\nstream\n${stream}endstream`;
+    objects[objNum - 1] = `<< /Length ${len} >>\nstream\n${stream}\nendstream`;
   });
   pageObjNums.forEach((objNum, idx) => {
     const contentNum = contentObjNums[idx];
