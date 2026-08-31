@@ -43,28 +43,28 @@ services:
       DB_STATEMENT_CACHE_SIZE: 30
       ORACLE_USE_THICK_MODE: "true"
       ORACLE_CLIENT_LIB_DIR: /opt/oracle/instantclient
-      JWT_SECRET: local-development-jwt-secret-change-before-sharing-2026
-      JWT_EXPIRES_IN: 15m
-      JWT_ISSUER: pkl-api-local
-      JWT_AUDIENCE: pkl-api-local-users
-      REFRESH_TOKEN_SECRET: local-development-refresh-token-secret-change-before-sharing-2026
-      REFRESH_TOKEN_TTL_SECONDS: 604800
-      REFRESH_TOKEN_AUDIENCE: pkl-api-local-refresh
-      REFRESH_COOKIE_NAME: hydrotrack_refresh
-      REFRESH_COOKIE_SECURE: "false"
-      TOKEN_REVOCATION_MAX_ITEMS: 10000
-      ENABLE_DOCS: "true"
-      BODY_LIMIT: 100kb
-      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
-      TRUST_PROXY: "false"
-      RATE_LIMIT_WINDOW_MS: 900000
-      RATE_LIMIT_MAX: 300
-      AUTH_RATE_LIMIT_MAX: 20
-      AUTH_CACHE_TTL_SECONDS: 30
-      AUTH_CACHE_MAX_ITEMS: 5000
-      STATION_CACHE_TTL_SECONDS: 300
-      STATION_CACHE_MAX_ITEMS: 1000
-      EMAIL_NOTIFICATIONS_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET:-local-development-jwt-secret-change-before-sharing-2026}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_ISSUER: ${JWT_ISSUER:-pkl-api-local}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-pkl-api-local-users}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-local-development-refresh-token-secret-change-before-sharing-2026}
+      REFRESH_TOKEN_TTL_SECONDS: ${REFRESH_TOKEN_TTL_SECONDS:-604800}
+      REFRESH_TOKEN_AUDIENCE: ${REFRESH_TOKEN_AUDIENCE:-pkl-api-local-refresh}
+      REFRESH_COOKIE_NAME: ${REFRESH_COOKIE_NAME:-hydrotrack_refresh}
+      REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-false}
+      TOKEN_REVOCATION_MAX_ITEMS: ${TOKEN_REVOCATION_MAX_ITEMS:-10000}
+      ENABLE_DOCS: ${ENABLE_DOCS:-true}
+      BODY_LIMIT: ${BODY_LIMIT:-100kb}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-20}
+      AUTH_CACHE_TTL_SECONDS: ${AUTH_CACHE_TTL_SECONDS:-30}
+      AUTH_CACHE_MAX_ITEMS: ${AUTH_CACHE_MAX_ITEMS:-5000}
+      STATION_CACHE_TTL_SECONDS: ${STATION_CACHE_TTL_SECONDS:-300}
+      STATION_CACHE_MAX_ITEMS: ${STATION_CACHE_MAX_ITEMS:-1000}
+      EMAIL_NOTIFICATIONS_ENABLED: ${EMAIL_NOTIFICATIONS_ENABLED:-false}
     depends_on:
       database:
         condition: service_healthy
