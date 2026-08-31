@@ -9,8 +9,8 @@ module.exports = {
   },
   servers: [
     {
-      url: `http://localhost:${config.port}`,
-      description: "Local development server",
+      url: "/",
+      description: "Current Server",
     },
   ],
   tags: [
