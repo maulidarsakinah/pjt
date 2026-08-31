@@ -17,7 +17,10 @@ const MonitoringMap = ({ stations = [] }) => {
 
   return (
     <MapContainer center={position} zoom={13} style={MAP_STYLE}>
-      <TileLayer url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png" />
+      <TileLayer
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
       <Marker position={position}>
         <Popup>
           <b>
