@@ -1,5 +1,6 @@
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { stationMarkerIcon } from "../utils/leafletIcon";
 
 const DEFAULT_CENTER = [-7.0382, 112.2806];
 const MAP_STYLE = {
@@ -50,7 +51,7 @@ const DashboardMap = ({ stations = [] }) => {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {targetStation && (
-        <Marker position={position}>
+        <Marker position={position} icon={stationMarkerIcon}>
           <Popup>
             <b>
               {targetStation.station_name ||

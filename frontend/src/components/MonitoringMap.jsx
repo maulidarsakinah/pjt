@@ -1,5 +1,6 @@
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { stationMarkerIcon } from "../utils/leafletIcon";
 
 const DEFAULT_CENTER = [-7.0382, 112.2806];
 const MAP_STYLE = {
@@ -21,7 +22,7 @@ const MonitoringMap = ({ stations = [] }) => {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <Marker position={position}>
+      <Marker position={position} icon={stationMarkerIcon}>
         <Popup>
           <b>
             {station740?.station_name ||
