@@ -258,8 +258,8 @@ const Monitoring = () => {
           { limit: 100, offset: 0 },
           { signal: controller.signal },
         );
-        const stationRows = (stationResponse.data || []).filter((station) =>
-          LIVE_STATION_IDS.has(String(station.id)),
+        const stationRows = (stationResponse.data || []).filter(
+          (station) => station && station.id !== undefined && station.id !== null,
         );
 
         // Latest per station for the station cards — always has data even when
