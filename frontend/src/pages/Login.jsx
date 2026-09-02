@@ -4,34 +4,6 @@ import useAuth from "../contexts/useAuth";
 import { getMe, login } from "../services/api";
 import "./Login.css";
 
-const STATIC_EMAIL = "pjt@gmail.com";
-const STATIC_PASSWORD = "pjt123456";
-const STATIC_ADMIN_EMAIL = "admin@gmail.com";
-const STATIC_ADMIN_PASSWORD = "admin123456";
-
-const STATIC_SESSION = {
-  user: {
-    id: 1,
-    name: "Operator PJT",
-    email: STATIC_EMAIL,
-    company_name: "Jasa Tirta",
-    roles: ["user-flowmeter"],
-    is_demo: true,
-  },
-};
-
-const STATIC_ADMIN_SESSION = {
-  user: {
-    id: 99,
-    name: "Admin HydroTrack",
-    email: STATIC_ADMIN_EMAIL,
-    company_name: "Jasa Tirta",
-    roles: ["administrator"],
-    role: "Administrator",
-    is_demo: true,
-  },
-};
-
 function isAdminUser(user) {
   const roles = [
     ...(Array.isArray(user?.roles) ? user.roles : []),
@@ -64,24 +36,6 @@ const Login = () => {
     setIsSubmitting(true);
 
     try {
-      if (
-        email.trim().toLowerCase() === STATIC_EMAIL &&
-        password === STATIC_PASSWORD
-      ) {
-        saveAuthSession(STATIC_SESSION);
-        navigate("/dashboard", { replace: true });
-        return;
-      }
-
-      if (
-        email.trim().toLowerCase() === STATIC_ADMIN_EMAIL &&
-        password === STATIC_ADMIN_PASSWORD
-      ) {
-        saveAuthSession(STATIC_ADMIN_SESSION);
-        navigate("/admin", { replace: true });
-        return;
-      }
-
       const response = await login(email, password);
 
       saveAuthSession(response);
